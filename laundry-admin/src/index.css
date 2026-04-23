@@ -7,19 +7,35 @@
   --radius-md: calc(0.5rem - 2px);
   --radius-sm: calc(0.5rem - 4px);
 
-  --color-border: hsl(214 32% 91%);
-  --color-input: hsl(214 32% 91%);
-  --color-ring: hsl(222 84% 5%);
-  --color-background: hsl(0 0% 100%);
-  --color-foreground: hsl(222 47% 11%);
-  --color-muted: hsl(210 40% 96%);
-  --color-muted-foreground: hsl(215 16% 47%);
-  --color-card: hsl(0 0% 100%);
-  --color-card-foreground: hsl(222 47% 11%);
-  --color-primary: hsl(221 83% 53%);
-  --color-primary-foreground: hsl(210 40% 98%);
-  --color-destructive: hsl(0 72% 51%);
-  --color-destructive-foreground: hsl(0 0% 98%);
+  --color-primary: #143f73;
+  --color-primary-dark: #0f315a;
+  --color-primary-soft: #e8eef5;
+  --color-accent: #a5cd39;
+  --color-accent-dark: #8eb22f;
+  --color-accent-soft: #f1f8df;
+  --color-aqua: #61bfc7;
+  --color-aqua-soft: #e7f7f9;
+  --color-text: #1f2937;
+  --color-text-muted: #6b7280;
+  --color-background: #f7f9fc;
+  --color-surface: #ffffff;
+  --color-border: #d6dfea;
+
+  /* Tokens semánticos UI */
+  --color-input: #d6dfea;
+  --color-ring: #143f73;
+  --color-foreground: #1f2937;
+  --color-muted: #e8eef5;
+  --color-muted-foreground: #6b7280;
+  --color-card: #ffffff;
+  --color-card-foreground: #1f2937;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #e8eef5;
+  --color-secondary-foreground: #143f73;
+  --color-destructive: #0f315a;
+  --color-destructive-foreground: #ffffff;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #1f2937;
 }
 
 @layer base {
@@ -34,5 +50,16 @@
   }
   #root {
     min-height: 100vh;
+  }
+
+  /* Quita flechas de inputs numéricos en todos los navegadores */
+  input[type='number']::-webkit-outer-spin-button,
+  input[type='number']::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type='number'] {
+    -moz-appearance: textfield;
+    appearance: textfield;
   }
 }

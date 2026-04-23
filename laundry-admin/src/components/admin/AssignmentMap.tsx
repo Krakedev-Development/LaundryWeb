@@ -12,6 +12,15 @@ import type { FleetSnapshot } from '@/types'
 const EMPTY_FC: FeatureCollection<GeoPoint> = { type: 'FeatureCollection', features: [] }
 
 const MAP_CENTER: [number, number] = [-75.5812, 6.2442]
+const MAP_COLORS = {
+  primary: '#143F73',
+  primaryDark: '#0F315A',
+  primarySoft: '#E8EEF5',
+  accent: '#A5CD39',
+  aqua: '#61BFC7',
+  textMuted: '#6B7280',
+  surface: '#FFFFFF',
+} as const
 
 function applyFleetToMap(map: mapboxgl.Map, fleet: FleetSnapshot) {
   const driversSource = map.getSource('drivers') as mapboxgl.GeoJSONSource | undefined
@@ -64,15 +73,15 @@ export function AssignmentMap() {
             'match',
             ['get', 'status'],
             'available',
-            '#16a34a',
+            MAP_COLORS.accent,
             'on_route',
-            '#2563eb',
+            MAP_COLORS.aqua,
             'offline',
-            '#94a3b8',
-            '#ca8a04',
+            MAP_COLORS.textMuted,
+            MAP_COLORS.primary,
           ],
           'circle-stroke-width': 2,
-          'circle-stroke-color': '#ffffff',
+          'circle-stroke-color': MAP_COLORS.surface,
         },
       })
 
@@ -90,11 +99,11 @@ export function AssignmentMap() {
         source: 'orders',
         filter: ['has', 'point_count'],
         paint: {
-          'circle-color': '#c2410c',
+          'circle-color': MAP_COLORS.primary,
           'circle-radius': ['step', ['get', 'point_count'], 18, 5, 22, 10, 28],
           'circle-opacity': 0.9,
           'circle-stroke-width': 2,
-          'circle-stroke-color': '#fff7ed',
+          'circle-stroke-color': MAP_COLORS.primarySoft,
         },
       })
 
@@ -109,7 +118,7 @@ export function AssignmentMap() {
           'text-size': 12,
         },
         paint: {
-          'text-color': '#ffffff',
+          'text-color': MAP_COLORS.surface,
         },
       })
 
@@ -119,10 +128,10 @@ export function AssignmentMap() {
         source: 'orders',
         filter: ['!', ['has', 'point_count']],
         paint: {
-          'circle-color': '#ea580c',
+          'circle-color': MAP_COLORS.primaryDark,
           'circle-radius': 8,
           'circle-stroke-width': 2,
-          'circle-stroke-color': '#ffffff',
+          'circle-stroke-color': MAP_COLORS.surface,
         },
       })
 
@@ -282,10 +291,10 @@ export function AssignmentMap() {
                   </div>
                 ) : null}
                 <div className="pointer-events-none absolute bottom-4 left-4 flex flex-wrap gap-3 rounded-md border border-border bg-background/95 px-3 py-2 text-xs shadow-sm">
-                  <LegendSwatch color="#16a34a" label="Chofer disponible" />
-                  <LegendSwatch color="#2563eb" label="Chofer en ruta" />
-                  <LegendSwatch color="#94a3b8" label="Chofer offline" />
-                  <LegendSwatch color="#c2410c" label="Órdenes pendientes (cluster)" />
+                  <LegendSwatch color={MAP_COLORS.accent} label="Chofer disponible" />
+                  <LegendSwatch color={MAP_COLORS.aqua} label="Chofer en ruta" />
+                  <LegendSwatch color={MAP_COLORS.textMuted} label="Chofer offline" />
+                  <LegendSwatch color={MAP_COLORS.primary} label="Órdenes pendientes (cluster)" />
                 </div>
               </>
             )}
@@ -299,7 +308,7 @@ export function AssignmentMap() {
 function LegendSwatch({ color, label }: { color: string; label: string }) {
   return (
     <span className="inline-flex items-center gap-2 text-muted-foreground">
-      <span className="size-2.5 rounded-full ring-2 ring-white" style={{ backgroundColor: color }} />
+      <span className="size-2.5 rounded-full ring-2 ring-surface" style={{ backgroundColor: color }} />
       {label}
     </span>
   )

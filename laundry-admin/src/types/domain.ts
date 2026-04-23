@@ -17,7 +17,16 @@ export interface CustomerProfile {
   fullName: string
   phone: string
   email: string
+  city: string
+  neighborhood: string
+  addressLine: string
+  location: GeoPoint
   kycStatus: KycStatus
+  subscriptionPlan: 'basic' | 'premium' | 'business'
+  subscriptionStatus: 'active' | 'past_due' | 'cancelled'
+  walletBalance: number
+  promotionsEnabled: boolean
+  registeredAt: string
   cedulaPhotoUrl: string
   selfiePhotoUrl: string
   createdAt: string
@@ -143,6 +152,7 @@ export interface FleetSnapshot {
   drivers: Driver[]
   orders: Order[]
   zones: ServiceZone[]
+  customers: CustomerProfile[]
   pendingCustomers: CustomerProfile[]
   incidents: Incident[]
   chatThreads: ChatThread[]
