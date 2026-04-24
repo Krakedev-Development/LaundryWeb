@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { SearchableMultiSelect } from '@/components/ui/searchable-multi-select'
 
 type Promotion = {
   id: string
@@ -14,11 +15,20 @@ type Promotion = {
   discountPercent: number
   minOrderAmount: number
   usageLimit: number
-  appliesTo: 'all' | 'dry_clean' | 'iron' | 'wash_fold' | 'home_service'
+  appliesToServiceIds: string[]
   startsAt: string
   validUntil: string
   active: boolean
 }
+
+const SERVICE_OPTIONS = [
+  { value: 'dry_clean', label: 'Lavado al seco', description: 'Prendas delicadas y especiales.' },
+  { value: 'iron', label: 'Planchado', description: 'Solo servicio de planchado.' },
+  { value: 'wash_fold', label: 'Lavado + doblado', description: 'Lavado estándar con doblado.' },
+  { value: 'home_service', label: 'Domicilio', description: 'Recogida/entrega a domicilio.' },
+  { value: 'shoes', label: 'Zapatos', description: 'Limpieza y tratamiento de calzado.' },
+  { value: 'blankets', label: 'Edredones', description: 'Limpieza especializada de edredones.' },
+]
 
 const initialPromotions: Promotion[] = [
   {
@@ -30,7 +40,7 @@ const initialPromotions: Promotion[] = [
     discountPercent: 15,
     minOrderAmount: 20000,
     usageLimit: 500,
-    appliesTo: 'iron',
+    appliesToServiceIds: ['iron'],
     startsAt: '2026-05-01',
     validUntil: '2026-05-31',
     active: true,
@@ -44,7 +54,7 @@ const initialPromotions: Promotion[] = [
     discountPercent: 10,
     minOrderAmount: 15000,
     usageLimit: 1000,
-    appliesTo: 'all',
+    appliesToServiceIds: ['dry_clean', 'iron', 'wash_fold', 'home_service', 'shoes', 'blankets'],
     startsAt: '2026-05-01',
     validUntil: '2026-06-15',
     active: true,
@@ -58,7 +68,7 @@ const initialPromotions: Promotion[] = [
     discountPercent: 20,
     minOrderAmount: 30000,
     usageLimit: 300,
-    appliesTo: 'wash_fold',
+    appliesToServiceIds: ['wash_fold'],
     startsAt: '2026-04-01',
     validUntil: '2026-04-30',
     active: false,
@@ -75,7 +85,7 @@ export function PromotionsView() {
   const [discountPercent, setDiscountPercent] = useState('10')
   const [minOrderAmount, setMinOrderAmount] = useState('0')
   const [usageLimit, setUsageLimit] = useState('100')
-  const [appliesTo, setAppliesTo] = useState<Promotion['appliesTo']>('all')
+  const [appliesToServiceIds, setAppliesToServiceIds] = useState<string[]>([])
   const [startsAt, setStartsAt] = useState('')
   const [validUntil, setValidUntil] = useState('')
   const [active, setActive] = useState(true)
@@ -97,7 +107,7 @@ export function PromotionsView() {
     setDiscountPercent('10')
     setMinOrderAmount('0')
     setUsageLimit('100')
-    setAppliesTo('all')
+    setAppliesToServiceIds([])
     setStartsAt('')
     setValidUntil('')
     setActive(true)
@@ -139,6 +149,10 @@ export function PromotionsView() {
       setFormError('El límite de uso debe ser mínimo 1.')
       return
     }
+    if (appliesToServiceIds.length === 0) {
+      setFormError('Selecciona al menos un servicio al que aplica la promoción.')
+      return
+    }
     if (!startsAt || !validUntil) {
       setFormError('Debes seleccionar fecha de inicio y fecha de fin.')
       return
@@ -157,7 +171,7 @@ export function PromotionsView() {
       discountPercent: parsedDiscount,
       minOrderAmount: parsedMinOrderAmount,
       usageLimit: parsedUsageLimit,
-      appliesTo,
+      appliesToServiceIds,
       startsAt,
       validUntil,
       active,
@@ -178,7 +192,7 @@ export function PromotionsView() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex justify-end">
+          <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
             <Dialog.Root open={openCreateModal} onOpenChange={setOpenCreateModal}>
               <Dialog.Trigger asChild>
                 <Button>
@@ -188,21 +202,22 @@ export function PromotionsView() {
               </Dialog.Trigger>
               <Dialog.Portal>
                 <Dialog.Overlay className="fixed inset-0 z-40 bg-primary/40" />
-                <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[min(900px,95vw)] -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-surface p-4 shadow-lg">
-                  <div className="mb-3 flex items-start justify-between">
-                    <div>
+                <Dialog.Content className="fixed left-1/2 top-1/2 z-50 flex max-h-[92vh] w-[min(900px,95vw)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-lg">
+                  <div className="flex items-start justify-between gap-2 border-b border-border px-4 py-3">
+                    <div className="min-w-0">
                       <Dialog.Title className="text-base font-semibold text-text">Crear promoción</Dialog.Title>
                       <Dialog.Description className="text-sm text-text-muted">
                         Completa todos los campos requeridos para publicar una campaña.
                       </Dialog.Description>
                     </div>
                     <Dialog.Close asChild>
-                      <Button size="sm" variant="outline">Cerrar</Button>
+                      <Button size="sm" variant="outline" className="shrink-0">Cerrar</Button>
                     </Dialog.Close>
                   </div>
 
-                  <form onSubmit={createPromotion} className="space-y-3">
-                    <div className="grid gap-3 md:grid-cols-2">
+                  <form onSubmit={createPromotion} className="flex flex-1 flex-col overflow-hidden">
+                    <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
+                    <div className="grid gap-3 sm:grid-cols-2">
                       <label className="space-y-1.5 text-sm text-text">
                         <span className="font-medium">Nombre de promoción</span>
                         <input
@@ -235,7 +250,7 @@ export function PromotionsView() {
                         className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none"
                       />
                     </label>
-                    <div className="grid gap-3 md:grid-cols-4">
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                       <label className="space-y-1.5 text-sm text-text">
                         <span className="font-medium">Tipo de descuento</span>
                         <select
@@ -284,20 +299,16 @@ export function PromotionsView() {
                         />
                       </label>
                     </div>
-                    <div className="grid gap-3 md:grid-cols-3">
-                      <label className="space-y-1.5 text-sm text-text">
-                        <span className="font-medium">Aplicación de la promoción</span>
-                        <select
-                          value={appliesTo}
-                          onChange={(event) => setAppliesTo(event.target.value as Promotion['appliesTo'])}
-                          className="h-10 w-full rounded-md border border-border bg-surface px-3 text-sm text-text focus:border-primary focus:outline-none"
-                        >
-                          <option value="all">Aplica a todo</option>
-                          <option value="dry_clean">Solo lavado al seco</option>
-                          <option value="iron">Solo planchado</option>
-                          <option value="wash_fold">Solo lavado + doblado</option>
-                          <option value="home_service">Solo domicilio</option>
-                        </select>
+                    <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+                      <label className="space-y-1.5 text-sm text-text sm:col-span-2 md:col-span-3">
+                        <span className="font-medium">Servicios a los que aplica la promoción</span>
+                        <SearchableMultiSelect
+                          options={SERVICE_OPTIONS}
+                          selectedValues={appliesToServiceIds}
+                          onChange={setAppliesToServiceIds}
+                          placeholder="Buscar servicios..."
+                          emptyMessage="No hay servicios para seleccionar."
+                        />
                       </label>
                       <label className="space-y-1.5 text-sm text-text">
                         <span className="font-medium">Fecha de inicio</span>
@@ -331,8 +342,9 @@ export function PromotionsView() {
                     </label>
 
                     {formError ? <p className="text-sm font-medium text-destructive">{formError}</p> : null}
+                    </div>
 
-                    <div className="flex justify-end">
+                    <div className="flex justify-end border-t border-border px-4 py-3">
                       <Button type="submit">
                         <Plus className="size-4" aria-hidden />
                         Crear promoción
@@ -344,7 +356,7 @@ export function PromotionsView() {
             </Dialog.Root>
           </div>
 
-          <div className="grid gap-3 md:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-3">
             <SummaryItem label="Total promociones" value={stats.total} tone="secondary" />
             <SummaryItem label="Activas" value={stats.active} tone="success" />
             <SummaryItem label="Inactivas" value={stats.inactive} tone="outline" />
@@ -352,7 +364,8 @@ export function PromotionsView() {
           {formSuccess ? <p className="text-sm font-medium text-primary">{formSuccess}</p> : null}
 
           <div className="overflow-hidden rounded-lg border border-border">
-            <table className="w-full border-collapse text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[780px] border-collapse text-sm">
               <thead className="bg-primary-soft text-left text-primary">
                 <tr>
                   <th className="px-3 py-2 font-semibold">Promoción</th>
@@ -371,7 +384,7 @@ export function PromotionsView() {
                         {promotion.name}
                       </p>
                       <p className="text-xs text-text-muted">
-                        Código: {promotion.code} · {promotion.appliesTo}
+                        Código: {promotion.code} · {formatServices(promotion.appliesToServiceIds)}
                       </p>
                       <p className="text-xs text-text-muted">{promotion.description}</p>
                     </td>
@@ -407,6 +420,7 @@ export function PromotionsView() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -431,4 +445,10 @@ function SummaryItem({
       </div>
     </article>
   )
+}
+
+function formatServices(serviceIds: string[]) {
+  if (serviceIds.length === 0) return 'Sin servicios'
+  const labelMap = Object.fromEntries(SERVICE_OPTIONS.map((option) => [option.value, option.label]))
+  return serviceIds.map((id) => labelMap[id] ?? id).join(', ')
 }

@@ -36,13 +36,13 @@ export function DashboardView() {
 
   const byDriver = [
     { label: 'Disponibles', value: drivers.filter((d) => d.status === 'available').length, color: 'bg-accent' },
-    { label: 'En ruta', value: drivers.filter((d) => d.status === 'on_route').length, color: 'bg-aqua' },
+    { label: 'En servicio', value: drivers.filter((d) => d.status === 'in_transit').length, color: 'bg-aqua' },
     { label: 'Offline', value: drivers.filter((d) => d.status === 'offline').length, color: 'bg-text-muted' },
   ]
 
   return (
     <section className="space-y-4">
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard label="Órdenes hoy" value={fleet?.kpis.ordersToday ?? 0} icon={BarChart3} loading={isLoading} />
         <MetricCard
           label="Choferes activos"
@@ -57,7 +57,7 @@ export function DashboardView() {
           loading={isLoading}
         />
         <MetricCard
-          label="Sin asignar (domicilio)"
+          label="Solicitudes sin asignar"
           value={unassignedHomeServices.length}
           icon={AlertTriangle}
           loading={isLoading}
@@ -65,7 +65,7 @@ export function DashboardView() {
         />
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[1.3fr_1fr]">
+      <div className="grid gap-4 lg:grid-cols-[1.3fr_1fr]">
         <Card className="border-border bg-surface">
           <CardHeader>
             <CardTitle className="text-text">Gráfica de órdenes por estado</CardTitle>
@@ -112,34 +112,34 @@ export function DashboardView() {
       </div>
 
       <Card className="border-border bg-surface">
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <CardTitle className="text-text">Servicios domiciliarios sin chofer</CardTitle>
+            <CardTitle className="text-text">Solicitudes de recogida sin chofer</CardTitle>
             <CardDescription className="text-text-muted">
-              Esta lista debe atenderse primero para no romper SLA.
+              Prioridad operativa para mantener el SLA de recogida.
             </CardDescription>
           </div>
-          <Badge variant={unassignedHomeServices.length ? 'warning' : 'success'}>
+          <Badge variant={unassignedHomeServices.length ? 'warning' : 'success'} className="w-fit">
             {unassignedHomeServices.length} pendientes
           </Badge>
         </CardHeader>
         <CardContent className="space-y-2">
           {unassignedHomeServices.length === 0 ? (
-            <p className="text-sm text-text-muted">No hay servicios sin asignar actualmente.</p>
+            <p className="text-sm text-text-muted">No hay solicitudes sin asignar actualmente.</p>
           ) : (
             <>
               {paginatedUnassigned.map((order) => (
                 <div
                   key={order.id}
-                  className="flex items-center justify-between rounded-md border border-border bg-primary-soft/50 px-3 py-2"
+                  className="flex flex-col gap-2 rounded-md border border-border bg-primary-soft/50 px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
                 >
-                  <div>
-                    <p className="text-sm font-semibold text-text">{order.customerName}</p>
-                    <p className="text-xs text-text-muted">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-text">{order.customerName}</p>
+                    <p className="truncate text-xs text-text-muted">
                       {order.zoneName} · {order.pickupAddress}
                     </p>
                   </div>
-                  <Button size="sm">Asignar ahora</Button>
+                  <Button size="sm" className="w-full sm:w-auto">Asignar ahora</Button>
                 </div>
               ))}
 
@@ -193,10 +193,10 @@ function MetricCard({
   highlight?: boolean
 }) {
   return (
-    <Card className={`border-border bg-surface ${highlight ? 'ring-2 ring-accent/60' : ''}`}>
+    <Card className={`border-border bg-surface ${highlight ? 'ring-2 ring-orange-400/70' : ''}`}>
       <CardHeader className="pb-2">
         <CardDescription className="flex items-center gap-2 text-text-muted">
-          <Icon className="size-4 text-primary" aria-hidden />
+          <Icon className={`size-4 ${highlight ? 'text-orange-500' : 'text-primary'}`} aria-hidden />
           {label}
         </CardDescription>
         <CardTitle className="text-2xl text-text">{loading ? '...' : value}</CardTitle>

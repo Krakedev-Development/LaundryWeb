@@ -34,7 +34,7 @@ export interface CustomerProfile {
 }
 
 /** Estado operativo del chofer en mapa y asignación */
-export type DriverStatus = 'available' | 'on_route' | 'offline'
+export type DriverStatus = 'available' | 'in_transit' | 'offline'
 
 export interface Driver {
   id: string
@@ -51,7 +51,7 @@ export interface Driver {
 export type OrderStatus =
   | 'pending'
   | 'assigned'
-  | 'pickup_en_route'
+  | 'heading_to_pickup'
   | 'picked_up'
   | 'at_facility'
   | 'out_for_delivery'

@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useFleetSnapshot } from '@/hooks/useFleetSnapshot'
 import { driversToGeoJSON, pendingOrdersToGeoJSON } from '@/services/mapGeojson'
-import type { FleetSnapshot } from '@/types'
+import type { DriverStatus, FleetSnapshot } from '@/types'
 
 const EMPTY_FC: FeatureCollection<GeoPoint> = { type: 'FeatureCollection', features: [] }
 
@@ -21,6 +21,14 @@ const MAP_COLORS = {
   textMuted: '#6B7280',
   surface: '#FFFFFF',
 } as const
+
+function driverStatusLabel(value: string): string {
+  const s = value as DriverStatus
+  if (s === 'available') return 'Disponible'
+  if (s === 'in_transit') return 'En servicio'
+  if (s === 'offline') return 'Fuera de línea'
+  return value
+}
 
 function applyFleetToMap(map: mapboxgl.Map, fleet: FleetSnapshot) {
   const driversSource = map.getSource('drivers') as mapboxgl.GeoJSONSource | undefined
@@ -74,7 +82,7 @@ export function AssignmentMap() {
             ['get', 'status'],
             'available',
             MAP_COLORS.accent,
-            'on_route',
+            'in_transit',
             MAP_COLORS.aqua,
             'offline',
             MAP_COLORS.textMuted,
@@ -147,7 +155,7 @@ export function AssignmentMap() {
           .setHTML(
             `<div style="font:12px/1.4 system-ui,sans-serif;min-width:180px">
               <div style="font-weight:600;margin-bottom:4px">${displayName}</div>
-              <div>Estado: <strong>${status}</strong></div>
+              <div>Estado: <strong>${driverStatusLabel(status)}</strong></div>
               <div>Placa: ${vehiclePlate}</div>
             </div>`,
           )
@@ -233,7 +241,7 @@ export function AssignmentMap() {
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard
           label="Órdenes del día"
           value={fleet?.kpis.ordersToday}
@@ -257,7 +265,7 @@ export function AssignmentMap() {
       </div>
 
       <Card className="overflow-hidden">
-        <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 pb-4">
+        <CardHeader className="flex flex-col items-start justify-between gap-3 space-y-0 pb-4 sm:flex-row sm:gap-4">
           <div className="space-y-1">
             <CardTitle className="flex items-center gap-2 text-base">
               <MapPinned className="size-4 text-primary" aria-hidden />
@@ -276,7 +284,7 @@ export function AssignmentMap() {
           ) : null}
         </CardHeader>
         <CardContent className="p-0">
-          <div className="relative h-[min(72vh,720px)] w-full border-t border-border bg-muted/30">
+          <div className="relative h-[60vh] min-h-[360px] w-full border-t border-border bg-muted/30 sm:h-[min(72vh,720px)]">
             {!token ? (
               <div className="flex h-full items-center justify-center p-8 text-center text-sm text-muted-foreground">
                 Define <code className="rounded bg-muted px-1 py-0.5">VITE_MAPBOX_ACCESS_TOKEN</code> en un
@@ -292,7 +300,7 @@ export function AssignmentMap() {
                 ) : null}
                 <div className="pointer-events-none absolute bottom-4 left-4 flex flex-wrap gap-3 rounded-md border border-border bg-background/95 px-3 py-2 text-xs shadow-sm">
                   <LegendSwatch color={MAP_COLORS.accent} label="Chofer disponible" />
-                  <LegendSwatch color={MAP_COLORS.aqua} label="Chofer en ruta" />
+                  <LegendSwatch color={MAP_COLORS.aqua} label="Chofer en servicio" />
                   <LegendSwatch color={MAP_COLORS.textMuted} label="Chofer offline" />
                   <LegendSwatch color={MAP_COLORS.primary} label="Órdenes pendientes (cluster)" />
                 </div>

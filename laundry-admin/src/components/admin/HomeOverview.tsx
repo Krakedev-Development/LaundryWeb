@@ -13,7 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 
 const quickStats = [
   { label: 'Nuevas órdenes', value: '126', note: '+8% vs ayer', icon: PackageCheck },
-  { label: 'Choferes activos', value: '42', note: '5 en ruta crítica', icon: Truck },
+  { label: 'Choferes activos', value: '42', note: '5 con prioridad alta', icon: Truck },
   { label: 'KYC pendientes', value: '14', note: '3 de alta prioridad', icon: ShieldCheck },
   { label: 'SLA global', value: '94.2%', note: 'Objetivo: 95%', icon: Clock3 },
 ] as const
@@ -50,7 +50,7 @@ export function HomeOverview() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {quickStats.map((stat) => (
           <Card key={stat.label} className="border-border bg-surface">
             <CardHeader className="pb-2">
@@ -76,7 +76,7 @@ export function HomeOverview() {
             Alertas rápidas
           </CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-2 md:grid-cols-3">
+        <CardContent className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {alerts.map((alert) => (
             <article
               key={alert}

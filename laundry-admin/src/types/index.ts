@@ -19,3 +19,13 @@ export type {
   StaffRole,
   TimelineActorType,
 } from './domain'
+export type {
+  PointsLedgerEntry,
+  PointsLedgerSourceType,
+  PointsRule,
+  RewardCatalogItem,
+  RewardRedemption,
+  RewardRedemptionStatus,
+  RewardsSnapshot,
+  RewardStatus,
+} from './rewards'

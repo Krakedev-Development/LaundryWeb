@@ -58,8 +58,8 @@ export function KycValidationView() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-3 xl:grid-cols-[1.2fr_auto_auto_1fr]">
-            <label className="relative">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[1.2fr_auto_auto_1fr]">
+            <label className="relative sm:col-span-2 xl:col-span-1">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-text-muted" />
               <input
                 value={query}
@@ -70,7 +70,7 @@ export function KycValidationView() {
             </label>
             <DateInput label="Desde" value={fromDate} onChange={setFromDate} />
             <DateInput label="Hasta" value={toDate} onChange={setToDate} />
-            <div className="flex items-center justify-end">
+            <div className="flex items-center sm:col-span-2 sm:justify-end xl:col-span-1">
               <Badge variant={pending.length ? 'warning' : 'success'}>
                 {pending.length} pendientes por validar
               </Badge>
@@ -78,7 +78,8 @@ export function KycValidationView() {
           </div>
 
           <div className="overflow-hidden rounded-lg border border-border">
-            <table className="w-full border-collapse text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[640px] border-collapse text-sm">
               <thead className="bg-primary-soft text-left text-primary">
                 <tr>
                   <th className="px-3 py-2 font-semibold">Cliente</th>
@@ -108,12 +109,13 @@ export function KycValidationView() {
                 ))}
               </tbody>
             </table>
+            </div>
             {rows.length === 0 ? (
               <div className="border-t border-border px-3 py-4 text-sm text-text-muted">
                 No hay registros pendientes con esos filtros.
               </div>
             ) : null}
-            <div className="flex items-center justify-between border-t border-border bg-background px-3 py-2">
+            <div className="flex flex-col gap-2 border-t border-border bg-background px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-xs text-text-muted">
                 Mostrando {rows.length === 0 ? 0 : start + 1}-{start + rows.length} de {pending.length}
               </p>
@@ -141,16 +143,16 @@ export function KycValidationView() {
       <Dialog.Root open={Boolean(selected)} onOpenChange={(open) => !open && setSelectedId(null)}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 z-40 bg-primary/40" />
-          <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[min(980px,92vw)] -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-surface p-4 shadow-lg">
+          <Dialog.Content className="fixed left-1/2 top-1/2 z-50 flex max-h-[92vh] w-[min(980px,92vw)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-lg">
             {!selected ? null : (
-              <>
+              <div className="flex flex-1 flex-col overflow-y-auto p-3 sm:p-4">
                 <Dialog.Title className="text-lg font-semibold text-text">
                   Validar identidad de {selected.fullName}
                 </Dialog.Title>
                 <Dialog.Description className="mt-1 text-sm text-text-muted">
                   Compara cédula y selfie antes de aprobar el registro.
                 </Dialog.Description>
-                <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                <div className="mt-4 grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <p className="text-xs font-semibold uppercase tracking-wide text-text-muted">Cédula</p>
                     <img
@@ -172,20 +174,20 @@ export function KycValidationView() {
                   <p><strong>Teléfono:</strong> {selected.phone}</p>
                   <p><strong>Email:</strong> {selected.email}</p>
                 </div>
-                <div className="mt-4 flex justify-end gap-2">
+                <div className="mt-4 flex flex-col justify-end gap-2 sm:flex-row">
                   <Dialog.Close asChild>
-                    <Button variant="outline">Cancelar</Button>
+                    <Button variant="outline" className="w-full sm:w-auto">Cancelar</Button>
                   </Dialog.Close>
-                  <Button variant="destructive" onClick={() => setDecision(selected.id, 'rejected')}>
+                  <Button variant="destructive" className="w-full sm:w-auto" onClick={() => setDecision(selected.id, 'rejected')}>
                     <XCircle className="size-4" aria-hidden />
                     Rechazar
                   </Button>
-                  <Button onClick={() => setDecision(selected.id, 'approved')}>
+                  <Button className="w-full sm:w-auto" onClick={() => setDecision(selected.id, 'approved')}>
                     <CheckCircle2 className="size-4" aria-hidden />
                     Aprobar
                   </Button>
                 </div>
-              </>
+              </div>
             )}
           </Dialog.Content>
         </Dialog.Portal>
@@ -204,14 +206,14 @@ function DateInput({
   onChange: (value: string) => void
 }) {
   return (
-    <label className="relative">
+    <label className="relative block w-full">
       <CalendarDays className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-text-muted" />
       <input
         type="date"
         aria-label={label}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="h-10 rounded-md border border-border bg-surface pl-9 pr-3 text-sm text-text focus:border-primary focus:outline-none"
+        className="h-10 w-full rounded-md border border-border bg-surface pl-9 pr-3 text-sm text-text focus:border-primary focus:outline-none"
       />
     </label>
   )

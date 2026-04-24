@@ -1,7 +1,7 @@
 import * as Dialog from '@radix-ui/react-dialog'
 import { Eye, Loader2, MapPinned, Navigation, UserRoundPlus } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { RoutePreviewMap } from '@/components/admin/RoutePreviewMap'
+import { ServiceMapPreview } from '@/components/admin/ServiceMapPreview'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -14,14 +14,12 @@ const HUBS = [
   { id: 'hq-sur', name: 'Sede Sur', lng: -75.6034, lat: 6.2128 },
 ] as const
 
-type ZoneFilter = 'all' | string
 type PriorityFilter = 'all' | 'low' | 'normal' | 'high' | 'urgent'
 
 export function DriverAssignmentView() {
   const { data: fleet, isLoading } = useFleetSnapshot()
   const token = import.meta.env.VITE_MAPBOX_TOKEN ?? import.meta.env.VITE_MAPBOX_ACCESS_TOKEN
 
-  const [zoneFilter, setZoneFilter] = useState<ZoneFilter>('all')
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>('all')
   const [hubId, setHubId] = useState<(typeof HUBS)[number]['id']>('hq-centro')
   const [page, setPage] = useState(1)
@@ -42,11 +40,10 @@ export function DriverAssignmentView() {
   const filteredOrders = useMemo(
     () =>
       effectiveWaitingOrders.filter((order) => {
-        const byZone = zoneFilter === 'all' || order.zoneId === zoneFilter
         const byPriority = priorityFilter === 'all' || order.priority === priorityFilter
-        return byZone && byPriority
+        return byPriority
       }),
-    [effectiveWaitingOrders, priorityFilter, zoneFilter],
+    [effectiveWaitingOrders, priorityFilter],
   )
 
   const totalPages = Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE))
@@ -69,29 +66,17 @@ export function DriverAssignmentView() {
     <section className="space-y-4">
       <Card className="border-border bg-surface">
         <CardHeader className="pb-4">
-          <CardTitle className="text-text">Asignar choferes</CardTitle>
+          <CardTitle className="text-text">Asignación de solicitudes de recogida</CardTitle>
           <CardDescription className="text-text-muted">
-            Clientes en espera, ruta sugerida por sede y asignación directa desde detalle.
+            Solicitudes en espera, vista en mapa por sede y asignación directa de chofer.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-3 xl:grid-cols-[auto_auto_auto_1fr]">
-            <select
-              value={zoneFilter}
-              onChange={(e) => setZoneFilter(e.target.value)}
-              className="h-10 rounded-md border border-border bg-surface px-3 text-sm text-text focus:border-primary focus:outline-none"
-            >
-              <option value="all">Todas las zonas</option>
-              {(fleet?.zones ?? []).map((zone) => (
-                <option key={zone.id} value={zone.id}>
-                  {zone.name}
-                </option>
-              ))}
-            </select>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[auto_auto_1fr]">
             <select
               value={priorityFilter}
               onChange={(e) => setPriorityFilter(e.target.value as PriorityFilter)}
-              className="h-10 rounded-md border border-border bg-surface px-3 text-sm text-text focus:border-primary focus:outline-none"
+              className="h-10 w-full rounded-md border border-border bg-surface px-3 text-sm text-text focus:border-primary focus:outline-none"
             >
               <option value="all">Todas las prioridades</option>
               <option value="urgent">Urgente</option>
@@ -102,27 +87,27 @@ export function DriverAssignmentView() {
             <select
               value={hubId}
               onChange={(e) => setHubId(e.target.value as (typeof HUBS)[number]['id'])}
-              className="h-10 rounded-md border border-border bg-surface px-3 text-sm text-text focus:border-primary focus:outline-none"
+              className="h-10 w-full rounded-md border border-border bg-surface px-3 text-sm text-text focus:border-primary focus:outline-none"
             >
               {HUBS.map((hub) => (
                 <option key={hub.id} value={hub.id}>
-                  Ruta desde {hub.name}
+                  Origen: {hub.name}
                 </option>
               ))}
             </select>
-            <div className="flex items-center justify-end">
+            <div className="flex items-center sm:col-span-2 sm:justify-end xl:col-span-1">
               <Badge variant={filteredOrders.length ? 'warning' : 'success'}>
-                {filteredOrders.length} esperando chofer
+                {filteredOrders.length} solicitudes pendientes
               </Badge>
             </div>
           </div>
 
           <div className="overflow-hidden rounded-lg border border-border">
-            <table className="w-full border-collapse text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[640px] border-collapse text-sm">
               <thead className="bg-primary-soft text-left text-primary">
                 <tr>
                   <th className="px-3 py-2 font-semibold">Cliente</th>
-                  <th className="px-3 py-2 font-semibold">Zona</th>
                   <th className="px-3 py-2 font-semibold">Prioridad</th>
                   <th className="px-3 py-2 font-semibold">Sede sugerida</th>
                   <th className="px-3 py-2 font-semibold">Acción</th>
@@ -135,7 +120,6 @@ export function DriverAssignmentView() {
                       <p className="font-semibold text-text">{order.customerName}</p>
                       <p className="text-xs text-text-muted">{order.pickupAddress}</p>
                     </td>
-                    <td className="px-3 py-2 text-text">{order.zoneName}</td>
                     <td className="px-3 py-2">
                       <Badge variant={order.priority === 'urgent' || order.priority === 'high' ? 'warning' : 'secondary'}>
                         {order.priority}
@@ -152,10 +136,11 @@ export function DriverAssignmentView() {
                 ))}
               </tbody>
             </table>
+            </div>
             {paginatedOrders.length === 0 ? (
-              <div className="px-3 py-4 text-sm text-text-muted">No hay clientes esperando chofer con esos filtros.</div>
+              <div className="px-3 py-4 text-sm text-text-muted">No hay solicitudes de recogida pendientes con esos filtros.</div>
             ) : null}
-            <div className="flex items-center justify-between border-t border-border bg-background px-3 py-2">
+            <div className="flex flex-col gap-2 border-t border-border bg-background px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-xs text-text-muted">
                 Mostrando {paginatedOrders.length === 0 ? 0 : start + 1}-{start + paginatedOrders.length} de{' '}
                 {filteredOrders.length}
@@ -184,20 +169,20 @@ export function DriverAssignmentView() {
       <Dialog.Root open={detailOpen} onOpenChange={(open) => !open && setSelectedOrderId(null)}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 z-40 bg-primary/40" />
-          <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[min(1200px,95vw)] -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-surface p-4 shadow-lg">
-            <div className="mb-3 flex items-start justify-between">
-              <div>
+          <Dialog.Content className="fixed left-1/2 top-1/2 z-50 flex max-h-[92vh] w-[min(1200px,95vw)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-lg">
+            <div className="flex items-start justify-between gap-2 border-b border-border p-3 sm:p-4">
+              <div className="min-w-0">
                 <Dialog.Title className="flex items-center gap-2 text-base font-semibold text-text">
                   <MapPinned className="size-4 text-primary" aria-hidden />
-                  Ver detalles de ruta y asignar chofer
+                  Detalle de solicitud y asignación de chofer
                 </Dialog.Title>
                 <Dialog.Description className="text-sm text-text-muted">
-                  Al seleccionar un cliente, se dibuja la ruta sugerida desde la sede elegida.
+                  Al elegir una solicitud, se muestra en el mapa el trazo de referencia desde la sede indicada.
                 </Dialog.Description>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 shrink-0">
                 {isLoading ? (
-                  <Badge variant="secondary">
+                  <Badge variant="secondary" className="hidden sm:inline-flex">
                     <Loader2 className="size-3 animate-spin" aria-hidden /> Cargando
                   </Badge>
                 ) : null}
@@ -207,10 +192,10 @@ export function DriverAssignmentView() {
               </div>
             </div>
 
-            <div className="grid gap-4 xl:grid-cols-[1.5fr_1fr]">
-              <div className="relative h-[520px] overflow-hidden rounded-md border border-border bg-primary-soft/30">
+            <div className="grid flex-1 gap-4 overflow-y-auto p-3 sm:p-4 xl:grid-cols-[1.5fr_1fr]">
+              <div className="relative h-[320px] overflow-hidden rounded-md border border-border bg-primary-soft/30 sm:h-[420px] xl:h-[520px]">
                 {selectedPickupLat && selectedPickupLng ? (
-                  <RoutePreviewMap
+                  <ServiceMapPreview
                     pickup={[selectedPickupLat, selectedPickupLng]}
                     mid={[
                       (selectedPickupLat + selectedHub.lat) / 2 + 0.0012,
@@ -222,7 +207,7 @@ export function DriverAssignmentView() {
                   />
                 ) : null}
                 <div className="absolute bottom-3 left-3 rounded-md border border-border bg-surface px-2 py-1 text-xs text-text-muted">
-                  Ruta simulada: {selectedHub.name} → {selectedOrder?.customerName ?? 'Sin selección'} ·
+                  Vista simulada: {selectedHub.name} → {selectedOrder?.customerName ?? 'Sin selección'} ·
                   proveedor: {mapProvider === 'mapbox' ? 'Mapbox' : 'OpenStreetMap fallback'}
                 </div>
               </div>
@@ -230,7 +215,7 @@ export function DriverAssignmentView() {
               <div className="space-y-3">
                 {!selectedOrder ? (
                   <div className="rounded-md border border-border bg-background p-3 text-sm text-text-muted">
-                    Selecciona un cliente desde la tabla para ver ruta y asignar chofer.
+                    Selecciona una solicitud desde la tabla para ver el mapa y asignar chofer.
                   </div>
                 ) : (
                   <>
@@ -249,13 +234,14 @@ export function DriverAssignmentView() {
                           <p className="text-xs text-text-muted">No hay choferes disponibles ahora.</p>
                         ) : (
                           availableDrivers.map((driver) => (
-                            <div key={driver.id} className="flex items-center justify-between rounded-md border border-border p-2">
-                              <div>
-                                <p className="text-sm font-medium text-text">{driver.displayName}</p>
-                                <p className="text-xs text-text-muted">{driver.vehiclePlate}</p>
+                            <div key={driver.id} className="flex flex-col gap-2 rounded-md border border-border p-2 sm:flex-row sm:items-center sm:justify-between">
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-medium text-text">{driver.displayName}</p>
+                                <p className="truncate text-xs text-text-muted">{driver.vehiclePlate}</p>
                               </div>
                               <Button
                                 size="sm"
+                                className="w-full sm:w-auto"
                                 onClick={() => {
                                   if (!selectedOrder) return
                                   assignDriver(selectedOrder.id, driver.id)
@@ -274,7 +260,7 @@ export function DriverAssignmentView() {
                     <div className="rounded-md border border-border bg-primary-soft/50 p-3 text-xs text-text-muted">
                       <p className="inline-flex items-center gap-1">
                         <Navigation className="size-3.5 text-primary" aria-hidden />
-                        Ruta sugerida desde <strong className="text-text">{selectedHub.name}</strong>.
+                        Vista sugerida desde <strong className="text-text">{selectedHub.name}</strong>.
                       </p>
                     </div>
                   </>

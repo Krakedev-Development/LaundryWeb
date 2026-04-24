@@ -52,12 +52,15 @@
     min-height: 100vh;
   }
 
-  /* Quita flechas de inputs numéricos en todos los navegadores */
+  /* Sin flechas (spinners) en inputs numéricos: WebKit/Blink + Firefox */
+  #root input[type='number']::-webkit-outer-spin-button,
+  #root input[type='number']::-webkit-inner-spin-button,
   input[type='number']::-webkit-outer-spin-button,
   input[type='number']::-webkit-inner-spin-button {
     -webkit-appearance: none;
     margin: 0;
   }
+  #root input[type='number'],
   input[type='number'] {
     -moz-appearance: textfield;
     appearance: textfield;

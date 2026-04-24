@@ -12,12 +12,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useFleetSnapshot } from '@/hooks/useFleetSnapshot'
 import type { CustomerProfile } from '@/types'
 
-type StatusFilter = 'all' | 'pending' | 'approved' | 'rejected'
-
 export function ClientManagementView() {
   const { data } = useFleetSnapshot()
   const [overrides, setOverrides] = useState<Record<string, Partial<CustomerProfile>>>({})
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [query, setQuery] = useState('')
   const [fromDate, setFromDate] = useState('')
   const [toDate, setToDate] = useState('')
@@ -30,21 +27,19 @@ export function ClientManagementView() {
 
   const filtered = useMemo(() => {
     return clients.filter((client) => {
-      const byStatus = statusFilter === 'all' || client.kycStatus === statusFilter
       const searchable = `${client.fullName} ${client.email} ${client.phone}`.toLowerCase()
       const byQuery = query.trim() === '' || searchable.includes(query.toLowerCase())
       const regTime = new Date(client.registeredAt).getTime()
       const fromOk = fromDate ? regTime >= new Date(`${fromDate}T00:00:00`).getTime() : true
       const toOk = toDate ? regTime <= new Date(`${toDate}T23:59:59`).getTime() : true
-      return byStatus && byQuery && fromOk && toOk
+      return byQuery && fromOk && toOk
     })
-  }, [clients, statusFilter, query, fromDate, toDate])
+  }, [clients, query, fromDate, toDate])
 
   const totals = {
     total: clients.length,
-    pending: clients.filter((c) => c.kycStatus === 'pending').length,
-    approved: clients.filter((c) => c.kycStatus === 'approved').length,
-    rejected: clients.filter((c) => c.kycStatus === 'rejected').length,
+    activeSubscriptions: clients.filter((c) => c.subscriptionStatus === 'active').length,
+    walletUsers: clients.filter((c) => c.walletBalance > 0).length,
     promotionsOff: clients.filter((c) => !c.promotionsEnabled).length,
   }
   const selectedProfile = clients.find((c) => c.id === selectedProfileId) ?? null
@@ -62,33 +57,33 @@ export function ClientManagementView() {
         <CardHeader>
           <CardTitle className="text-text">Gestión de clientes</CardTitle>
           <CardDescription className="text-text-muted">
-            Búsqueda, filtros por fecha/estado, suscripción, billetera digital y promociones.
+            Búsqueda comercial de clientes, suscripción, billetera digital y promociones.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-3 lg:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <FlowItem
-              title="Por revisar"
-              description="La aprobación se gestiona en el módulo Validación KYC."
-              value={totals.pending}
-              tone="warning"
+              title="Clientes totales"
+              description="Base actual de clientes registrados."
+              value={totals.total}
+              tone="secondary"
             />
             <FlowItem
-              title="Aprobados"
-              description="Clientes activos, solo consulta de datos y control comercial."
-              value={totals.approved}
+              title="Suscripción activa"
+              description="Clientes con plan activo."
+              value={totals.activeSubscriptions}
               tone="success"
             />
             <FlowItem
-              title="Rechazados"
-              description="Se pueden reabrir para nueva validación si corresponde."
-              value={totals.rejected}
-              tone="destructive"
+              title="Con billetera activa"
+              description="Clientes con saldo mayor a 0."
+              value={totals.walletUsers}
+              tone="outline"
             />
           </div>
 
-          <div className="grid gap-3 lg:grid-cols-[1.3fr_auto_auto_auto]">
-            <label className="relative">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1.3fr_auto_auto]">
+            <label className="relative sm:col-span-2 lg:col-span-1">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-text-muted" />
               <input
                 value={query}
@@ -97,26 +92,16 @@ export function ClientManagementView() {
                 className="h-10 w-full rounded-md border border-border bg-surface pl-9 pr-3 text-sm text-text placeholder:text-text-muted focus:border-primary focus:outline-none"
               />
             </label>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-              className="h-10 rounded-md border border-border bg-surface px-3 text-sm text-text focus:border-primary focus:outline-none"
-            >
-              <option value="all">Todos los estados</option>
-              <option value="pending">Pendiente</option>
-              <option value="approved">Aprobado</option>
-              <option value="rejected">Rechazado</option>
-            </select>
             <DateInput label="Desde" value={fromDate} onChange={setFromDate} />
             <DateInput label="Hasta" value={toDate} onChange={setToDate} />
           </div>
 
           <div className="overflow-hidden rounded-lg border border-border">
-            <table className="w-full border-collapse text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[720px] border-collapse text-sm">
               <thead className="bg-primary-soft text-left text-primary">
                 <tr>
                   <th className="px-3 py-2 font-semibold">Cliente</th>
-                  <th className="px-3 py-2 font-semibold">Estado KYC</th>
                   <th className="px-3 py-2 font-semibold">Suscripción</th>
                   <th className="px-3 py-2 font-semibold">Billetera</th>
                   <th className="px-3 py-2 font-semibold">Promociones</th>
@@ -129,9 +114,6 @@ export function ClientManagementView() {
                     <td className="px-3 py-3">
                       <p className="font-semibold">{client.fullName}</p>
                       <p className="text-xs text-text-muted">{client.email}</p>
-                    </td>
-                    <td className="px-3 py-3">
-                      <StatusBadge status={client.kycStatus} />
                     </td>
                     <td className="px-3 py-3">
                       <p className="font-medium capitalize">{client.subscriptionPlan}</p>
@@ -166,6 +148,7 @@ export function ClientManagementView() {
                 ))}
               </tbody>
             </table>
+            </div>
             {filtered.length === 0 ? (
               <div className="border-t border-border bg-surface px-3 py-4 text-sm text-text-muted">
                 No hay clientes que cumplan los filtros aplicados.
@@ -178,12 +161,12 @@ export function ClientManagementView() {
       <Dialog.Root open={Boolean(selectedProfile)} onOpenChange={(open) => !open && setSelectedProfileId(null)}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 z-40 bg-primary/40" />
-          <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[min(1080px,94vw)] -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-surface p-4 shadow-lg">
+          <Dialog.Content className="fixed left-1/2 top-1/2 z-50 flex max-h-[92vh] w-[min(1080px,94vw)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-lg">
             {!selectedProfile ? null : (
               <>
-                <div className="mb-3 flex items-start justify-between">
-                  <div>
-                    <Dialog.Title className="text-lg font-semibold text-text">
+                <div className="flex items-start justify-between gap-2 border-b border-border p-3 sm:p-4">
+                  <div className="min-w-0">
+                    <Dialog.Title className="truncate text-lg font-semibold text-text">
                       Perfil completo de {selectedProfile.fullName}
                     </Dialog.Title>
                     <Dialog.Description className="text-sm text-text-muted">
@@ -191,11 +174,11 @@ export function ClientManagementView() {
                     </Dialog.Description>
                   </div>
                   <Dialog.Close asChild>
-                    <Button variant="outline" size="sm">Cerrar</Button>
+                    <Button variant="outline" size="sm" className="shrink-0">Cerrar</Button>
                   </Dialog.Close>
                 </div>
 
-                <div className="grid gap-4 xl:grid-cols-[1.2fr_1fr]">
+                <div className="grid flex-1 gap-4 overflow-y-auto p-3 sm:p-4 xl:grid-cols-[1.2fr_1fr]">
                   <div className="space-y-4">
                     <section className="rounded-md border border-border bg-background p-3">
                       <p className="mb-2 text-sm font-semibold text-text">Datos personales</p>
@@ -232,7 +215,6 @@ export function ClientManagementView() {
                         <Info label="Estado suscripción" value={selectedProfile.subscriptionStatus} />
                         <Info label="Billetera" value={`$${selectedProfile.walletBalance.toLocaleString('es-CO')}`} />
                         <Info label="Promociones" value={selectedProfile.promotionsEnabled ? 'Activas' : 'Desactivadas'} />
-                        <Info label="Estado KYC" value={selectedProfile.kycStatus} />
                       </div>
                     </section>
                   </div>
@@ -279,7 +261,7 @@ function FlowItem({
   title: string
   description: string
   value: number
-  tone: 'warning' | 'success' | 'destructive'
+  tone: 'secondary' | 'success' | 'outline'
 }) {
   return (
     <article className="rounded-md border border-border bg-background px-3 py-2">
@@ -290,12 +272,6 @@ function FlowItem({
       <p className="text-xs text-text-muted">{description}</p>
     </article>
   )
-}
-
-function StatusBadge({ status }: { status: CustomerProfile['kycStatus'] }) {
-  if (status === 'approved') return <Badge variant="success">Aprobado</Badge>
-  if (status === 'rejected') return <Badge variant="destructive">Rechazado</Badge>
-  return <Badge variant="warning">Pendiente</Badge>
 }
 
 function Info({ label, value }: { label: string; value: string }) {
@@ -317,14 +293,14 @@ function DateInput({
   onChange: (value: string) => void
 }) {
   return (
-    <label className="relative">
+    <label className="relative block w-full">
       <CalendarDays className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-text-muted" />
       <input
         type="date"
         aria-label={label}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="h-10 rounded-md border border-border bg-surface pl-9 pr-3 text-sm text-text focus:border-primary focus:outline-none"
+        className="h-10 w-full rounded-md border border-border bg-surface pl-9 pr-3 text-sm text-text focus:border-primary focus:outline-none"
       />
     </label>
   )

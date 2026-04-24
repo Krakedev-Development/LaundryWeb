@@ -1,7 +1,7 @@
 import * as Dialog from '@radix-ui/react-dialog'
-import { CalendarDays, Eye, MapPinned, Route, Search } from 'lucide-react'
+import { CalendarDays, Eye, Map, MapPinned, Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { RoutePreviewMap } from '@/components/admin/RoutePreviewMap'
+import { ServiceMapPreview } from '@/components/admin/ServiceMapPreview'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -11,7 +11,7 @@ import type { Order, OrderStatus } from '@/types'
 const PAGE_SIZE = 6
 type StatusFilter = 'all' | OrderStatus
 
-export function RouteHistoryView({ canEditOrder = true }: { canEditOrder?: boolean }) {
+export function OrderHistoryView({ canEditOrder = true }: { canEditOrder?: boolean }) {
   const { data: fleet } = useFleetSnapshot()
   const token = import.meta.env.VITE_MAPBOX_TOKEN ?? import.meta.env.VITE_MAPBOX_ACCESS_TOKEN
   const [search, setSearch] = useState('')
@@ -30,7 +30,7 @@ export function RouteHistoryView({ canEditOrder = true }: { canEditOrder?: boole
     [fleet?.drivers],
   )
 
-  const routeRows = useMemo(() => {
+  const orderRows = useMemo(() => {
     const orders = fleet?.orders ?? []
     return orders
       .filter((order) => order.status !== 'pending')
@@ -45,7 +45,7 @@ export function RouteHistoryView({ canEditOrder = true }: { canEditOrder?: boole
   }, [driversById, fleet?.orders])
 
   const filtered = useMemo(() => {
-    return routeRows.filter((row) => {
+    return orderRows.filter((row) => {
       const byStatus = status === 'all' || row.order.status === status
       const byZone = zone === 'all' || row.order.zoneId === zone
       const haystack =
@@ -56,7 +56,7 @@ export function RouteHistoryView({ canEditOrder = true }: { canEditOrder?: boole
       const byTo = toDate ? rowTime <= new Date(`${toDate}T23:59:59`).getTime() : true
       return byStatus && byZone && bySearch && byFrom && byTo
     })
-  }, [fromDate, routeRows, search, status, toDate, zone])
+  }, [fromDate, orderRows, search, status, toDate, zone])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const visiblePage = Math.min(page, totalPages)
@@ -71,14 +71,14 @@ export function RouteHistoryView({ canEditOrder = true }: { canEditOrder?: boole
     <section className="space-y-4">
       <Card className="border-border bg-surface">
         <CardHeader>
-          <CardTitle className="text-text">Historial de rutas</CardTitle>
+          <CardTitle className="text-text">Historial de solicitudes de recogida</CardTitle>
           <CardDescription className="text-text-muted">
-            Consulta rutas gestionadas, estado logístico y tiempos estimados con filtros rápidos.
+            Consulta solicitudes gestionadas, estado logístico y trazabilidad del servicio.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-3 xl:grid-cols-[1.2fr_auto_auto_auto_auto_1fr]">
-            <label className="relative">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[1.2fr_auto_auto_auto_auto_1fr]">
+            <label className="relative sm:col-span-2 xl:col-span-1">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-text-muted" />
               <input
                 value={search}
@@ -90,11 +90,11 @@ export function RouteHistoryView({ canEditOrder = true }: { canEditOrder?: boole
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value as StatusFilter)}
-              className="h-10 rounded-md border border-border bg-surface px-3 text-sm text-text focus:border-primary focus:outline-none"
+              className="h-10 w-full rounded-md border border-border bg-surface px-3 text-sm text-text focus:border-primary focus:outline-none"
             >
               <option value="all">Todos los estados</option>
               <option value="assigned">Asignada</option>
-              <option value="pickup_en_route">En ruta de recogida</option>
+              <option value="heading_to_pickup">Hacia recogida</option>
               <option value="picked_up">Recogida</option>
               <option value="at_facility">En planta</option>
               <option value="out_for_delivery">En entrega</option>
@@ -105,7 +105,7 @@ export function RouteHistoryView({ canEditOrder = true }: { canEditOrder?: boole
             <select
               value={zone}
               onChange={(e) => setZone(e.target.value)}
-              className="h-10 rounded-md border border-border bg-surface px-3 text-sm text-text focus:border-primary focus:outline-none"
+              className="h-10 w-full rounded-md border border-border bg-surface px-3 text-sm text-text focus:border-primary focus:outline-none"
             >
               <option value="all">Todas las zonas</option>
               {(fleet?.zones ?? []).map((z) => (
@@ -116,17 +116,18 @@ export function RouteHistoryView({ canEditOrder = true }: { canEditOrder?: boole
             </select>
             <DateInput label="Desde" value={fromDate} onChange={setFromDate} />
             <DateInput label="Hasta" value={toDate} onChange={setToDate} />
-            <div className="flex items-center justify-end">
-              <Badge variant={filtered.length ? 'secondary' : 'outline'}>{filtered.length} rutas</Badge>
+            <div className="flex items-center sm:col-span-2 sm:justify-end xl:col-span-1">
+              <Badge variant={filtered.length ? 'secondary' : 'outline'}>{filtered.length} solicitudes</Badge>
             </div>
           </div>
 
           <div className="overflow-hidden rounded-lg border border-border">
-            <table className="w-full border-collapse text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[880px] border-collapse text-sm">
               <thead className="bg-primary-soft text-left text-primary">
                 <tr>
                   <th className="px-3 py-2 font-semibold">Orden / Cliente</th>
-                  <th className="px-3 py-2 font-semibold">Ruta</th>
+                  <th className="px-3 py-2 font-semibold">Dirección / mapa</th>
                   <th className="px-3 py-2 font-semibold">Chofer</th>
                   <th className="px-3 py-2 font-semibold">Estado</th>
                   <th className="px-3 py-2 font-semibold">Tiempo</th>
@@ -143,7 +144,7 @@ export function RouteHistoryView({ canEditOrder = true }: { canEditOrder?: boole
                     </td>
                     <td className="px-3 py-2">
                       <p className="inline-flex items-center gap-1 text-text">
-                        <Route className="size-4 text-primary" aria-hidden />
+                        <Map className="size-4 text-primary" aria-hidden />
                         {order.pickupAddress}
                       </p>
                       <p className="text-xs text-text-muted">
@@ -176,12 +177,13 @@ export function RouteHistoryView({ canEditOrder = true }: { canEditOrder?: boole
                 ))}
               </tbody>
             </table>
+            </div>
             {rows.length === 0 ? (
               <div className="border-t border-border bg-surface px-3 py-4 text-sm text-text-muted">
-                No hay rutas para los filtros seleccionados.
+                No hay solicitudes para los filtros seleccionados.
               </div>
             ) : null}
-            <div className="flex items-center justify-between border-t border-border bg-background px-3 py-2">
+            <div className="flex flex-col gap-2 border-t border-border bg-background px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-xs text-text-muted">
                 Mostrando {rows.length === 0 ? 0 : start + 1}-{start + rows.length} de {filtered.length}
               </p>
@@ -209,26 +211,26 @@ export function RouteHistoryView({ canEditOrder = true }: { canEditOrder?: boole
       <Dialog.Root open={detailOpen} onOpenChange={(open) => !open && setSelectedOrderId(null)}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 z-40 bg-primary/40" />
-          <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[min(1100px,95vw)] -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-surface p-4 shadow-lg">
-            <div className="mb-3 flex items-start justify-between">
-              <div>
+          <Dialog.Content className="fixed left-1/2 top-1/2 z-50 flex max-h-[92vh] w-[min(1100px,95vw)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-lg">
+            <div className="flex items-start justify-between gap-2 border-b border-border p-3 sm:p-4">
+              <div className="min-w-0">
                 <Dialog.Title className="flex items-center gap-2 text-base font-semibold text-text">
                   <MapPinned className="size-4 text-primary" aria-hidden />
-                  Detalle de ruta y tramo
+                  Detalle en mapa y tramo
                 </Dialog.Title>
                 <Dialog.Description className="text-sm text-text-muted">
-                  Visualiza el tramo de la ruta y validación de mapa para la orden seleccionada.
+                  Revisa el tramo del servicio y el mapa de referencia para la orden seleccionada.
                 </Dialog.Description>
               </div>
               <Dialog.Close asChild>
-                <Button size="sm" variant="outline">Cerrar</Button>
+                <Button size="sm" variant="outline" className="shrink-0">Cerrar</Button>
               </Dialog.Close>
             </div>
 
-            <div className="grid gap-4 xl:grid-cols-[1.5fr_1fr]">
-              <div className="relative h-[500px] overflow-hidden rounded-md border border-border bg-primary-soft/30">
+            <div className="grid flex-1 gap-4 overflow-y-auto p-3 sm:p-4 xl:grid-cols-[1.5fr_1fr]">
+              <div className="relative h-[300px] overflow-hidden rounded-md border border-border bg-primary-soft/30 sm:h-[420px] xl:h-[500px]">
                 {pickupLat !== null && pickupLng !== null ? (
-                  <RoutePreviewMap
+                  <ServiceMapPreview
                     pickup={[pickupLat, pickupLng]}
                     mid={[pickupLat - 0.003, pickupLng + 0.005]}
                     destination={[pickupLat - 0.006, pickupLng + 0.01]}
@@ -263,7 +265,7 @@ export function RouteHistoryView({ canEditOrder = true }: { canEditOrder?: boole
                             className="h-9 rounded-md border border-border bg-surface px-2 text-xs text-text focus:border-primary focus:outline-none"
                           >
                             <option value="assigned">Asignada</option>
-                            <option value="pickup_en_route">Ruta a recogida</option>
+                            <option value="heading_to_pickup">Hacia recogida</option>
                             <option value="picked_up">Recogida</option>
                             <option value="at_facility">En planta</option>
                             <option value="out_for_delivery">En entrega</option>
@@ -316,14 +318,14 @@ function DateInput({
   onChange: (value: string) => void
 }) {
   return (
-    <label className="relative">
+    <label className="relative block w-full">
       <CalendarDays className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-text-muted" />
       <input
         type="date"
         aria-label={label}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="h-10 rounded-md border border-border bg-surface pl-9 pr-3 text-sm text-text focus:border-primary focus:outline-none"
+        className="h-10 w-full rounded-md border border-border bg-surface pl-9 pr-3 text-sm text-text focus:border-primary focus:outline-none"
       />
     </label>
   )
@@ -335,7 +337,7 @@ function StatusBadge({ status }: { status: Order['status'] }) {
   if (status === 'cancelled') return <Badge variant="outline">Cancelada</Badge>
   if (status === 'out_for_delivery') return <Badge variant="warning">En entrega</Badge>
   if (status === 'picked_up') return <Badge variant="secondary">Recogida</Badge>
-  if (status === 'pickup_en_route') return <Badge variant="secondary">Ruta a recogida</Badge>
+  if (status === 'heading_to_pickup') return <Badge variant="secondary">Hacia recogida</Badge>
   if (status === 'assigned') return <Badge variant="secondary">Asignada</Badge>
   return <Badge variant="outline">{status}</Badge>
 }

@@ -37,12 +37,6 @@ const initialItems: ServiceItem[] = [
   { id: 'sv-15', type: 'optional', name: 'Perfumado', description: 'Aroma adicional en entrega.', basePrice: 2000, active: true },
 ]
 
-const typeLabel: Record<ServiceType, string> = {
-  garment: 'Tipo de prenda',
-  wash_type: 'Servicio (tipo de lavado)',
-  optional: 'Servicio opcional',
-}
-
 const singularByType: Record<ServiceType, string> = {
   garment: 'prenda',
   wash_type: 'tipo de lavado',
@@ -56,7 +50,6 @@ export function ServicesCatalogView() {
   const [openModal, setOpenModal] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [activeMenu, setActiveMenu] = useState<ServiceType>('garment')
-  const [type, setType] = useState<ServiceType>('garment')
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [basePrice, setBasePrice] = useState('0')
@@ -64,6 +57,13 @@ export function ServicesCatalogView() {
   const [minDays, setMinDays] = useState('1')
   const [maxDays, setMaxDays] = useState('3')
   const [formError, setFormError] = useState('')
+
+  const modalItemType: ServiceType = useMemo(() => {
+    if (editingId) {
+      return items.find((i) => i.id === editingId)?.type ?? 'garment'
+    }
+    return activeMenu
+  }, [editingId, items, activeMenu])
 
   const grouped = useMemo(
     () => ({
@@ -80,7 +80,6 @@ export function ServicesCatalogView() {
 
   function openCreateModal() {
     setEditingId(null)
-    setType(activeMenu)
     setName('')
     setDescription('')
     setBasePrice('0')
@@ -93,7 +92,6 @@ export function ServicesCatalogView() {
 
   function openEditModal(item: ServiceItem) {
     setEditingId(item.id)
-    setType(item.type)
     setName(item.name)
     setDescription(item.description)
     setBasePrice(String(item.basePrice))
@@ -117,16 +115,20 @@ export function ServicesCatalogView() {
       return
     }
 
+    const resolvedType: ServiceType = editingId
+      ? (items.find((i) => i.id === editingId)?.type ?? 'garment')
+      : activeMenu
+
     const nextItem: ServiceItem = {
       id: editingId ?? `sv-${Date.now()}`,
-      type,
+      type: resolvedType,
       name: name.trim(),
       description: description.trim(),
       basePrice: parsedPrice,
       active: true,
     }
 
-    if (type === 'wash_type') {
+    if (resolvedType === 'wash_type') {
       const parsedEstimatedDays = Number(estimatedDays)
       const parsedMinDays = Number(minDays)
       const parsedMaxDays = Number(maxDays)
@@ -175,7 +177,8 @@ export function ServicesCatalogView() {
               <div>
                 <CardTitle className="text-text">Catálogo de servicios</CardTitle>
                 <CardDescription className="text-text-muted">
-                  Gestiona tipos de prendas, tipos de lavado y servicios opcionales visibles en la app.
+                  Gestiona el catálogo de prendas, servicios y extras visibles en la app. Usa las pestañas para
+                  filtrar.
                 </CardDescription>
               </div>
               <Dialog.Trigger asChild>
@@ -259,48 +262,34 @@ export function ServicesCatalogView() {
 
           <Dialog.Portal>
             <Dialog.Overlay className="fixed inset-0 z-40 bg-primary/40" />
-            <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[min(780px,95vw)] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-xl border border-border bg-surface shadow-xl">
-              <div className="flex items-start justify-between border-b border-border bg-primary-soft/40 px-5 py-4">
-                <div className="pr-3">
+            <Dialog.Content className="fixed left-1/2 top-1/2 z-50 flex max-h-[92vh] w-[min(780px,95vw)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-xl">
+              <div className="flex items-start justify-between gap-2 border-b border-border bg-primary-soft/40 px-5 py-4">
+                <div className="min-w-0 pr-3">
                   <Dialog.Title className="text-lg font-semibold text-text">
-                    {editingId ? 'Editar' : 'Crear'} {singularByType[type]}
+                    {editingId ? 'Editar' : 'Crear'} {singularByType[modalItemType]}
                   </Dialog.Title>
                   <Dialog.Description className="mt-1 text-sm text-text-muted">
                     {editingId
-                      ? `Actualiza la configuración del ${singularByType[type]} seleccionado.`
-                      : `Registra un nuevo ${singularByType[type]} para la app móvil.`}
+                      ? `Actualiza la configuración del ${singularByType[modalItemType]} seleccionado.`
+                      : `Registra un nuevo ${singularByType[modalItemType]} para la app móvil.`}
                   </Dialog.Description>
                 </div>
                 <Dialog.Close asChild>
-                  <Button size="sm" variant="outline">Cerrar</Button>
+                  <Button size="sm" variant="outline" className="shrink-0">Cerrar</Button>
                 </Dialog.Close>
               </div>
 
-              <form onSubmit={saveItem} className="space-y-4 px-5 py-4">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <label className="space-y-1.5 text-sm text-text">
-                    <span className="font-medium">Tipo</span>
-                    <select
-                      value={type}
-                      onChange={(event) => setType(event.target.value as ServiceType)}
-                      className="h-10 w-full rounded-md border border-border bg-surface px-3 text-sm text-text focus:border-primary focus:outline-none"
-                    >
-                      <option value="garment">Tipo de prenda</option>
-                      <option value="wash_type">Tipo de lavado</option>
-                      <option value="optional">Servicio opcional</option>
-                    </select>
-                  </label>
-                  <label className="space-y-1.5 text-sm text-text">
-                    <span className="font-medium">Nombre</span>
-                    <input
-                      value={name}
-                      onChange={(event) => setName(event.target.value)}
-                      required
-                      placeholder="Ej: Perfumado premium"
-                      className="h-10 w-full rounded-md border border-border bg-surface px-3 text-sm text-text focus:border-primary focus:outline-none"
-                    />
-                  </label>
-                </div>
+              <form onSubmit={saveItem} className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
+                <label className="block space-y-1.5 text-sm text-text">
+                  <span className="font-medium">Nombre</span>
+                  <input
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    required
+                    placeholder="Ej: Perfumado premium"
+                    className="h-10 w-full rounded-md border border-border bg-surface px-3 text-sm text-text focus:border-primary focus:outline-none"
+                  />
+                </label>
                 <label className="space-y-1.5 text-sm text-text">
                   <span className="font-medium">Descripción</span>
                   <textarea
@@ -311,9 +300,13 @@ export function ServicesCatalogView() {
                     className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none"
                   />
                 </label>
-                <div className="grid gap-4 md:grid-cols-[1fr_auto]">
+                <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
                   <label className="space-y-1.5 text-sm text-text">
-                    <span className="font-medium">Precio base</span>
+                    <span className="font-medium">
+                      {modalItemType === 'wash_type'
+                        ? 'Precio base por servicio (USD)'
+                        : 'Precio base (USD)'}
+                    </span>
                     <input
                       value={basePrice}
                       onChange={(event) => setBasePrice(event.target.value)}
@@ -324,13 +317,13 @@ export function ServicesCatalogView() {
                     />
                   </label>
                   <div className="flex items-end">
-                    <div className="h-10 rounded-md border border-border bg-background px-3 text-sm font-medium text-text inline-flex items-center">
-                      Moneda: COP
+                    <div className="inline-flex h-10 w-full items-center rounded-md border border-border bg-background px-3 text-sm font-medium text-text sm:w-auto">
+                      Moneda: USD (dólar estadounidense)
                     </div>
                   </div>
                 </div>
-                {type === 'wash_type' ? (
-                  <div className="grid gap-4 md:grid-cols-3">
+                {modalItemType === 'wash_type' ? (
+                  <div className="grid gap-4 sm:grid-cols-3">
                     <label className="space-y-1.5 text-sm text-text">
                       <span className="font-medium">Días requeridos</span>
                       <input
@@ -400,7 +393,7 @@ function CatalogTable({
     const normalized = query.trim().toLowerCase()
     if (!normalized) return items
     return items.filter((item) =>
-      `${item.name} ${item.description} ${typeLabel[item.type]}`.toLowerCase().includes(normalized),
+      `${item.name} ${item.description}`.toLowerCase().includes(normalized),
     )
   }, [items, query])
 
@@ -420,17 +413,17 @@ function CatalogTable({
               setQuery(event.target.value)
               setPage(1)
             }}
-            placeholder="Buscar por nombre, descripción o tipo"
+            placeholder="Buscar por nombre o descripción"
             className="h-9 w-full rounded-md border border-border bg-surface pl-9 pr-3 text-sm text-text focus:border-primary focus:outline-none"
           />
         </label>
       </div>
-      <table className="w-full border-collapse text-sm">
+      <div className="overflow-x-auto">
+      <table className="w-full min-w-[640px] border-collapse text-sm">
         <thead className="bg-background text-left text-text-muted">
           <tr>
             <th className="px-3 py-2 font-medium">Nombre</th>
-            <th className="px-3 py-2 font-medium">Tipo</th>
-            <th className="px-3 py-2 font-medium">Precio base</th>
+            <th className="px-3 py-2 font-medium">Precio base (USD)</th>
             {showTiming ? <th className="px-3 py-2 font-medium">Días req.</th> : null}
             {showTiming ? <th className="px-3 py-2 font-medium">Días mín.</th> : null}
             {showTiming ? <th className="px-3 py-2 font-medium">Días máx.</th> : null}
@@ -445,8 +438,9 @@ function CatalogTable({
                 <p className="font-semibold text-text">{item.name}</p>
                 <p className="text-xs text-text-muted">{item.description}</p>
               </td>
-              <td className="px-3 py-2 text-text">{typeLabel[item.type]}</td>
-              <td className="px-3 py-2 text-text">${item.basePrice.toLocaleString('es-CO')}</td>
+              <td className="px-3 py-2 text-text">
+                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(item.basePrice)}
+              </td>
               {showTiming ? <td className="px-3 py-2 text-text">{item.estimatedDays ?? '-'}</td> : null}
               {showTiming ? <td className="px-3 py-2 text-text">{item.minDays ?? '-'}</td> : null}
               {showTiming ? <td className="px-3 py-2 text-text">{item.maxDays ?? '-'}</td> : null}
@@ -454,7 +448,7 @@ function CatalogTable({
                 <Badge variant={item.active ? 'success' : 'outline'}>{item.active ? 'Activo' : 'Inactivo'}</Badge>
               </td>
               <td className="px-3 py-2">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <Button size="sm" variant="outline" onClick={() => onEdit(item)}>
                     Editar
                   </Button>
@@ -467,10 +461,11 @@ function CatalogTable({
           ))}
         </tbody>
       </table>
+      </div>
       {rows.length === 0 ? (
         <div className="border-t border-border px-3 py-3 text-sm text-text-muted">No hay elementos en este grupo.</div>
       ) : null}
-      <div className="flex items-center justify-between border-t border-border bg-background px-3 py-2">
+      <div className="flex flex-col gap-2 border-t border-border bg-background px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs text-text-muted">
           Mostrando {rows.length === 0 ? 0 : start + 1}-{start + rows.length} de {filtered.length}
         </p>

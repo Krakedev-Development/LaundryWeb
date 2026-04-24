@@ -6,8 +6,9 @@ import { DriverAssignmentView } from '@/components/admin/DriverAssignmentView'
 import { DriverOpsView } from '@/components/admin/DriverOpsView'
 import { KycValidationView } from '@/components/admin/KycValidationView'
 import { PromotionsView } from '@/components/admin/PromotionsView'
+import { PickupDeliveryRequestsView } from '@/components/admin/PickupDeliveryRequestsView'
 import { RewardsSystemView } from '@/components/admin/RewardsSystemView'
-import { RouteHistoryView } from '@/components/admin/RouteHistoryView'
+import { OrderHistoryView } from '@/components/admin/OrderHistoryView'
 import { ServicesCatalogView } from '@/components/admin/ServicesCatalogView'
 import logoLaundry from '@/assets/logo-laundry.png'
 import { LoginView, type SessionRole } from '@/components/auth/LoginView'
@@ -20,12 +21,16 @@ const sectionMeta: Record<AdminSectionId, { title: string; subtitle: string }> =
     subtitle: 'Gráficas operativas y servicios domiciliarios sin asignación en prioridad alta.',
   },
   map: {
-    title: 'Asignar choferes',
-    subtitle: 'Clientes esperando chofer, rutas por sede y asignación directa.',
+    title: 'Asignación de recogida',
+    subtitle: 'Solicitudes pendientes por asignar a chofer para la etapa de recogida.',
+  },
+  requests: {
+    title: 'Seguimiento de entrega',
+    subtitle: 'Control de solicitudes ya recogidas y pendientes de entrega al cliente.',
   },
   orders: {
-    title: 'Historial de rutas',
-    subtitle: 'Rutas operativas con filtros por estado, zona y fecha.',
+    title: 'Historial de solicitudes',
+    subtitle: 'Trazabilidad de solicitudes de recogida y su seguimiento operativo.',
   },
   clients: {
     title: 'Gestión de clientes',
@@ -60,8 +65,8 @@ function App() {
   const allowedSections = useMemo(
     () =>
       sessionRole === 'Administrador'
-        ? (['dashboard', 'map', 'orders', 'clients', 'kyc', 'team', 'services', 'rewards', 'promotions'] as const)
-        : (['dashboard', 'map', 'orders'] as const),
+        ? (['dashboard', 'map', 'requests', 'orders', 'clients', 'kyc', 'team', 'services', 'rewards', 'promotions'] as const)
+        : (['dashboard', 'map', 'requests', 'orders'] as const),
     [sessionRole],
   )
   const currentSection = allowedSections.includes(section) ? section : allowedSections[0]
@@ -69,7 +74,8 @@ function App() {
   const content = useMemo(() => {
     if (currentSection === 'dashboard') return <DashboardView />
     if (currentSection === 'map') return <DriverAssignmentView />
-    if (currentSection === 'orders') return <RouteHistoryView canEditOrder={sessionRole === 'Administrador'} />
+    if (currentSection === 'requests') return <PickupDeliveryRequestsView />
+    if (currentSection === 'orders') return <OrderHistoryView canEditOrder={sessionRole === 'Administrador'} />
     if (currentSection === 'clients') return <ClientManagementView />
     if (currentSection === 'kyc') return <KycValidationView />
     if (currentSection === 'team') return <DriverOpsView />

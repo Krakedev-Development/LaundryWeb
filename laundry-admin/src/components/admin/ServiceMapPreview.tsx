@@ -5,7 +5,7 @@ import type { LatLngBoundsExpression } from 'leaflet'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { MapContainer, Polyline, TileLayer, CircleMarker, useMap } from 'react-leaflet'
 
-type RoutePreviewMapProps = {
+type ServiceMapPreviewProps = {
   pickup: [number, number]
   mid: [number, number]
   destination: [number, number]
@@ -15,13 +15,13 @@ type RoutePreviewMapProps = {
 
 type Provider = 'mapbox' | 'osm'
 
-export function RoutePreviewMap({
+export function ServiceMapPreview({
   pickup,
   mid,
   destination,
   token,
   onProviderChange,
-}: RoutePreviewMapProps) {
+}: ServiceMapPreviewProps) {
   const points = useMemo<[number, number][]>(() => [pickup, mid, destination], [pickup, mid, destination])
   const [provider, setProvider] = useState<Provider>(token ? 'mapbox' : 'osm')
   const mapDivRef = useRef<HTMLDivElement>(null)
@@ -65,24 +65,24 @@ export function RoutePreviewMap({
       })
 
       map.on('load', () => {
-        map.addSource('route-line', {
+        map.addSource('path-line', {
           type: 'geojson',
           data: { type: 'FeatureCollection', features: [] },
         })
         map.addLayer({
-          id: 'route-line-layer',
+          id: 'path-line-layer',
           type: 'line',
-          source: 'route-line',
+          source: 'path-line',
           paint: { 'line-color': '#143F73', 'line-width': 4, 'line-opacity': 0.95 },
         })
-        map.addSource('route-points', {
+        map.addSource('path-points', {
           type: 'geojson',
           data: { type: 'FeatureCollection', features: [] },
         })
         map.addLayer({
-          id: 'route-points-layer',
+          id: 'path-points-layer',
           type: 'circle',
-          source: 'route-points',
+          source: 'path-points',
           paint: {
             'circle-radius': 7,
             'circle-color': ['match', ['get', 'kind'], 'pickup', '#A5CD39', 'destination', '#61BFC7', '#6B7280'],
@@ -110,8 +110,8 @@ export function RoutePreviewMap({
     if (!map) return
 
     const apply = () => {
-      const line = map.getSource('route-line') as mapboxgl.GeoJSONSource | undefined
-      const pointsSource = map.getSource('route-points') as mapboxgl.GeoJSONSource | undefined
+      const line = map.getSource('path-line') as mapboxgl.GeoJSONSource | undefined
+      const pointsSource = map.getSource('path-points') as mapboxgl.GeoJSONSource | undefined
       if (!line || !pointsSource) return
 
       line.setData({
@@ -139,10 +139,10 @@ export function RoutePreviewMap({
           },
         ],
       })
-      const bounds = new mapboxgl.LngLatBounds()
-      mapboxLineCoords.forEach((coord) => bounds.extend(coord as [number, number]))
+      const b = new mapboxgl.LngLatBounds()
+      mapboxLineCoords.forEach((coord) => b.extend(coord as [number, number]))
       map.resize()
-      map.fitBounds(bounds, { padding: 40, duration: 300 })
+      map.fitBounds(b, { padding: 40, duration: 300 })
     }
 
     if (!map.isStyleLoaded()) {
