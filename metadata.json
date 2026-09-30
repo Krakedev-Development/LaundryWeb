@@ -1,0 +1,6 @@
+{
+  "name": "LaundryWeb - Operaciones Clean & Fresh",
+  "description": "Centro digital de operaciones para lavanderías modernas: gestión integral de recogidas, planta de procesamiento, despacho de choferes y entregas a domicilio.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
