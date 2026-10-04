@@ -16,12 +16,14 @@ npm run dev
 
 La aplicacion intenta usar `http://localhost:3000`. Si ese puerto esta ocupado, Vite muestra en la terminal el siguiente puerto disponible.
 
-El MVP no requiere variables de entorno: actualmente utiliza datos de demostracion persistidos en `localStorage`. El archivo `.env.example` conserva variables reservadas para una futura integracion con servicios externos.
+El modo demo conserva datos locales y escenarios de Samborondón sin credenciales. Copia `.env.example` a `.env` y configura Mapbox para mapas, Geocoding v6, Directions y Matrix reales. Consulta [el alcance, configuración y recorrido completo](GEO-MVP.md). LaundryApp y LaundryWeb son demostraciones independientes.
 
 ## Verificacion
 
 ```bash
 npm run lint
+npm test
+npm run test:ui
 npm run build
 npm run preview
 ```

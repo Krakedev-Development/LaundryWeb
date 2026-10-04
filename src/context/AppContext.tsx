@@ -1,3 +1,5 @@
+import { WebMockTracking } from '../services/geo/WebMockTracking';
+import { geoConfig } from '../services/geo/geo.config';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import {
   AuditLog,
@@ -44,25 +46,80 @@ interface AppContextType {
   auditLogs: AuditLog[];
   settings: SystemSettings;
   // Actions
-  assignDriver: (orderId: string, driverId: string, type: 'pickup' | 'delivery', notes?: string) => boolean;
-  updateOrderStatus: (orderId: string, newStatus: OrderStatus, notes?: string, isOverride?: boolean, overrideReason?: string) => boolean;
-  moveToQuarantine: (orderId: string, reason: string, notes?: string) => boolean;
-  releaseFromQuarantine: (orderId: string, targetStatus?: OrderStatus, notes?: string) => boolean;
-  scheduleDelivery: (orderId: string, targetDate: string, timeSlot: string, recipientName: string, recipientPhone: string, notes?: string, driverId?: string) => boolean;
-  createIncident: (data: Omit<Incident, 'id' | 'createdAt' | 'status' | 'internalNotes'>) => Incident;
-  updateIncidentStatus: (id: string, status: IncidentStatus, notes?: string) => boolean;
+  assignDriver: (
+    orderId: string,
+    driverId: string,
+    type: 'pickup' | 'delivery',
+    notes?: string,
+  ) => boolean;
+  updateOrderStatus: (
+    orderId: string,
+    newStatus: OrderStatus,
+    notes?: string,
+    isOverride?: boolean,
+    overrideReason?: string,
+  ) => boolean;
+  moveToQuarantine: (
+    orderId: string,
+    reason: string,
+    notes?: string,
+  ) => boolean;
+  releaseFromQuarantine: (
+    orderId: string,
+    targetStatus?: OrderStatus,
+    notes?: string,
+  ) => boolean;
+  scheduleDelivery: (
+    orderId: string,
+    targetDate: string,
+    timeSlot: string,
+    recipientName: string,
+    recipientPhone: string,
+    notes?: string,
+    driverId?: string,
+  ) => boolean;
+  createIncident: (
+    data: Omit<Incident, 'id' | 'createdAt' | 'status' | 'internalNotes'>,
+  ) => Incident;
+  updateIncidentStatus: (
+    id: string,
+    status: IncidentStatus,
+    notes?: string,
+  ) => boolean;
   addIncidentNote: (id: string, text: string) => void;
-  updateCustomerKyc: (id: string, status: KycStatus, reason?: string) => boolean;
-  adjustCustomerPoints: (id: string, pointsDelta: number, reason: string) => boolean;
-  createDriver: (data: Omit<Driver, 'id' | 'activeOrders' | 'rating' | 'completedTripsToday'>) => Driver;
+  updateCustomerKyc: (
+    id: string,
+    status: KycStatus,
+    reason?: string,
+  ) => boolean;
+  adjustCustomerPoints: (
+    id: string,
+    pointsDelta: number,
+    reason: string,
+  ) => boolean;
+  createDriver: (
+    data: Omit<
+      Driver,
+      'id' | 'activeOrders' | 'rating' | 'completedTripsToday'
+    >,
+  ) => Driver;
   updateDriver: (driver: Driver) => void;
-  createFacility: (data: Omit<Facility, 'id' | 'activeOrders' | 'assignedDriversCount' | 'currentLoadKgDay'>) => Facility;
+  createFacility: (
+    data: Omit<
+      Facility,
+      'id' | 'activeOrders' | 'assignedDriversCount' | 'currentLoadKgDay'
+    >,
+  ) => Facility;
   updateFacility: (facility: Facility) => void;
   createCatalogItem: (item: Omit<CatalogItem, 'id'>) => CatalogItem;
   updateCatalogItem: (item: CatalogItem) => void;
   createPromotion: (promo: Omit<Promotion, 'id' | 'usageCount'>) => boolean;
   createReward: (reward: Omit<Reward, 'id'>) => Reward;
-  updateRedemptionStatus: (id: string, status: RewardRedemption['status'], notes?: string) => boolean;
+  updateRedemptionStatus: (
+    id: string,
+    status: RewardRedemption['status'],
+    notes?: string,
+  ) => boolean;
   updateSettings: (settings: SystemSettings) => void;
   resetAll: () => void;
   // Toasts
@@ -73,20 +130,42 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | null>(null);
 
-export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState<User>(storageService.getCurrentUser());
+export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const [currentUser, setCurrentUser] = useState<User>(
+    storageService.getCurrentUser(),
+  );
   const [orders, setOrders] = useState<Order[]>(storageService.getOrders());
-  const [customers, setCustomers] = useState<Customer[]>(storageService.getCustomers());
+  const [customers, setCustomers] = useState<Customer[]>(
+    storageService.getCustomers(),
+  );
   const [drivers, setDrivers] = useState<Driver[]>(storageService.getDrivers());
-  const [facilities, setFacilities] = useState<Facility[]>(storageService.getFacilities());
-  const [incidents, setIncidents] = useState<Incident[]>(storageService.getIncidents());
-  const [catalog, setCatalog] = useState<CatalogItem[]>(storageService.getCatalog());
-  const [promotions, setPromotions] = useState<Promotion[]>(storageService.getPromotions());
+  const [facilities, setFacilities] = useState<Facility[]>(
+    storageService.getFacilities(),
+  );
+  const [incidents, setIncidents] = useState<Incident[]>(
+    storageService.getIncidents(),
+  );
+  const [catalog, setCatalog] = useState<CatalogItem[]>(
+    storageService.getCatalog(),
+  );
+  const [promotions, setPromotions] = useState<Promotion[]>(
+    storageService.getPromotions(),
+  );
   const [rewards, setRewards] = useState<Reward[]>(storageService.getRewards());
-  const [redemptions, setRedemptions] = useState<RewardRedemption[]>(storageService.getRedemptions());
-  const [pointsLedger, setPointsLedger] = useState<PointsLedgerEntry[]>(storageService.getPointsLedger());
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>(storageService.getAuditLogs());
-  const [settings, setSettings] = useState<SystemSettings>(storageService.getSettings());
+  const [redemptions, setRedemptions] = useState<RewardRedemption[]>(
+    storageService.getRedemptions(),
+  );
+  const [pointsLedger, setPointsLedger] = useState<PointsLedgerEntry[]>(
+    storageService.getPointsLedger(),
+  );
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>(
+    storageService.getAuditLogs(),
+  );
+  const [settings, setSettings] = useState<SystemSettings>(
+    storageService.getSettings(),
+  );
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   const refreshState = () => {
@@ -112,8 +191,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => unsubscribe();
   }, []);
 
+  useEffect(() => {
+    const tracking = new WebMockTracking();
+    if (geoConfig.trackingMode !== 'mock') return () => tracking.dispose();
+    const reconcile = () =>
+      tracking.reconcile(
+        storageService.getOrders(),
+        storageService.getDrivers(),
+        storageService.getFacilities(),
+        (id, coordinates, updatedAt) =>
+          storageService.publishDemoLocation(id, coordinates, updatedAt),
+      );
+    reconcile();
+    const unsubscribe = storageService.subscribe(reconcile);
+    const timer = setInterval(
+      () => storageService.refreshDemoLocations(),
+      30000,
+    );
+    return () => {
+      unsubscribe();
+      clearInterval(timer);
+      tracking.dispose();
+    };
+  }, []);
+
   const showToast = (toast: Omit<ToastMessage, 'id'>) => {
-    const id = 'toast-' + Date.now() + '-' + Math.random().toString(36).substring(2, 5);
+    const id =
+      'toast-' + Date.now() + '-' + Math.random().toString(36).substring(2, 5);
     setToasts((prev) => [...prev, { ...toast, id }]);
     setTimeout(() => {
       dismissToast(id);
@@ -129,7 +233,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast({
       type: 'info',
       title: `Modo de sesión cambiado a ${role === 'ADMIN' ? 'Administrador' : 'Supervisor'}`,
-      message: 'Los permisos y opciones de navegación se han actualizado según la matriz de acceso.',
+      message:
+        'Los permisos y opciones de navegación se han actualizado según la matriz de acceso.',
     });
   };
 
@@ -141,12 +246,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
-  const assignDriver = (orderId: string, driverId: string, type: 'pickup' | 'delivery', notes?: string) => {
+  const assignDriver = (
+    orderId: string,
+    driverId: string,
+    type: 'pickup' | 'delivery',
+    notes?: string,
+  ) => {
     const res = storageService.assignDriver(orderId, driverId, type, notes);
     if (res.success) {
       showToast({
         type: 'success',
-        title: type === 'pickup' ? 'Chofer de recogida asignado' : 'Chofer de entrega asignado',
+        title:
+          type === 'pickup'
+            ? 'Chofer de recogida asignado'
+            : 'Chofer de entrega asignado',
         message: `La solicitud ${orderId} ha actualizado su estado operativo.`,
       });
       return true;
@@ -165,13 +278,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     newStatus: OrderStatus,
     notes?: string,
     isOverride?: boolean,
-    overrideReason?: string
+    overrideReason?: string,
   ) => {
-    const res = storageService.updateOrderStatus(orderId, newStatus, notes, isOverride, overrideReason);
+    const res = storageService.updateOrderStatus(
+      orderId,
+      newStatus,
+      notes,
+      isOverride,
+      overrideReason,
+    );
     if (res.success) {
       showToast({
         type: isOverride ? 'warning' : 'success',
-        title: isOverride ? 'Override administrativo aplicado' : 'Estado de solicitud actualizado',
+        title: isOverride
+          ? 'Override administrativo aplicado'
+          : 'Estado de solicitud actualizado',
         message: `Orden ${orderId} ahora en estado: ${newStatus}`,
       });
       return true;
@@ -185,7 +306,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const moveToQuarantine = (orderId: string, reason: string, notes?: string) => {
+  const moveToQuarantine = (
+    orderId: string,
+    reason: string,
+    notes?: string,
+  ) => {
     const res = storageService.moveToQuarantine(orderId, reason, notes);
     if (res.success) {
       showToast({
@@ -198,8 +323,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return false;
   };
 
-  const releaseFromQuarantine = (orderId: string, targetStatus?: OrderStatus, notes?: string) => {
-    const res = storageService.releaseFromQuarantine(orderId, targetStatus, notes);
+  const releaseFromQuarantine = (
+    orderId: string,
+    targetStatus?: OrderStatus,
+    notes?: string,
+  ) => {
+    const res = storageService.releaseFromQuarantine(
+      orderId,
+      targetStatus,
+      notes,
+    );
     if (res.success) {
       showToast({
         type: 'success',
@@ -218,9 +351,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     recipientName: string,
     recipientPhone: string,
     notes?: string,
-    driverId?: string
+    driverId?: string,
   ) => {
-    const res = storageService.scheduleDelivery(orderId, targetDate, timeSlot, recipientName, recipientPhone, notes, driverId);
+    const res = storageService.scheduleDelivery(
+      orderId,
+      targetDate,
+      timeSlot,
+      recipientName,
+      recipientPhone,
+      notes,
+      driverId,
+    );
     if (res.success) {
       showToast({
         type: 'success',
@@ -232,17 +373,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return false;
   };
 
-  const createIncident = (data: Omit<Incident, 'id' | 'createdAt' | 'status' | 'internalNotes'>) => {
+  const createIncident = (
+    data: Omit<Incident, 'id' | 'createdAt' | 'status' | 'internalNotes'>,
+  ) => {
     const inc = storageService.createIncident(data);
     showToast({
       type: 'warning',
       title: `Incidencia registrada (${inc.id})`,
-      message: 'Recuerda: las órdenes con incidencias abiertas no pueden cerrarse hasta resolverse.',
+      message:
+        'Recuerda: las órdenes con incidencias abiertas no pueden cerrarse hasta resolverse.',
     });
     return inc;
   };
 
-  const updateIncidentStatus = (id: string, status: IncidentStatus, notes?: string) => {
+  const updateIncidentStatus = (
+    id: string,
+    status: IncidentStatus,
+    notes?: string,
+  ) => {
     const res = storageService.updateIncidentStatus(id, status, notes);
     if (res.success) {
       showToast({
@@ -263,7 +411,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
-  const updateCustomerKyc = (id: string, status: KycStatus, reason?: string) => {
+  const updateCustomerKyc = (
+    id: string,
+    status: KycStatus,
+    reason?: string,
+  ) => {
     const res = storageService.updateCustomerKyc(id, status, reason);
     if (res.success) {
       showToast({
@@ -282,7 +434,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const adjustCustomerPoints = (id: string, pointsDelta: number, reason: string) => {
+  const adjustCustomerPoints = (
+    id: string,
+    pointsDelta: number,
+    reason: string,
+  ) => {
     const res = storageService.adjustCustomerPoints(id, pointsDelta, reason);
     if (res.success) {
       showToast({
@@ -301,7 +457,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const createDriver = (data: Omit<Driver, 'id' | 'activeOrders' | 'rating' | 'completedTripsToday'>) => {
+  const createDriver = (
+    data: Omit<
+      Driver,
+      'id' | 'activeOrders' | 'rating' | 'completedTripsToday'
+    >,
+  ) => {
     const drv = storageService.createDriver(data);
     showToast({
       type: 'success',
@@ -319,7 +480,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
-  const createFacility = (data: Omit<Facility, 'id' | 'activeOrders' | 'assignedDriversCount' | 'currentLoadKgDay'>) => {
+  const createFacility = (
+    data: Omit<
+      Facility,
+      'id' | 'activeOrders' | 'assignedDriversCount' | 'currentLoadKgDay'
+    >,
+  ) => {
     const fac = storageService.createFacility(data);
     showToast({
       type: 'success',
@@ -384,7 +550,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return rew;
   };
 
-  const updateRedemptionStatus = (id: string, status: RewardRedemption['status'], notes?: string) => {
+  const updateRedemptionStatus = (
+    id: string,
+    status: RewardRedemption['status'],
+    notes?: string,
+  ) => {
     const res = storageService.updateRedemptionStatus(id, status, notes);
     if (res.success) {
       showToast({
@@ -410,7 +580,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast({
       type: 'info',
       title: 'Datos de demostración restablecidos',
-      message: 'Todas las solicitudes, choferes y estados han vuelto a su valor inicial.',
+      message:
+        'Todas las solicitudes, choferes y estados han vuelto a su valor inicial.',
     });
   };
 

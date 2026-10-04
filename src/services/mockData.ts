@@ -1,3 +1,4 @@
+import { prepareWebDemoData } from './geo/WebDemoData';
 import {
   Customer,
   Driver,
@@ -20,7 +21,8 @@ export const INITIAL_USERS: User[] = [
     name: 'Carlos Mendoza',
     email: 'admin@laundryweb.com',
     role: 'ADMIN',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    avatar:
+      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
     facilityId: 'FAC-01',
   },
   {
@@ -28,7 +30,8 @@ export const INITIAL_USERS: User[] = [
     name: 'Elena Rostova',
     email: 'supervisor@laundryweb.com',
     role: 'SUPERVISOR',
-    avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80',
+    avatar:
+      'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80',
     facilityId: 'FAC-01',
   },
 ];
@@ -105,7 +108,8 @@ export const INITIAL_DRIVERS: Driver[] = [
     name: 'Carlos Ruiz',
     phone: '+51 987 654 321',
     email: 'carlos.ruiz@laundryweb.com',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
+    avatar:
+      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
     vehicleType: 'VAN',
     vehiclePlate: 'ABC-123',
     facilityId: 'FAC-01',
@@ -129,14 +133,15 @@ export const INITIAL_DRIVERS: Driver[] = [
     name: 'Mateo Quispe',
     phone: '+51 981 123 456',
     email: 'mateo.quispe@laundryweb.com',
-    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80',
+    avatar:
+      'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80',
     vehicleType: 'VAN',
     vehiclePlate: 'XYZ-789',
     facilityId: 'FAC-02',
     facilityName: 'Sede Fresh Miraflores',
     zoneId: 'ZONA-SUR',
     zoneName: 'Zona Sur & Bahía',
-    status: 'ON_DUTY',
+    status: 'AVAILABLE',
     activeOrders: 4,
     maxOrders: 5,
     rating: 4.8,
@@ -153,7 +158,8 @@ export const INITIAL_DRIVERS: Driver[] = [
     name: 'Javier Arriola',
     phone: '+51 992 445 566',
     email: 'javier.arriola@laundryweb.com',
-    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=120&auto=format&fit=crop&q=80',
+    avatar:
+      'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=120&auto=format&fit=crop&q=80',
     vehicleType: 'MOTO',
     vehiclePlate: 'MOT-442',
     facilityId: 'FAC-03',
@@ -177,14 +183,15 @@ export const INITIAL_DRIVERS: Driver[] = [
     name: 'Andrea Morales',
     phone: '+51 976 889 900',
     email: 'andrea.morales@laundryweb.com',
-    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=120&auto=format&fit=crop&q=80',
+    avatar:
+      'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=120&auto=format&fit=crop&q=80',
     vehicleType: 'VAN',
     vehiclePlate: 'VWT-505',
     facilityId: 'FAC-01',
     facilityName: 'Sede Central Norte - Clean Hub',
     zoneId: 'ZONA-NORTE',
     zoneName: 'Zona Norte & Centro',
-    status: 'BUSY',
+    status: 'ON_SERVICE',
     activeOrders: 5,
     maxOrders: 5,
     rating: 4.7,
@@ -201,7 +208,8 @@ export const INITIAL_DRIVERS: Driver[] = [
     name: 'Diego Valdivia',
     phone: '+51 965 334 221',
     email: 'diego.valdivia@laundryweb.com',
-    avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=120&auto=format&fit=crop&q=80',
+    avatar:
+      'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=120&auto=format&fit=crop&q=80',
     vehicleType: 'CAMIONETA',
     vehiclePlate: 'PKU-881',
     facilityId: 'FAC-02',
@@ -225,7 +233,8 @@ export const INITIAL_DRIVERS: Driver[] = [
     name: 'Lucía Santillán',
     phone: '+51 944 112 887',
     email: 'lucia.santillan@laundryweb.com',
-    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=120&auto=format&fit=crop&q=80',
+    avatar:
+      'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=120&auto=format&fit=crop&q=80',
     vehicleType: 'VAN',
     vehiclePlate: 'ECO-204',
     facilityId: 'FAC-03',
@@ -249,7 +258,8 @@ export const INITIAL_DRIVERS: Driver[] = [
     name: 'Fernando Castro',
     phone: '+51 955 776 332',
     email: 'fernando.castro@laundryweb.com',
-    avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=120&auto=format&fit=crop&q=80',
+    avatar:
+      'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=120&auto=format&fit=crop&q=80',
     vehicleType: 'MOTO',
     vehiclePlate: 'MOT-991',
     facilityId: 'FAC-01',
@@ -273,14 +283,15 @@ export const INITIAL_DRIVERS: Driver[] = [
     name: 'Gabriel Zúñiga',
     phone: '+51 933 221 445',
     email: 'gabriel.zuniga@laundryweb.com',
-    avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=120&auto=format&fit=crop&q=80',
+    avatar:
+      'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=120&auto=format&fit=crop&q=80',
     vehicleType: 'VAN',
     vehiclePlate: 'FST-319',
     facilityId: 'FAC-02',
     facilityName: 'Sede Fresh Miraflores',
     zoneId: 'ZONA-SUR',
     zoneName: 'Zona Sur & Bahía',
-    status: 'ON_DUTY',
+    status: 'AVAILABLE',
     activeOrders: 3,
     maxOrders: 5,
     rating: 4.88,
@@ -305,8 +316,10 @@ export const INITIAL_CUSTOMERS: Customer[] = [
     kycStatus: 'APPROVED',
     kycReviewedAt: '2026-09-15 10:20',
     kycReviewedBy: 'Carlos Mendoza',
-    kycDocumentUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80',
-    kycSelfieUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
+    kycDocumentUrl:
+      'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80',
+    kycSelfieUrl:
+      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
     addresses: [
       {
         street: 'Calle Grimaldo del Solar',
@@ -337,8 +350,10 @@ export const INITIAL_CUSTOMERS: Customer[] = [
     kycStatus: 'APPROVED',
     kycReviewedAt: '2026-08-01 14:00',
     kycReviewedBy: 'Carlos Mendoza',
-    kycDocumentUrl: 'https://images.unsplash.com/photo-1450133064473-71024230f91b?w=600&auto=format&fit=crop&q=80',
-    kycSelfieUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80',
+    kycDocumentUrl:
+      'https://images.unsplash.com/photo-1450133064473-71024230f91b?w=600&auto=format&fit=crop&q=80',
+    kycSelfieUrl:
+      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80',
     addresses: [
       {
         street: 'Av. La Marina',
@@ -357,7 +372,8 @@ export const INITIAL_CUSTOMERS: Customer[] = [
     totalOrders: 42,
     completedOrders: 39,
     createdAt: '2026-03-12',
-    notes: 'Cuenta B2B: uniformes médicos y sábanas de clínica con protocolo de sanitización extrema.',
+    notes:
+      'Cuenta B2B: uniformes médicos y sábanas de clínica con protocolo de sanitización extrema.',
   },
   {
     id: 'CUST-003',
@@ -368,8 +384,10 @@ export const INITIAL_CUSTOMERS: Customer[] = [
     documentNumber: '71239845',
     kycStatus: 'PENDING',
     kycSubmittedAt: '2026-09-29 09:15',
-    kycDocumentUrl: 'https://images.unsplash.com/photo-1628155930542-3c7a64e2c833?w=600&auto=format&fit=crop&q=80',
-    kycSelfieUrl: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=400&auto=format&fit=crop&q=80',
+    kycDocumentUrl:
+      'https://images.unsplash.com/photo-1628155930542-3c7a64e2c833?w=600&auto=format&fit=crop&q=80',
+    kycSelfieUrl:
+      'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=400&auto=format&fit=crop&q=80',
     addresses: [
       {
         street: 'Av. Javier Prado Oeste',
@@ -388,7 +406,8 @@ export const INITIAL_CUSTOMERS: Customer[] = [
     totalOrders: 1,
     completedOrders: 0,
     createdAt: '2026-09-29',
-    notes: 'Nuevo registro. Pendiente de verificación documental KYC para desbloquear pedidos de alto volumen.',
+    notes:
+      'Nuevo registro. Pendiente de verificación documental KYC para desbloquear pedidos de alto volumen.',
   },
   {
     id: 'CUST-004',
@@ -400,8 +419,10 @@ export const INITIAL_CUSTOMERS: Customer[] = [
     kycStatus: 'APPROVED',
     kycReviewedAt: '2026-07-22 11:30',
     kycReviewedBy: 'Elena Rostova',
-    kycDocumentUrl: 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop&q=80',
-    kycSelfieUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&auto=format&fit=crop&q=80',
+    kycDocumentUrl:
+      'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop&q=80',
+    kycSelfieUrl:
+      'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&auto=format&fit=crop&q=80',
     addresses: [
       {
         street: 'Malecón de la Reserva',
@@ -420,7 +441,8 @@ export const INITIAL_CUSTOMERS: Customer[] = [
     totalOrders: 19,
     completedOrders: 18,
     createdAt: '2026-05-18',
-    notes: 'Prefiere detergentes ecológicos biodegradables y bolsas de tela reutilizables.',
+    notes:
+      'Prefiere detergentes ecológicos biodegradables y bolsas de tela reutilizables.',
   },
   {
     id: 'CUST-005',
@@ -433,9 +455,12 @@ export const INITIAL_CUSTOMERS: Customer[] = [
     kycSubmittedAt: '2026-09-28 16:40',
     kycReviewedAt: '2026-09-28 17:15',
     kycReviewedBy: 'Carlos Mendoza',
-    kycRejectionReason: 'La foto del documento de identidad no es legible y los bordes están recortados.',
-    kycDocumentUrl: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=600&auto=format&fit=crop&q=80',
-    kycSelfieUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&auto=format&fit=crop&q=80',
+    kycRejectionReason:
+      'La foto del documento de identidad no es legible y los bordes están recortados.',
+    kycDocumentUrl:
+      'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=600&auto=format&fit=crop&q=80',
+    kycSelfieUrl:
+      'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&auto=format&fit=crop&q=80',
     addresses: [
       {
         street: 'Av. Salaverry',
@@ -465,8 +490,10 @@ export const INITIAL_CUSTOMERS: Customer[] = [
     documentNumber: '73901244',
     kycStatus: 'PENDING',
     kycSubmittedAt: '2026-09-29 14:02',
-    kycDocumentUrl: 'https://images.unsplash.com/photo-1584438784894-089d6a62b8fa?w=600&auto=format&fit=crop&q=80',
-    kycSelfieUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80',
+    kycDocumentUrl:
+      'https://images.unsplash.com/photo-1584438784894-089d6a62b8fa?w=600&auto=format&fit=crop&q=80',
+    kycSelfieUrl:
+      'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80',
     addresses: [
       {
         street: 'Calle Dos de Mayo',
@@ -485,7 +512,8 @@ export const INITIAL_CUSTOMERS: Customer[] = [
     totalOrders: 7,
     completedOrders: 6,
     createdAt: '2026-07-04',
-    notes: 'Atelier de diseño textil. Envía prendas de seda y lino con frecuencia.',
+    notes:
+      'Atelier de diseño textil. Envía prendas de seda y lino con frecuencia.',
   },
   {
     id: 'CUST-007',
@@ -585,9 +613,30 @@ export const INITIAL_ORDERS: Order[] = [
     slaDeadline: 'Hoy 18:30',
     slaProgressPercent: 65,
     items: [
-      { id: 'ITM-01', name: 'Traje ejecutivo 2 piezas', quantity: 2, unitPrice: 18.0, category: 'PRENDAS', notes: 'Cuidado con botones de nácar' },
-      { id: 'ITM-02', name: 'Camisas de algodón egipcio', quantity: 5, unitPrice: 7.0, category: 'PRENDAS', notes: 'Almidonado ligero' },
-      { id: 'ITM-03', name: 'Vestido de fiesta de seda', quantity: 1, unitPrice: 26.0, category: 'DELICADOS', notes: 'Dry cleaning ecológico' },
+      {
+        id: 'ITM-01',
+        name: 'Traje ejecutivo 2 piezas',
+        quantity: 2,
+        unitPrice: 18.0,
+        category: 'PRENDAS',
+        notes: 'Cuidado con botones de nácar',
+      },
+      {
+        id: 'ITM-02',
+        name: 'Camisas de algodón egipcio',
+        quantity: 5,
+        unitPrice: 7.0,
+        category: 'PRENDAS',
+        notes: 'Almidonado ligero',
+      },
+      {
+        id: 'ITM-03',
+        name: 'Vestido de fiesta de seda',
+        quantity: 1,
+        unitPrice: 26.0,
+        category: 'DELICADOS',
+        notes: 'Dry cleaning ecológico',
+      },
     ],
     itemCount: 8,
     serviceType: 'Lavado + Dry Cleaning Premium',
@@ -678,12 +727,26 @@ export const INITIAL_ORDERS: Order[] = [
     slaDeadline: 'Hoy 20:00',
     slaProgressPercent: 40,
     items: [
-      { id: 'ITM-11', name: 'Uniformes médicos quirúrgicos (Lote A)', quantity: 140, unitPrice: 2.2, category: 'INDUSTRIAL' },
-      { id: 'ITM-12', name: 'Sábanas hospitalarias antibacteriales', quantity: 80, unitPrice: 3.0, category: 'INDUSTRIAL' },
+      {
+        id: 'ITM-11',
+        name: 'Uniformes médicos quirúrgicos (Lote A)',
+        quantity: 140,
+        unitPrice: 2.2,
+        category: 'INDUSTRIAL',
+      },
+      {
+        id: 'ITM-12',
+        name: 'Sábanas hospitalarias antibacteriales',
+        quantity: 80,
+        unitPrice: 3.0,
+        category: 'INDUSTRIAL',
+      },
     ],
     itemCount: 220,
     serviceType: 'Sanitización Hospitalaria Termodesinfectante',
-    extras: [{ id: 'EXT-10', name: 'Certificado de Sanitización Ozono', price: 25.0 }],
+    extras: [
+      { id: 'EXT-10', name: 'Certificado de Sanitización Ozono', price: 25.0 },
+    ],
     pricing: {
       subtotal: 548.0,
       discount: 50.0,
@@ -710,11 +773,46 @@ export const INITIAL_ORDERS: Order[] = [
     },
     incidentsCount: 0,
     timeline: [
-      { id: 'TL-10', status: 'CREATED', label: 'Solicitud corporativa emitida', timestamp: 'Hoy 07:30', userName: 'Clínica San Gabriel', userRole: 'ADMIN' },
-      { id: 'TL-11', status: 'PICKUP_ASSIGNED', label: 'Chofer asignado para recogida', timestamp: 'Hoy 07:45', userName: 'Elena Rostova', userRole: 'SUPERVISOR' },
-      { id: 'TL-12', status: 'PICKED_UP', label: 'Carga recogida en almacén hospitalario', timestamp: 'Hoy 09:12', userName: 'Carlos Ruiz', userRole: 'SUPERVISOR' },
-      { id: 'TL-13', status: 'AT_FACILITY', label: 'Recepción en planta e ingreso a túnel de lavado', timestamp: 'Hoy 10:05', userName: 'Roberto Gómez', userRole: 'ADMIN' },
-      { id: 'TL-14', status: 'IN_PROCESS', label: 'Ciclo termodesinfectante en curso (60%)', timestamp: 'Hoy 11:30', userName: 'Roberto Gómez', userRole: 'ADMIN' },
+      {
+        id: 'TL-10',
+        status: 'CREATED',
+        label: 'Solicitud corporativa emitida',
+        timestamp: 'Hoy 07:30',
+        userName: 'Clínica San Gabriel',
+        userRole: 'ADMIN',
+      },
+      {
+        id: 'TL-11',
+        status: 'PICKUP_ASSIGNED',
+        label: 'Chofer asignado para recogida',
+        timestamp: 'Hoy 07:45',
+        userName: 'Elena Rostova',
+        userRole: 'SUPERVISOR',
+      },
+      {
+        id: 'TL-12',
+        status: 'PICKED_UP',
+        label: 'Carga recogida en almacén hospitalario',
+        timestamp: 'Hoy 09:12',
+        userName: 'Carlos Ruiz',
+        userRole: 'SUPERVISOR',
+      },
+      {
+        id: 'TL-13',
+        status: 'AT_FACILITY',
+        label: 'Recepción en planta e ingreso a túnel de lavado',
+        timestamp: 'Hoy 10:05',
+        userName: 'Roberto Gómez',
+        userRole: 'ADMIN',
+      },
+      {
+        id: 'TL-14',
+        status: 'IN_PROCESS',
+        label: 'Ciclo termodesinfectante en curso (60%)',
+        timestamp: 'Hoy 11:30',
+        userName: 'Roberto Gómez',
+        userRole: 'ADMIN',
+      },
     ],
     createdAt: '2026-09-29 07:30',
     updatedAt: '2026-09-29 11:30',
@@ -753,11 +851,25 @@ export const INITIAL_ORDERS: Order[] = [
     slaDeadline: 'Hoy 17:00',
     slaProgressPercent: 88,
     quarantineReason: 'Mancha rebelde desconocida en vestido de diseñador',
-    quarantineNotes: 'Presenta decoloración química previa en orla inferior. Requiere autorización del cliente antes de aplicar solvente enzimático.',
+    quarantineNotes:
+      'Presenta decoloración química previa en orla inferior. Requiere autorización del cliente antes de aplicar solvente enzimático.',
     quarantineDate: 'Hoy 11:15',
     items: [
-      { id: 'ITM-21', name: 'Vestido Haute Couture estampado', quantity: 1, unitPrice: 38.0, category: 'DELICADOS', notes: 'Prenda delicada de lino y viscosa' },
-      { id: 'ITM-22', name: 'Pantalón palazzo marfil', quantity: 2, unitPrice: 12.0, category: 'PRENDAS' },
+      {
+        id: 'ITM-21',
+        name: 'Vestido Haute Couture estampado',
+        quantity: 1,
+        unitPrice: 38.0,
+        category: 'DELICADOS',
+        notes: 'Prenda delicada de lino y viscosa',
+      },
+      {
+        id: 'ITM-22',
+        name: 'Pantalón palazzo marfil',
+        quantity: 2,
+        unitPrice: 12.0,
+        category: 'PRENDAS',
+      },
     ],
     itemCount: 3,
     serviceType: 'Eco Dry Clean & Restauración Fina',
@@ -787,10 +899,39 @@ export const INITIAL_ORDERS: Order[] = [
     },
     incidentsCount: 1,
     timeline: [
-      { id: 'TL-20', status: 'CREATED', label: 'Solicitud creada', timestamp: 'Hoy 08:10', userName: 'Luciana Barandiarán', userRole: 'ADMIN' },
-      { id: 'TL-21', status: 'PICKED_UP', label: 'Recogido por chofer Mateo Quispe', timestamp: 'Hoy 09:48', userName: 'Mateo Quispe', userRole: 'SUPERVISOR' },
-      { id: 'TL-22', status: 'AT_FACILITY', label: 'Ingresado a Sede Miraflores', timestamp: 'Hoy 10:20', userName: 'Mariana Silva', userRole: 'SUPERVISOR' },
-      { id: 'TL-23', status: 'QUARANTINE', label: 'Puesto en CUARENTENA por inspección técnica', timestamp: 'Hoy 11:15', userName: 'Mariana Silva', userRole: 'SUPERVISOR', notes: 'Mancha química persistente detectada' },
+      {
+        id: 'TL-20',
+        status: 'CREATED',
+        label: 'Solicitud creada',
+        timestamp: 'Hoy 08:10',
+        userName: 'Luciana Barandiarán',
+        userRole: 'ADMIN',
+      },
+      {
+        id: 'TL-21',
+        status: 'PICKED_UP',
+        label: 'Recogido por chofer Mateo Quispe',
+        timestamp: 'Hoy 09:48',
+        userName: 'Mateo Quispe',
+        userRole: 'SUPERVISOR',
+      },
+      {
+        id: 'TL-22',
+        status: 'AT_FACILITY',
+        label: 'Ingresado a Sede Miraflores',
+        timestamp: 'Hoy 10:20',
+        userName: 'Mariana Silva',
+        userRole: 'SUPERVISOR',
+      },
+      {
+        id: 'TL-23',
+        status: 'QUARANTINE',
+        label: 'Puesto en CUARENTENA por inspección técnica',
+        timestamp: 'Hoy 11:15',
+        userName: 'Mariana Silva',
+        userRole: 'SUPERVISOR',
+        notes: 'Mancha química persistente detectada',
+      },
     ],
     createdAt: '2026-09-29 08:10',
     updatedAt: '2026-09-29 11:15',
@@ -829,8 +970,20 @@ export const INITIAL_ORDERS: Order[] = [
     slaDeadline: 'Hoy 19:30',
     slaProgressPercent: 50,
     items: [
-      { id: 'ITM-31', name: 'Juegos de cama King Size 600 hilos', quantity: 25, unitPrice: 6.5, category: 'HOGAR' },
-      { id: 'ITM-32', name: 'Mantelería blanca para banquetes', quantity: 40, unitPrice: 3.5, category: 'HOGAR' },
+      {
+        id: 'ITM-31',
+        name: 'Juegos de cama King Size 600 hilos',
+        quantity: 25,
+        unitPrice: 6.5,
+        category: 'HOGAR',
+      },
+      {
+        id: 'ITM-32',
+        name: 'Mantelería blanca para banquetes',
+        quantity: 40,
+        unitPrice: 3.5,
+        category: 'HOGAR',
+      },
     ],
     itemCount: 65,
     serviceType: 'Lavado Hotelero y Planchado Calandra',
@@ -860,12 +1013,54 @@ export const INITIAL_ORDERS: Order[] = [
     },
     incidentsCount: 0,
     timeline: [
-      { id: 'TL-30', status: 'CREATED', label: 'Solicitud programada diaria', timestamp: 'Hoy 06:45', userName: 'Hotel Boutique', userRole: 'ADMIN' },
-      { id: 'TL-31', status: 'PICKED_UP', label: 'Recogido por Mateo Quispe', timestamp: 'Hoy 08:15', userName: 'Mateo Quispe', userRole: 'SUPERVISOR' },
-      { id: 'TL-32', status: 'AT_FACILITY', label: 'Recepción en planta Miraflores', timestamp: 'Hoy 09:00', userName: 'Mariana Silva', userRole: 'SUPERVISOR' },
-      { id: 'TL-33', status: 'IN_PROCESS', label: 'Procesamiento en lavadoras industriales', timestamp: 'Hoy 10:15', userName: 'Mariana Silva', userRole: 'SUPERVISOR' },
-      { id: 'TL-34', status: 'QUALITY_CONTROL', label: 'Control de calidad aprobado sin manchas', timestamp: 'Hoy 12:40', userName: 'Mariana Silva', userRole: 'SUPERVISOR' },
-      { id: 'TL-35', status: 'READY_FOR_DELIVERY', label: 'Empaquetado y listo para despacho de entrega', timestamp: 'Hoy 13:10', userName: 'Mariana Silva', userRole: 'SUPERVISOR' },
+      {
+        id: 'TL-30',
+        status: 'CREATED',
+        label: 'Solicitud programada diaria',
+        timestamp: 'Hoy 06:45',
+        userName: 'Hotel Boutique',
+        userRole: 'ADMIN',
+      },
+      {
+        id: 'TL-31',
+        status: 'PICKED_UP',
+        label: 'Recogido por Mateo Quispe',
+        timestamp: 'Hoy 08:15',
+        userName: 'Mateo Quispe',
+        userRole: 'SUPERVISOR',
+      },
+      {
+        id: 'TL-32',
+        status: 'AT_FACILITY',
+        label: 'Recepción en planta Miraflores',
+        timestamp: 'Hoy 09:00',
+        userName: 'Mariana Silva',
+        userRole: 'SUPERVISOR',
+      },
+      {
+        id: 'TL-33',
+        status: 'IN_PROCESS',
+        label: 'Procesamiento en lavadoras industriales',
+        timestamp: 'Hoy 10:15',
+        userName: 'Mariana Silva',
+        userRole: 'SUPERVISOR',
+      },
+      {
+        id: 'TL-34',
+        status: 'QUALITY_CONTROL',
+        label: 'Control de calidad aprobado sin manchas',
+        timestamp: 'Hoy 12:40',
+        userName: 'Mariana Silva',
+        userRole: 'SUPERVISOR',
+      },
+      {
+        id: 'TL-35',
+        status: 'READY_FOR_DELIVERY',
+        label: 'Empaquetado y listo para despacho de entrega',
+        timestamp: 'Hoy 13:10',
+        userName: 'Mariana Silva',
+        userRole: 'SUPERVISOR',
+      },
     ],
     createdAt: '2026-09-29 06:45',
     updatedAt: '2026-09-29 13:10',
@@ -904,8 +1099,20 @@ export const INITIAL_ORDERS: Order[] = [
     slaDeadline: 'Hoy 17:30',
     slaProgressPercent: 70,
     items: [
-      { id: 'ITM-41', name: 'Trajes de lana fría para corte', quantity: 3, unitPrice: 20.0, category: 'PRENDAS' },
-      { id: 'ITM-42', name: 'Corbatas de seda italiana', quantity: 4, unitPrice: 6.0, category: 'DELICADOS' },
+      {
+        id: 'ITM-41',
+        name: 'Trajes de lana fría para corte',
+        quantity: 3,
+        unitPrice: 20.0,
+        category: 'PRENDAS',
+      },
+      {
+        id: 'ITM-42',
+        name: 'Corbatas de seda italiana',
+        quantity: 4,
+        unitPrice: 6.0,
+        category: 'DELICADOS',
+      },
     ],
     itemCount: 7,
     serviceType: 'Dry Cleaning Ejecutivo + Planchado Vapor',
@@ -939,8 +1146,22 @@ export const INITIAL_ORDERS: Order[] = [
     },
     incidentsCount: 0,
     timeline: [
-      { id: 'TL-40', status: 'DELIVERY_ASSIGNED', label: 'Asignado chofer de entrega Javier Arriola', timestamp: 'Hoy 14:05', userName: 'Elena Rostova', userRole: 'SUPERVISOR' },
-      { id: 'TL-41', status: 'OUT_FOR_DELIVERY', label: 'En ruta de entrega hacia Calle Los Pinos', timestamp: 'Hoy 14:30', userName: 'Javier Arriola', userRole: 'SUPERVISOR' },
+      {
+        id: 'TL-40',
+        status: 'DELIVERY_ASSIGNED',
+        label: 'Asignado chofer de entrega Javier Arriola',
+        timestamp: 'Hoy 14:05',
+        userName: 'Elena Rostova',
+        userRole: 'SUPERVISOR',
+      },
+      {
+        id: 'TL-41',
+        status: 'OUT_FOR_DELIVERY',
+        label: 'En ruta de entrega hacia Calle Los Pinos',
+        timestamp: 'Hoy 14:30',
+        userName: 'Javier Arriola',
+        userRole: 'SUPERVISOR',
+      },
     ],
     createdAt: '2026-09-28 15:00',
     updatedAt: '2026-09-29 14:30',
@@ -979,8 +1200,20 @@ export const INITIAL_ORDERS: Order[] = [
     slaDeadline: 'Hoy 14:00',
     slaProgressPercent: 100,
     items: [
-      { id: 'ITM-51', name: 'Edredón de plumas Queen Size', quantity: 1, unitPrice: 28.0, category: 'HOGAR' },
-      { id: 'ITM-52', name: 'Cortinas de terciopelo (pares)', quantity: 2, unitPrice: 22.0, category: 'HOGAR' },
+      {
+        id: 'ITM-51',
+        name: 'Edredón de plumas Queen Size',
+        quantity: 1,
+        unitPrice: 28.0,
+        category: 'HOGAR',
+      },
+      {
+        id: 'ITM-52',
+        name: 'Cortinas de terciopelo (pares)',
+        quantity: 2,
+        unitPrice: 22.0,
+        category: 'HOGAR',
+      },
     ],
     itemCount: 3,
     serviceType: 'Lavado al Seco Especializado Hogar',
@@ -1008,8 +1241,22 @@ export const INITIAL_ORDERS: Order[] = [
     },
     incidentsCount: 1,
     timeline: [
-      { id: 'TL-50', status: 'CREATED', label: 'Solicitud creada con prioridad urgente', timestamp: 'Hoy 10:45', userName: 'Sofía Montalvo', userRole: 'ADMIN' },
-      { id: 'TL-51', status: 'PICKUP_PENDING', label: 'Sin asignar chofer aún (demora logística)', timestamp: 'Hoy 10:46', userName: 'Sistema LaundryWeb', userRole: 'ADMIN' },
+      {
+        id: 'TL-50',
+        status: 'CREATED',
+        label: 'Solicitud creada con prioridad urgente',
+        timestamp: 'Hoy 10:45',
+        userName: 'Sofía Montalvo',
+        userRole: 'ADMIN',
+      },
+      {
+        id: 'TL-51',
+        status: 'PICKUP_PENDING',
+        label: 'Sin asignar chofer aún (demora logística)',
+        timestamp: 'Hoy 10:46',
+        userName: 'Sistema LaundryWeb',
+        userRole: 'ADMIN',
+      },
     ],
     createdAt: '2026-09-29 10:45',
     updatedAt: '2026-09-29 14:05',
@@ -1046,7 +1293,13 @@ export const INITIAL_ORDERS: Order[] = [
     slaDeadline: '2026-09-27',
     slaProgressPercent: 100,
     items: [
-      { id: 'ITM-61', name: 'Prendas de uso diario (Bolsa 8kg)', quantity: 1, unitPrice: 24.0, category: 'PRENDAS' },
+      {
+        id: 'ITM-61',
+        name: 'Prendas de uso diario (Bolsa 8kg)',
+        quantity: 1,
+        unitPrice: 24.0,
+        category: 'PRENDAS',
+      },
     ],
     itemCount: 1,
     serviceType: 'Lavado + Doblado Fresh Pack',
@@ -1079,8 +1332,22 @@ export const INITIAL_ORDERS: Order[] = [
     },
     incidentsCount: 0,
     timeline: [
-      { id: 'TL-60', status: 'DELIVERED', label: 'Entregado con conformidad del cliente', timestamp: '2026-09-27 16:45', userName: 'Mateo Quispe', userRole: 'SUPERVISOR' },
-      { id: 'TL-61', status: 'CLOSED', label: 'Solicitud cerrada exitosamente', timestamp: '2026-09-27 17:00', userName: 'Elena Rostova', userRole: 'SUPERVISOR' },
+      {
+        id: 'TL-60',
+        status: 'DELIVERED',
+        label: 'Entregado con conformidad del cliente',
+        timestamp: '2026-09-27 16:45',
+        userName: 'Mateo Quispe',
+        userRole: 'SUPERVISOR',
+      },
+      {
+        id: 'TL-61',
+        status: 'CLOSED',
+        label: 'Solicitud cerrada exitosamente',
+        timestamp: '2026-09-27 17:00',
+        userName: 'Elena Rostova',
+        userRole: 'SUPERVISOR',
+      },
     ],
     createdAt: '2026-09-26 09:00',
     updatedAt: '2026-09-27 17:00',
@@ -1117,8 +1384,20 @@ export const INITIAL_ORDERS: Order[] = [
     slaDeadline: 'Mañana 16:00',
     slaProgressPercent: 25,
     items: [
-      { id: 'ITM-71', name: 'Camisas manga larga', quantity: 6, unitPrice: 6.5, category: 'PRENDAS' },
-      { id: 'ITM-72', name: 'Pantalones de vestir', quantity: 3, unitPrice: 9.0, category: 'PRENDAS' },
+      {
+        id: 'ITM-71',
+        name: 'Camisas manga larga',
+        quantity: 6,
+        unitPrice: 6.5,
+        category: 'PRENDAS',
+      },
+      {
+        id: 'ITM-72',
+        name: 'Pantalones de vestir',
+        quantity: 3,
+        unitPrice: 9.0,
+        category: 'PRENDAS',
+      },
     ],
     itemCount: 9,
     serviceType: 'Lavado y Planchado Ejecutivo',
@@ -1148,8 +1427,22 @@ export const INITIAL_ORDERS: Order[] = [
     },
     incidentsCount: 0,
     timeline: [
-      { id: 'TL-70', status: 'PICKED_UP', label: 'Recogida realizada por Lucía Santillán', timestamp: 'Hoy 12:20', userName: 'Lucía Santillán', userRole: 'SUPERVISOR' },
-      { id: 'TL-71', status: 'AT_FACILITY', label: 'Pesaje e ingreso a clasificación en planta San Isidro', timestamp: 'Hoy 13:05', userName: 'Daniel Benavides', userRole: 'SUPERVISOR' },
+      {
+        id: 'TL-70',
+        status: 'PICKED_UP',
+        label: 'Recogida realizada por Lucía Santillán',
+        timestamp: 'Hoy 12:20',
+        userName: 'Lucía Santillán',
+        userRole: 'SUPERVISOR',
+      },
+      {
+        id: 'TL-71',
+        status: 'AT_FACILITY',
+        label: 'Pesaje e ingreso a clasificación en planta San Isidro',
+        timestamp: 'Hoy 13:05',
+        userName: 'Daniel Benavides',
+        userRole: 'SUPERVISOR',
+      },
     ],
     createdAt: '2026-09-29 10:00',
     updatedAt: '2026-09-29 13:05',
@@ -1186,12 +1479,26 @@ export const INITIAL_ORDERS: Order[] = [
     slaDeadline: 'Hoy 19:00',
     slaProgressPercent: 55,
     items: [
-      { id: 'ITM-81', name: 'Abrigo de lana alpaca', quantity: 1, unitPrice: 32.0, category: 'DELICADOS' },
-      { id: 'ITM-82', name: 'Bufandas de cachemira', quantity: 2, unitPrice: 14.0, category: 'DELICADOS' },
+      {
+        id: 'ITM-81',
+        name: 'Abrigo de lana alpaca',
+        quantity: 1,
+        unitPrice: 32.0,
+        category: 'DELICADOS',
+      },
+      {
+        id: 'ITM-82',
+        name: 'Bufandas de cachemira',
+        quantity: 2,
+        unitPrice: 14.0,
+        category: 'DELICADOS',
+      },
     ],
     itemCount: 3,
     serviceType: 'Limpieza Ecológica Lana & Fibras Naturales',
-    extras: [{ id: 'EXT-80', name: 'Tratamiento antipolillas botánico', price: 8.0 }],
+    extras: [
+      { id: 'EXT-80', name: 'Tratamiento antipolillas botánico', price: 8.0 },
+    ],
     pricing: {
       subtotal: 60.0,
       discount: 0.0,
@@ -1217,8 +1524,22 @@ export const INITIAL_ORDERS: Order[] = [
     },
     incidentsCount: 0,
     timeline: [
-      { id: 'TL-80', status: 'IN_PROCESS', label: 'Limpieza con solvente bio completada', timestamp: 'Hoy 13:00', userName: 'Mariana Silva', userRole: 'SUPERVISOR' },
-      { id: 'TL-81', status: 'QUALITY_CONTROL', label: 'Revisión minuciosa de fibras bajo lámpara de luz fría', timestamp: 'Hoy 14:10', userName: 'Mariana Silva', userRole: 'SUPERVISOR' },
+      {
+        id: 'TL-80',
+        status: 'IN_PROCESS',
+        label: 'Limpieza con solvente bio completada',
+        timestamp: 'Hoy 13:00',
+        userName: 'Mariana Silva',
+        userRole: 'SUPERVISOR',
+      },
+      {
+        id: 'TL-81',
+        status: 'QUALITY_CONTROL',
+        label: 'Revisión minuciosa de fibras bajo lámpara de luz fría',
+        timestamp: 'Hoy 14:10',
+        userName: 'Mariana Silva',
+        userRole: 'SUPERVISOR',
+      },
     ],
     createdAt: '2026-09-29 08:30',
     updatedAt: '2026-09-29 14:10',
@@ -1255,7 +1576,13 @@ export const INITIAL_ORDERS: Order[] = [
     slaDeadline: 'Hoy 16:30',
     slaProgressPercent: 60,
     items: [
-      { id: 'ITM-91', name: 'Sacos de paño fino', quantity: 2, unitPrice: 19.0, category: 'PRENDAS' },
+      {
+        id: 'ITM-91',
+        name: 'Sacos de paño fino',
+        quantity: 2,
+        unitPrice: 19.0,
+        category: 'PRENDAS',
+      },
     ],
     itemCount: 2,
     serviceType: 'Dry Cleaning Express',
@@ -1286,7 +1613,14 @@ export const INITIAL_ORDERS: Order[] = [
     },
     incidentsCount: 0,
     timeline: [
-      { id: 'TL-90', status: 'PICKUP_ASSIGNED', label: 'Asignado chofer Javier Arriola', timestamp: 'Hoy 14:00', userName: 'Elena Rostova', userRole: 'SUPERVISOR' },
+      {
+        id: 'TL-90',
+        status: 'PICKUP_ASSIGNED',
+        label: 'Asignado chofer Javier Arriola',
+        timestamp: 'Hoy 14:00',
+        userName: 'Elena Rostova',
+        userRole: 'SUPERVISOR',
+      },
     ],
     createdAt: '2026-09-29 13:45',
     updatedAt: '2026-09-29 14:00',
@@ -1302,12 +1636,14 @@ export const INITIAL_INCIDENTS: Incident[] = [
     type: 'MANCHA_PERSISTENTE',
     severity: 'ALTA',
     status: 'IN_PROGRESS',
-    description: 'Mancha rebelde desconocida en vestido de alta costura. Se detectó riesgo de desprendimiento de pigmento si se aplica percloroetileno estándar.',
+    description:
+      'Mancha rebelde desconocida en vestido de alta costura. Se detectó riesgo de desprendimiento de pigmento si se aplica percloroetileno estándar.',
     evidences: [
       {
         id: 'EVD-01',
         url: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=500&auto=format&fit=crop&q=80',
-        caption: 'Detalle de la orla inferior del vestido con residuo químico previo',
+        caption:
+          'Detalle de la orla inferior del vestido con residuo químico previo',
         uploadedAt: '2026-09-29 11:15',
       },
     ],
@@ -1332,7 +1668,8 @@ export const INITIAL_INCIDENTS: Incident[] = [
     type: 'RETRASO_OPERACIONAL',
     severity: 'MEDIA',
     status: 'OPEN',
-    description: 'Retraso de más de 45 minutos en la asignación de chofer para recogida en zona San Isidro debido a alta congestión en hora punta.',
+    description:
+      'Retraso de más de 45 minutos en la asignación de chofer para recogida en zona San Isidro debido a alta congestión en hora punta.',
     evidences: [],
     assignedTo: 'Elena Rostova (Supervisor)',
     reportedBy: 'Sistema LaundryWeb',
@@ -1355,38 +1692,205 @@ export const INITIAL_INCIDENTS: Incident[] = [
     type: 'CLIENTE_AUSENTE',
     severity: 'BAJA',
     status: 'RESOLVED',
-    description: 'En el primer intento de recogida el cliente no respondía al intercomunicador. Se reprogramó 30 minutos después exitosamente.',
+    description:
+      'En el primer intento de recogida el cliente no respondía al intercomunicador. Se reprogramó 30 minutos después exitosamente.',
     evidences: [],
     assignedTo: 'Carlos Ruiz',
     reportedBy: 'Carlos Ruiz',
     reportedRole: 'SUPERVISOR',
     createdAt: '2026-09-26 10:15',
     resolvedAt: '2026-09-26 11:10',
-    resolutionNotes: 'El conserje notificó que la cliente había bajado a compras breves. Recogida efectuada a las 11:10 am.',
+    resolutionNotes:
+      'El conserje notificó que la cliente había bajado a compras breves. Recogida efectuada a las 11:10 am.',
     internalNotes: [],
   },
 ];
 
 export const INITIAL_CATALOG: CatalogItem[] = [
   // Prendas
-  { id: 'CAT-01', name: 'Camisa / Blusa de algodón', category: 'PRENDAS', type: 'Prenda Individual', description: 'Lavado con agentes protectores de fibra y planchado al vapor vertical.', price: 6.5, estimatedHours: 24, minHours: 12, maxHours: 36, status: 'ACTIVE' },
-  { id: 'CAT-02', name: 'Traje ejecutivo 2 piezas (Saco + Pantalón)', category: 'PRENDAS', type: 'Conjunto', description: 'Dry cleaning ecológico especializado sin olores agresivos.', price: 18.0, estimatedHours: 36, minHours: 24, maxHours: 48, status: 'ACTIVE' },
-  { id: 'CAT-03', name: 'Pantalón de vestir / Jean', category: 'PRENDAS', type: 'Prenda Individual', description: 'Lavado neutro para preservación de color y planchado de quiebre.', price: 8.5, estimatedHours: 24, minHours: 12, maxHours: 36, status: 'ACTIVE' },
-  { id: 'CAT-04', name: 'Vestido casual / diario', category: 'PRENDAS', type: 'Prenda Individual', description: 'Tratamiento delicado antiarrugas.', price: 14.0, estimatedHours: 24, minHours: 18, maxHours: 36, status: 'ACTIVE' },
-  { id: 'CAT-05', name: 'Vestido de fiesta / seda / pedrería', category: 'PRENDAS', type: 'Alta Costura', description: 'Inspección manual con luz ultravioleta y solventes de origen botánico.', price: 28.0, estimatedHours: 48, minHours: 36, maxHours: 72, status: 'ACTIVE' },
-  { id: 'CAT-06', name: 'Abrigo de lana / Paño grueso', category: 'PRENDAS', type: 'Prenda Pesada', description: 'Limpieza profesional con acabado cepillado de fibra.', price: 26.0, estimatedHours: 48, minHours: 36, maxHours: 72, status: 'ACTIVE' },
-  
+  {
+    id: 'CAT-01',
+    name: 'Camisa / Blusa de algodón',
+    category: 'PRENDAS',
+    type: 'Prenda Individual',
+    description:
+      'Lavado con agentes protectores de fibra y planchado al vapor vertical.',
+    price: 6.5,
+    estimatedHours: 24,
+    minHours: 12,
+    maxHours: 36,
+    status: 'ACTIVE',
+  },
+  {
+    id: 'CAT-02',
+    name: 'Traje ejecutivo 2 piezas (Saco + Pantalón)',
+    category: 'PRENDAS',
+    type: 'Conjunto',
+    description: 'Dry cleaning ecológico especializado sin olores agresivos.',
+    price: 18.0,
+    estimatedHours: 36,
+    minHours: 24,
+    maxHours: 48,
+    status: 'ACTIVE',
+  },
+  {
+    id: 'CAT-03',
+    name: 'Pantalón de vestir / Jean',
+    category: 'PRENDAS',
+    type: 'Prenda Individual',
+    description:
+      'Lavado neutro para preservación de color y planchado de quiebre.',
+    price: 8.5,
+    estimatedHours: 24,
+    minHours: 12,
+    maxHours: 36,
+    status: 'ACTIVE',
+  },
+  {
+    id: 'CAT-04',
+    name: 'Vestido casual / diario',
+    category: 'PRENDAS',
+    type: 'Prenda Individual',
+    description: 'Tratamiento delicado antiarrugas.',
+    price: 14.0,
+    estimatedHours: 24,
+    minHours: 18,
+    maxHours: 36,
+    status: 'ACTIVE',
+  },
+  {
+    id: 'CAT-05',
+    name: 'Vestido de fiesta / seda / pedrería',
+    category: 'PRENDAS',
+    type: 'Alta Costura',
+    description:
+      'Inspección manual con luz ultravioleta y solventes de origen botánico.',
+    price: 28.0,
+    estimatedHours: 48,
+    minHours: 36,
+    maxHours: 72,
+    status: 'ACTIVE',
+  },
+  {
+    id: 'CAT-06',
+    name: 'Abrigo de lana / Paño grueso',
+    category: 'PRENDAS',
+    type: 'Prenda Pesada',
+    description: 'Limpieza profesional con acabado cepillado de fibra.',
+    price: 26.0,
+    estimatedHours: 48,
+    minHours: 36,
+    maxHours: 72,
+    status: 'ACTIVE',
+  },
+
   // Servicios
-  { id: 'CAT-11', name: 'Lavado por Kilos (Bolsa Fresh 5kg)', category: 'SERVICIOS', type: 'Carga por Peso', description: 'Ropa diaria separada por claros y oscuros, lavado suave y doblado premium.', price: 18.0, estimatedHours: 24, minHours: 12, maxHours: 36, status: 'ACTIVE' },
-  { id: 'CAT-12', name: 'Lavado por Kilos (Bolsa Fresh 10kg)', category: 'SERVICIOS', type: 'Carga por Peso', description: 'Ideal para familias. Incluye suavizante aromaterapia hipoalergénico.', price: 32.0, estimatedHours: 24, minHours: 18, maxHours: 36, status: 'ACTIVE' },
-  { id: 'CAT-13', name: 'Sanitización Hospitalaria e Industrial', category: 'SERVICIOS', type: 'B2B Termodesinfección', description: 'Protocolo de lavado a 85°C con peróxido e inyección de ozono.', price: 0.95, estimatedHours: 16, minHours: 8, maxHours: 24, status: 'ACTIVE' },
-  { id: 'CAT-14', name: 'Edredón / Plumón King Size', category: 'SERVICIOS', type: 'Ropa de Hogar', description: 'Desinfección profunda antiácaros y secado rotativo esponjoso.', price: 26.0, estimatedHours: 36, minHours: 24, maxHours: 48, status: 'ACTIVE' },
+  {
+    id: 'CAT-11',
+    name: 'Lavado por Kilos (Bolsa Fresh 5kg)',
+    category: 'SERVICIOS',
+    type: 'Carga por Peso',
+    description:
+      'Ropa diaria separada por claros y oscuros, lavado suave y doblado premium.',
+    price: 18.0,
+    estimatedHours: 24,
+    minHours: 12,
+    maxHours: 36,
+    status: 'ACTIVE',
+  },
+  {
+    id: 'CAT-12',
+    name: 'Lavado por Kilos (Bolsa Fresh 10kg)',
+    category: 'SERVICIOS',
+    type: 'Carga por Peso',
+    description:
+      'Ideal para familias. Incluye suavizante aromaterapia hipoalergénico.',
+    price: 32.0,
+    estimatedHours: 24,
+    minHours: 18,
+    maxHours: 36,
+    status: 'ACTIVE',
+  },
+  {
+    id: 'CAT-13',
+    name: 'Sanitización Hospitalaria e Industrial',
+    category: 'SERVICIOS',
+    type: 'B2B Termodesinfección',
+    description:
+      'Protocolo de lavado a 85°C con peróxido e inyección de ozono.',
+    price: 0.95,
+    estimatedHours: 16,
+    minHours: 8,
+    maxHours: 24,
+    status: 'ACTIVE',
+  },
+  {
+    id: 'CAT-14',
+    name: 'Edredón / Plumón King Size',
+    category: 'SERVICIOS',
+    type: 'Ropa de Hogar',
+    description:
+      'Desinfección profunda antiácaros y secado rotativo esponjoso.',
+    price: 26.0,
+    estimatedHours: 36,
+    minHours: 24,
+    maxHours: 48,
+    status: 'ACTIVE',
+  },
 
   // Extras
-  { id: 'CAT-21', name: 'Almidonado fino en cuellos y puños', category: 'EXTRAS', type: 'Acabado', description: 'Estructura nítida profesional para presentaciones ejecutivas.', price: 3.5, estimatedHours: 0, minHours: 0, maxHours: 0, status: 'ACTIVE' },
-  { id: 'CAT-22', name: 'Bolsa protectora biodegradable hermética', category: 'EXTRAS', type: 'Empaque Eco', description: 'Material derivado de fécula de maíz con cierre Zip reutilizable.', price: 2.0, estimatedHours: 0, minHours: 0, maxHours: 0, status: 'ACTIVE' },
-  { id: 'CAT-23', name: 'Tratamiento antimanchas hidrofóbico Nanotech', category: 'EXTRAS', type: 'Protección', description: 'Crea una película invisible repelente a líquidos en sacos y vestidos.', price: 9.0, estimatedHours: 4, minHours: 2, maxHours: 6, status: 'ACTIVE' },
-  { id: 'CAT-24', name: 'Percha de madera natural con antideslizante', category: 'EXTRAS', type: 'Accesorio', description: 'Conserva la silueta del hombro de trajes y abrigos sin deformar.', price: 4.5, estimatedHours: 0, minHours: 0, maxHours: 0, status: 'ACTIVE' },
+  {
+    id: 'CAT-21',
+    name: 'Almidonado fino en cuellos y puños',
+    category: 'EXTRAS',
+    type: 'Acabado',
+    description:
+      'Estructura nítida profesional para presentaciones ejecutivas.',
+    price: 3.5,
+    estimatedHours: 0,
+    minHours: 0,
+    maxHours: 0,
+    status: 'ACTIVE',
+  },
+  {
+    id: 'CAT-22',
+    name: 'Bolsa protectora biodegradable hermética',
+    category: 'EXTRAS',
+    type: 'Empaque Eco',
+    description:
+      'Material derivado de fécula de maíz con cierre Zip reutilizable.',
+    price: 2.0,
+    estimatedHours: 0,
+    minHours: 0,
+    maxHours: 0,
+    status: 'ACTIVE',
+  },
+  {
+    id: 'CAT-23',
+    name: 'Tratamiento antimanchas hidrofóbico Nanotech',
+    category: 'EXTRAS',
+    type: 'Protección',
+    description:
+      'Crea una película invisible repelente a líquidos en sacos y vestidos.',
+    price: 9.0,
+    estimatedHours: 4,
+    minHours: 2,
+    maxHours: 6,
+    status: 'ACTIVE',
+  },
+  {
+    id: 'CAT-24',
+    name: 'Percha de madera natural con antideslizante',
+    category: 'EXTRAS',
+    type: 'Accesorio',
+    description:
+      'Conserva la silueta del hombro de trajes y abrigos sin deformar.',
+    price: 4.5,
+    estimatedHours: 0,
+    minHours: 0,
+    maxHours: 0,
+    status: 'ACTIVE',
+  },
 ];
 
 export const INITIAL_PROMOTIONS: Promotion[] = [
@@ -1409,7 +1913,8 @@ export const INITIAL_PROMOTIONS: Promotion[] = [
     id: 'PROM-02',
     name: 'Edredones Impecables Otoño',
     code: 'EDREDON20',
-    description: 'Descuento de $8.00 fijos en lavado de edredones y ropa de cama pesada.',
+    description:
+      'Descuento de $8.00 fijos en lavado de edredones y ropa de cama pesada.',
     discountType: 'FIXED',
     discountValue: 8.0,
     minOrderAmount: 40.0,
@@ -1424,13 +1929,17 @@ export const INITIAL_PROMOTIONS: Promotion[] = [
     id: 'PROM-03',
     name: 'Corporativo San Isidro Express',
     code: 'CORPEXEC25',
-    description: '25% de descuento en trajes y camisas ejecutivas para empresas aliadas.',
+    description:
+      '25% de descuento en trajes y camisas ejecutivas para empresas aliadas.',
     discountType: 'PERCENTAGE',
     discountValue: 25,
     minOrderAmount: 60.0,
     usageLimit: 100,
     usageCount: 39,
-    applicableServices: ['Traje ejecutivo 2 piezas', 'Camisa / Blusa de algodón'],
+    applicableServices: [
+      'Traje ejecutivo 2 piezas',
+      'Camisa / Blusa de algodón',
+    ],
     startDate: '2026-08-15',
     endDate: '2026-11-30',
     status: 'ACTIVE',
@@ -1456,7 +1965,8 @@ export const INITIAL_REWARDS: Reward[] = [
   {
     id: 'REW-01',
     name: 'Lavado de Edredón King Size Gratis',
-    description: 'Canjeable por 1 servicio completo de edredón con desinfección antiácaros.',
+    description:
+      'Canjeable por 1 servicio completo de edredón con desinfección antiácaros.',
     pointsCost: 800,
     minPurchases: 3,
     minSpend: 100,
@@ -1466,7 +1976,8 @@ export const INITIAL_REWARDS: Reward[] = [
   {
     id: 'REW-02',
     name: 'Bolsa Fresh 5kg Sin Costo',
-    description: 'Lavado y doblado de una bolsa de 5kg de prendas de uso diario.',
+    description:
+      'Lavado y doblado de una bolsa de 5kg de prendas de uso diario.',
     pointsCost: 500,
     minPurchases: 2,
     minSpend: 50,
@@ -1476,7 +1987,8 @@ export const INITIAL_REWARDS: Reward[] = [
   {
     id: 'REW-03',
     name: 'Crédito de Billetera Digital $20',
-    description: 'Saldo directo aplicable a cualquier orden futura sin fecha de vencimiento.',
+    description:
+      'Saldo directo aplicable a cualquier orden futura sin fecha de vencimiento.',
     pointsCost: 1200,
     minPurchases: 5,
     minSpend: 180,
@@ -1486,7 +1998,8 @@ export const INITIAL_REWARDS: Reward[] = [
   {
     id: 'REW-04',
     name: 'Kit de Cuidado Textil Ecológico',
-    description: 'Incluye 2 bolas de lana natural para secadora y perfume botánico de lavanda.',
+    description:
+      'Incluye 2 bolas de lana natural para secadora y perfume botánico de lavanda.',
     pointsCost: 650,
     minPurchases: 1,
     minSpend: 40,
@@ -1534,13 +2047,64 @@ export const INITIAL_REDEMPTIONS: RewardRedemption[] = [
 ];
 
 export const INITIAL_POINTS_LEDGER: PointsLedgerEntry[] = [
-  { id: 'LED-01', customerId: 'CUST-001', points: 250, type: 'PURCHASE', reason: 'Acumulación por orden SOL-4552 ($25)', date: '2026-09-27 17:05' },
-  { id: 'LED-02', customerId: 'CUST-001', points: -500, type: 'REDEMPTION', reason: 'Canje de recompensa: Bolsa Fresh 5kg', date: '2026-09-24 16:30' },
-  { id: 'LED-03', customerId: 'CUST-001', points: 100, type: 'ADMIN_ADJUSTMENT', reason: 'Bonificación por fidelidad primer mes', date: '2026-09-15 11:00', adminUser: 'Carlos Mendoza' },
-  { id: 'LED-04', customerId: 'CUST-004', points: 450, type: 'PURCHASE', reason: 'Acumulación por orden SOL-4568 ($45)', date: '2026-09-20 14:10' },
-  { id: 'LED-05', customerId: 'CUST-004', points: -650, type: 'REDEMPTION', reason: 'Canje: Kit de Cuidado Textil', date: '2026-09-28 11:20' },
-  { id: 'LED-06', customerId: 'CUST-007', points: 2800, type: 'PURCHASE', reason: 'Acumulación orden hotelera corporativa', date: '2026-09-25 18:30' },
-  { id: 'LED-07', customerId: 'CUST-007', points: -1200, type: 'REDEMPTION', reason: 'Canje de crédito en billetera $20', date: '2026-09-29 08:15', adminUser: 'Carlos Mendoza' },
+  {
+    id: 'LED-01',
+    customerId: 'CUST-001',
+    points: 250,
+    type: 'PURCHASE',
+    reason: 'Acumulación por orden SOL-4552 ($25)',
+    date: '2026-09-27 17:05',
+  },
+  {
+    id: 'LED-02',
+    customerId: 'CUST-001',
+    points: -500,
+    type: 'REDEMPTION',
+    reason: 'Canje de recompensa: Bolsa Fresh 5kg',
+    date: '2026-09-24 16:30',
+  },
+  {
+    id: 'LED-03',
+    customerId: 'CUST-001',
+    points: 100,
+    type: 'ADMIN_ADJUSTMENT',
+    reason: 'Bonificación por fidelidad primer mes',
+    date: '2026-09-15 11:00',
+    adminUser: 'Carlos Mendoza',
+  },
+  {
+    id: 'LED-04',
+    customerId: 'CUST-004',
+    points: 450,
+    type: 'PURCHASE',
+    reason: 'Acumulación por orden SOL-4568 ($45)',
+    date: '2026-09-20 14:10',
+  },
+  {
+    id: 'LED-05',
+    customerId: 'CUST-004',
+    points: -650,
+    type: 'REDEMPTION',
+    reason: 'Canje: Kit de Cuidado Textil',
+    date: '2026-09-28 11:20',
+  },
+  {
+    id: 'LED-06',
+    customerId: 'CUST-007',
+    points: 2800,
+    type: 'PURCHASE',
+    reason: 'Acumulación orden hotelera corporativa',
+    date: '2026-09-25 18:30',
+  },
+  {
+    id: 'LED-07',
+    customerId: 'CUST-007',
+    points: -1200,
+    type: 'REDEMPTION',
+    reason: 'Canje de crédito en billetera $20',
+    date: '2026-09-29 08:15',
+    adminUser: 'Carlos Mendoza',
+  },
 ];
 
 export const INITIAL_AUDIT_LOGS: AuditLog[] = [
@@ -1605,3 +2169,14 @@ export const INITIAL_AUDIT_LOGS: AuditLog[] = [
     notes: 'Documento borroso y bordes recortados',
   },
 ];
+
+prepareWebDemoData(
+  {
+    orders: INITIAL_ORDERS,
+    customers: INITIAL_CUSTOMERS,
+    drivers: INITIAL_DRIVERS,
+    facilities: INITIAL_FACILITIES,
+    settings: INITIAL_SETTINGS,
+  },
+  true,
+);

@@ -16,6 +16,9 @@ export type OrderStatus =
   | 'PICKUP_PENDING'
   | 'PICKUP_ASSIGNED'
   | 'HEADING_TO_PICKUP'
+  | 'ARRIVED_FOR_PICKUP'
+  | 'HEADING_TO_FACILITY'
+  | 'ARRIVED_FOR_DELIVERY'
   | 'PICKED_UP'
   | 'AT_FACILITY'
   | 'IN_PROCESS'
@@ -170,7 +173,7 @@ export interface Customer {
   notes?: string;
 }
 
-export type DriverStatus = 'AVAILABLE' | 'ON_DUTY' | 'BUSY' | 'OFFLINE';
+export type DriverStatus = 'AVAILABLE' | 'ON_SERVICE' | 'BREAK' | 'OFFLINE';
 
 export interface Driver {
   id: string;
@@ -184,6 +187,7 @@ export interface Driver {
   facilityName: string;
   zoneId: string;
   zoneName: string;
+  authorizedZoneIds?: string[];
   status: DriverStatus;
   activeOrders: number;
   maxOrders: number;
@@ -194,6 +198,7 @@ export interface Driver {
     lng: number;
     address: string;
     lastUpdated: string;
+    simulated?: boolean;
   };
 }
 
@@ -228,7 +233,8 @@ export type IncidentType =
 
 export type IncidentSeverity = 'BAJA' | 'MEDIA' | 'ALTA' | 'CRITICA';
 
-export type IncidentStatus = 'OPEN' | 'IN_PROGRESS' | 'PENDING_CLOSURE' | 'RESOLVED';
+export type IncidentStatus =
+  'OPEN' | 'IN_PROGRESS' | 'PENDING_CLOSURE' | 'RESOLVED';
 
 export interface IncidentEvidence {
   id: string;
@@ -304,7 +310,8 @@ export interface Reward {
   status: 'ACTIVE' | 'INACTIVE';
 }
 
-export type RedemptionStatus = 'PENDING' | 'APPROVED' | 'DELIVERED' | 'REJECTED';
+export type RedemptionStatus =
+  'PENDING' | 'APPROVED' | 'DELIVERED' | 'REJECTED';
 
 export interface RewardRedemption {
   id: string;

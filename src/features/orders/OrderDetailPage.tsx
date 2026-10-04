@@ -1,3 +1,4 @@
+import { OrderRouteMap } from '../../components/maps/OrderRouteMap';
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
@@ -26,9 +27,24 @@ import {
 } from 'lucide-react';
 import { OrderStatus, IncidentType, IncidentSeverity } from '../../types';
 
+const demoLifecycleSteps: Partial<Record<OrderStatus, [OrderStatus, string]>> =
+  {
+    HEADING_TO_PICKUP: ['ARRIVED_FOR_PICKUP', 'Marcar llegada'],
+    ARRIVED_FOR_PICKUP: ['PICKED_UP', 'Confirmar recogida'],
+    HEADING_TO_FACILITY: ['AT_FACILITY', 'Registrar recepción en planta'],
+    ARRIVED_FOR_DELIVERY: ['DELIVERED', 'Confirmar entrega'],
+  };
 export const OrderDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { orders, currentUser, updateOrderStatus, moveToQuarantine, releaseFromQuarantine, createIncident, incidents } = useApp();
+  const {
+    orders,
+    currentUser,
+    updateOrderStatus,
+    moveToQuarantine,
+    releaseFromQuarantine,
+    createIncident,
+    incidents,
+  } = useApp();
   const navigate = useNavigate();
 
   const order = orders.find((o) => o.id === id);
@@ -41,7 +57,9 @@ export const OrderDetailPage: React.FC = () => {
   const [isQuarantineModalOpen, setIsQuarantineModalOpen] = useState(false);
 
   // Quarantine input state
-  const [quarantineReason, setQuarantineReason] = useState('Mancha química persistente en tejido delicado');
+  const [quarantineReason, setQuarantineReason] = useState(
+    'Mancha química persistente en tejido delicado',
+  );
   const [quarantineNotes, setQuarantineNotes] = useState('');
 
   // New incident form state
@@ -52,8 +70,12 @@ export const OrderDetailPage: React.FC = () => {
   if (!order) {
     return (
       <div className="p-12 text-center bg-white rounded-3xl border border-slate-200/80 shadow-xs max-w-md mx-auto my-12">
-        <h2 className="text-base font-bold text-slate-900">Solicitud no encontrada</h2>
-        <p className="text-xs text-slate-500 mt-1">El código {id} no corresponde a ninguna orden registrada.</p>
+        <h2 className="text-base font-bold text-slate-900">
+          Solicitud no encontrada
+        </h2>
+        <p className="text-xs text-slate-500 mt-1">
+          El código {id} no corresponde a ninguna orden registrada.
+        </p>
         <button
           onClick={() => navigate('/operations/orders')}
           className="mt-5 px-5 py-2.5 text-xs font-semibold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-xl transition-colors cursor-pointer"
@@ -66,7 +88,9 @@ export const OrderDetailPage: React.FC = () => {
 
   const isAdmin = currentUser.role === 'ADMIN';
   const orderIncidents = incidents.filter((i) => i.orderId === order.id);
-  const hasActiveIncidents = orderIncidents.some((i) => i.status === 'OPEN' || i.status === 'IN_PROGRESS');
+  const hasActiveIncidents = orderIncidents.some(
+    (i) => i.status === 'OPEN' || i.status === 'IN_PROGRESS',
+  );
 
   // Handle standard lifecycle transitions
   const handleAdvanceStatus = (nextStatus: OrderStatus, noteText?: string) => {
@@ -96,7 +120,12 @@ export const OrderDetailPage: React.FC = () => {
           id: 'EVD-' + Date.now(),
           url: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=500&auto=format&fit=crop&q=80',
           caption: 'Evidencia fotográfica adjunta en recepción/procesamiento',
-          uploadedAt: 'Hoy ' + new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+          uploadedAt:
+            'Hoy ' +
+            new Date().toLocaleTimeString('es-ES', {
+              hour: '2-digit',
+              minute: '2-digit',
+            }),
         },
       ],
     });
@@ -142,27 +171,42 @@ export const OrderDetailPage: React.FC = () => {
 
             {order.status === 'PICKUP_ASSIGNED' && (
               <button
-                onClick={() => handleAdvanceStatus('PICKED_UP', 'Prendas recolectadas en domicilio')}
+                onClick={() =>
+                  handleAdvanceStatus(
+                    'HEADING_TO_PICKUP',
+                    'Recorrido de recogida simulado',
+                  )
+                }
                 className="px-4 py-2.5 text-xs font-bold text-white bg-teal-700 hover:bg-teal-800 rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
               >
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Marcar como Recogida</span>
+                <span>Iniciar recogida</span>
               </button>
             )}
 
             {order.status === 'PICKED_UP' && (
               <button
-                onClick={() => handleAdvanceStatus('AT_FACILITY', `Recepción en ${order.facilityName}`)}
+                onClick={() =>
+                  handleAdvanceStatus(
+                    'HEADING_TO_FACILITY',
+                    'Traslado simulado a planta',
+                  )
+                }
                 className="px-4 py-2.5 text-xs font-bold text-white bg-sky-700 hover:bg-sky-800 rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
               >
                 <Building2 className="w-3.5 h-3.5" />
-                <span>Registrar recepción en planta</span>
+                <span>Ir a planta</span>
               </button>
             )}
 
             {order.status === 'AT_FACILITY' && (
               <button
-                onClick={() => handleAdvanceStatus('IN_PROCESS', 'Ingresado al ciclo de lavado')}
+                onClick={() =>
+                  handleAdvanceStatus(
+                    'IN_PROCESS',
+                    'Ingresado al ciclo de lavado',
+                  )
+                }
                 className="px-4 py-2.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
               >
                 <Sparkles className="w-3.5 h-3.5" />
@@ -180,7 +224,12 @@ export const OrderDetailPage: React.FC = () => {
                   <span>Enviar a Cuarentena</span>
                 </button>
                 <button
-                  onClick={() => handleAdvanceStatus('QUALITY_CONTROL', 'Lavado completado, pasando a control de calidad')}
+                  onClick={() =>
+                    handleAdvanceStatus(
+                      'QUALITY_CONTROL',
+                      'Lavado completado, pasando a control de calidad',
+                    )
+                  }
                   className="px-4 py-2.5 text-xs font-bold text-white bg-purple-700 hover:bg-purple-800 rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
                 >
                   <CheckCircle2 className="w-3.5 h-3.5" />
@@ -191,7 +240,13 @@ export const OrderDetailPage: React.FC = () => {
 
             {order.status === 'QUARANTINE' && (
               <button
-                onClick={() => releaseFromQuarantine(order.id, 'QUALITY_CONTROL', 'Tratamiento técnico especializado completado')}
+                onClick={() =>
+                  releaseFromQuarantine(
+                    order.id,
+                    'QUALITY_CONTROL',
+                    'Tratamiento técnico especializado completado',
+                  )
+                }
                 className="px-4 py-2.5 text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
               >
                 <ShieldCheck className="w-3.5 h-3.5" />
@@ -201,7 +256,12 @@ export const OrderDetailPage: React.FC = () => {
 
             {order.status === 'QUALITY_CONTROL' && (
               <button
-                onClick={() => handleAdvanceStatus('READY_FOR_DELIVERY', 'Control de calidad aprobado sin observaciones')}
+                onClick={() =>
+                  handleAdvanceStatus(
+                    'READY_FOR_DELIVERY',
+                    'Control de calidad aprobado sin observaciones',
+                  )
+                }
                 className="px-4 py-2.5 text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
               >
                 <CheckCircle2 className="w-3.5 h-3.5" />
@@ -221,7 +281,12 @@ export const OrderDetailPage: React.FC = () => {
 
             {order.status === 'DELIVERY_ASSIGNED' && (
               <button
-                onClick={() => handleAdvanceStatus('OUT_FOR_DELIVERY', `Chofer en camino a destino`)}
+                onClick={() =>
+                  handleAdvanceStatus(
+                    'OUT_FOR_DELIVERY',
+                    `Chofer en camino a destino`,
+                  )
+                }
                 className="px-4 py-2.5 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
               >
                 <Truck className="w-3.5 h-3.5" />
@@ -231,26 +296,51 @@ export const OrderDetailPage: React.FC = () => {
 
             {order.status === 'OUT_FOR_DELIVERY' && (
               <button
-                onClick={() => handleAdvanceStatus('DELIVERED', 'Entregado en manos del destinatario')}
+                onClick={() =>
+                  handleAdvanceStatus(
+                    'ARRIVED_FOR_DELIVERY',
+                    'Llegada a dirección de entrega',
+                  )
+                }
                 className="px-4 py-2.5 text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
               >
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Confirmar Entregada</span>
+                <span>Marcar llegada</span>
               </button>
             )}
 
             {order.status === 'DELIVERED' && (
               <button
                 disabled={hasActiveIncidents}
-                onClick={() => handleAdvanceStatus('CLOSED', 'Solicitud cerrada con satisfacción')}
+                onClick={() =>
+                  handleAdvanceStatus(
+                    'CLOSED',
+                    'Solicitud cerrada con satisfacción',
+                  )
+                }
                 className="px-3.5 py-2 text-xs font-bold text-white bg-slate-800 hover:bg-slate-900 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
-                title={hasActiveIncidents ? 'No puede cerrarse con incidencias abiertas' : 'Finalizar solicitud'}
+                title={
+                  hasActiveIncidents
+                    ? 'No puede cerrarse con incidencias abiertas'
+                    : 'Finalizar solicitud'
+                }
               >
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 Cerrar Solicitud
               </button>
             )}
 
+            {demoLifecycleSteps[order.status] && (
+              <button
+                className="px-4 py-2 rounded-lg bg-[#143F73] text-white"
+                onClick={() => {
+                  const step = demoLifecycleSteps[order.status]!;
+                  handleAdvanceStatus(step[0], step[1]);
+                }}
+              >
+                {demoLifecycleSteps[order.status]![1]}
+              </button>
+            )}
             {/* Registrar Incidencia */}
             <button
               onClick={() => setIsIncidentModalOpen(true)}
@@ -287,11 +377,19 @@ export const OrderDetailPage: React.FC = () => {
               Motivo: {order.quarantineReason}
             </p>
             {order.quarantineNotes && (
-              <p className="text-xs text-red-700 mt-1">{order.quarantineNotes}</p>
+              <p className="text-xs text-red-700 mt-1">
+                {order.quarantineNotes}
+              </p>
             )}
           </div>
           <button
-            onClick={() => releaseFromQuarantine(order.id, 'QUALITY_CONTROL', 'Liberación aprobada')}
+            onClick={() =>
+              releaseFromQuarantine(
+                order.id,
+                'QUALITY_CONTROL',
+                'Liberación aprobada',
+              )
+            }
             className="px-3 py-1.5 text-xs font-bold text-white bg-red-700 hover:bg-red-800 rounded-lg shadow-xs transition-colors shrink-0"
           >
             Liberar orden
@@ -305,7 +403,9 @@ export const OrderDetailPage: React.FC = () => {
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
             <span>
-              <strong>Regla operacional #21:</strong> Esta orden cuenta con {orderIncidents.length} incidencia(s) activa(s). No podrá ser cerrada hasta que sean resueltas.
+              <strong>Regla operacional #21:</strong> Esta orden cuenta con{' '}
+              {orderIncidents.length} incidencia(s) activa(s). No podrá ser
+              cerrada hasta que sean resueltas.
             </span>
           </div>
           <button
@@ -344,7 +444,9 @@ export const OrderDetailPage: React.FC = () => {
                       }`}
                     />
                     <div className="flex items-center justify-between text-xs">
-                      <span className={`font-bold ${isLatest ? 'text-[#143F73]' : 'text-slate-800'}`}>
+                      <span
+                        className={`font-bold ${isLatest ? 'text-[#143F73]' : 'text-slate-800'}`}
+                      >
                         {event.label}
                       </span>
                       <span className="text-[10px] text-slate-400 font-mono tabular-nums">
@@ -352,7 +454,11 @@ export const OrderDetailPage: React.FC = () => {
                       </span>
                     </div>
                     <p className="text-[11px] text-slate-500 mt-0.5">
-                      Por: <strong className="text-slate-700">{event.userName}</strong> ({event.userRole})
+                      Por:{' '}
+                      <strong className="text-slate-700">
+                        {event.userName}
+                      </strong>{' '}
+                      ({event.userRole})
                     </p>
                     {event.notes && (
                       <p className="mt-1 text-xs text-slate-600 bg-slate-50 p-2 rounded-lg border border-slate-100">
@@ -387,21 +493,33 @@ export const OrderDetailPage: React.FC = () => {
             ) : (
               <div className="space-y-3">
                 {orderIncidents.map((inc) => (
-                  <div key={inc.id} className="p-3 rounded-xl border border-rose-100 bg-rose-50/40">
+                  <div
+                    key={inc.id}
+                    className="p-3 rounded-xl border border-rose-100 bg-rose-50/40"
+                  >
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-bold text-rose-900 font-mono">{inc.id}</span>
+                      <span className="font-bold text-rose-900 font-mono">
+                        {inc.id}
+                      </span>
                       <span className="text-[10px] font-bold text-rose-700 bg-rose-100 px-1.5 py-0.2 rounded">
                         {inc.severity}
                       </span>
                     </div>
-                    <p className="text-xs font-semibold text-slate-800 mt-1">{inc.type}</p>
-                    <p className="text-xs text-slate-600 mt-0.5">{inc.description}</p>
+                    <p className="text-xs font-semibold text-slate-800 mt-1">
+                      {inc.type}
+                    </p>
+                    <p className="text-xs text-slate-600 mt-0.5">
+                      {inc.description}
+                    </p>
 
                     {/* Evidences list */}
                     {inc.evidences.length > 0 && (
                       <div className="mt-2 flex gap-2">
                         {inc.evidences.map((ev) => (
-                          <div key={ev.id} className="relative group cursor-pointer">
+                          <div
+                            key={ev.id}
+                            className="relative group cursor-pointer"
+                          >
                             <img
                               src={ev.url}
                               alt={ev.caption}
@@ -433,8 +551,12 @@ export const OrderDetailPage: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
               <div className="space-y-2">
                 <div>
-                  <span className="text-slate-400 block text-[11px]">Cliente</span>
-                  <span className="font-bold text-sm text-slate-900">{order.customerName}</span>
+                  <span className="text-slate-400 block text-[11px]">
+                    Cliente
+                  </span>
+                  <span className="font-bold text-sm text-slate-900">
+                    {order.customerName}
+                  </span>
                   <span className="ml-2 text-[10px] font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
                     Plan {order.customerPlan}
                   </span>
@@ -451,17 +573,30 @@ export const OrderDetailPage: React.FC = () => {
 
               <div className="space-y-2 border-t sm:border-t-0 sm:border-l border-slate-100 sm:pl-4">
                 <div>
-                  <span className="text-slate-400 block text-[11px]">Sede de procesamiento</span>
-                  <span className="font-bold text-slate-900">{order.facilityName}</span>
+                  <span className="text-slate-400 block text-[11px]">
+                    Sede de procesamiento
+                  </span>
+                  <span className="font-bold text-slate-900">
+                    {order.facilityName}
+                  </span>
                 </div>
                 <div>
-                  <span className="text-slate-400 block text-[11px]">Zona Logística</span>
-                  <span className="font-medium text-slate-700">{order.zoneName}</span>
+                  <span className="text-slate-400 block text-[11px]">
+                    Zona Logística
+                  </span>
+                  <span className="font-medium text-slate-700">
+                    {order.zoneName}
+                  </span>
                 </div>
                 <div>
-                  <span className="text-slate-400 block text-[11px]">Método y Estado de Pago</span>
+                  <span className="text-slate-400 block text-[11px]">
+                    Método y Estado de Pago
+                  </span>
                   <span className="font-semibold text-slate-800">
-                    {order.pricing.paymentMethod} · {order.pricing.paymentStatus === 'PAID' ? 'PAGADO' : 'PENDIENTE'}
+                    {order.pricing.paymentMethod} ·{' '}
+                    {order.pricing.paymentStatus === 'PAID'
+                      ? 'PAGADO'
+                      : 'PENDIENTE'}
                   </span>
                 </div>
               </div>
@@ -490,12 +625,24 @@ export const OrderDetailPage: React.FC = () => {
                   {order.items.map((item) => (
                     <tr key={item.id}>
                       <td className="py-2.5 px-3">
-                        <span className="font-bold text-slate-800">{item.name}</span>
-                        {item.notes && <span className="block text-[10px] text-slate-500">{item.notes}</span>}
+                        <span className="font-bold text-slate-800">
+                          {item.name}
+                        </span>
+                        {item.notes && (
+                          <span className="block text-[10px] text-slate-500">
+                            {item.notes}
+                          </span>
+                        )}
                       </td>
-                      <td className="py-2.5 px-3 text-center font-mono tabular-nums">{item.quantity}</td>
-                      <td className="py-2.5 px-3 text-slate-600">{item.category}</td>
-                      <td className="py-2.5 px-3 text-right font-mono tabular-nums">${item.unitPrice.toFixed(2)}</td>
+                      <td className="py-2.5 px-3 text-center font-mono tabular-nums">
+                        {item.quantity}
+                      </td>
+                      <td className="py-2.5 px-3 text-slate-600">
+                        {item.category}
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-mono tabular-nums">
+                        ${item.unitPrice.toFixed(2)}
+                      </td>
                       <td className="py-2.5 px-3 text-right font-mono font-semibold tabular-nums">
                         ${(item.quantity * item.unitPrice).toFixed(2)}
                       </td>
@@ -508,20 +655,30 @@ export const OrderDetailPage: React.FC = () => {
             {/* Extras & Total calculation */}
             <div className="flex flex-col sm:flex-row justify-between gap-4 pt-2 text-xs">
               <div className="space-y-1">
-                <p className="font-bold text-slate-700">Servicios adicionales y extras:</p>
+                <p className="font-bold text-slate-700">
+                  Servicios adicionales y extras:
+                </p>
                 {order.extras.length === 0 ? (
-                  <p className="text-slate-400 italic text-[11px]">Sin extras seleccionados.</p>
+                  <p className="text-slate-400 italic text-[11px]">
+                    Sin extras seleccionados.
+                  </p>
                 ) : (
                   order.extras.map((ext) => (
-                    <p key={ext.id} className="text-slate-600 flex items-center justify-between gap-4">
+                    <p
+                      key={ext.id}
+                      className="text-slate-600 flex items-center justify-between gap-4"
+                    >
                       <span>• {ext.name}</span>
-                      <span className="font-mono tabular-nums">+${ext.price.toFixed(2)}</span>
+                      <span className="font-mono tabular-nums">
+                        +${ext.price.toFixed(2)}
+                      </span>
                     </p>
                   ))
                 )}
                 {order.pricing.promoCodeApplied && (
                   <p className="text-emerald-700 font-semibold pt-1">
-                    Cupón aplicado: {order.pricing.promoCodeApplied} (-${order.pricing.discount.toFixed(2)})
+                    Cupón aplicado: {order.pricing.promoCodeApplied} (-$
+                    {order.pricing.discount.toFixed(2)})
                   </p>
                 )}
               </div>
@@ -559,24 +716,38 @@ export const OrderDetailPage: React.FC = () => {
             <div className="bg-white rounded-2xl border border-[#E5EAF0] p-4 shadow-2xs space-y-2 text-xs">
               <div className="flex items-center justify-between pb-1.5 border-b border-slate-100">
                 <span className="font-bold text-[#143F73] uppercase tracking-wider flex items-center gap-1.5">
-                  <MapPin className="w-3.5 h-3.5 text-teal-600" /> Logística de Recogida
+                  <MapPin className="w-3.5 h-3.5 text-teal-600" /> Logística de
+                  Recogida
                 </span>
                 <span className="text-[10px] font-bold text-slate-500 font-mono">
                   {order.pickup.completedAt ? 'Completada' : 'Pendiente'}
                 </span>
               </div>
               <div>
-                <span className="text-slate-400 block text-[10px]">Fecha y Horario</span>
-                <span className="font-bold text-slate-800">{order.pickup.date} · {order.pickup.timeSlot}</span>
+                <span className="text-slate-400 block text-[10px]">
+                  Fecha y Horario
+                </span>
+                <span className="font-bold text-slate-800">
+                  {order.pickup.date} · {order.pickup.timeSlot}
+                </span>
               </div>
               <div>
-                <span className="text-slate-400 block text-[10px]">Dirección de recogida</span>
-                <span className="font-medium text-slate-700">{order.customerAddress.street} #{order.customerAddress.number}, {order.customerAddress.neighborhood}</span>
+                <span className="text-slate-400 block text-[10px]">
+                  Dirección de recogida
+                </span>
+                <span className="font-medium text-slate-700">
+                  {order.customerAddress.street} #{order.customerAddress.number}
+                  , {order.customerAddress.neighborhood}
+                </span>
               </div>
               <div>
-                <span className="text-slate-400 block text-[10px]">Conductor asignado</span>
+                <span className="text-slate-400 block text-[10px]">
+                  Conductor asignado
+                </span>
                 <span className="font-semibold text-slate-900">
-                  {order.pickup.driverName ? `${order.pickup.driverName} (${order.pickup.vehiclePlate})` : 'Sin asignar aún'}
+                  {order.pickup.driverName
+                    ? `${order.pickup.driverName} (${order.pickup.vehiclePlate})`
+                    : 'Sin asignar aún'}
                 </span>
               </div>
               {order.pickup.notes && (
@@ -590,24 +761,38 @@ export const OrderDetailPage: React.FC = () => {
             <div className="bg-white rounded-2xl border border-[#E5EAF0] p-4 shadow-2xs space-y-2 text-xs">
               <div className="flex items-center justify-between pb-1.5 border-b border-slate-100">
                 <span className="font-bold text-[#143F73] uppercase tracking-wider flex items-center gap-1.5">
-                  <Truck className="w-3.5 h-3.5 text-orange-600" /> Logística de Entrega
+                  <Truck className="w-3.5 h-3.5 text-orange-600" /> Logística de
+                  Entrega
                 </span>
                 <span className="text-[10px] font-bold text-slate-500 font-mono">
                   {order.delivery.completedAt ? 'Entregada' : 'En proceso'}
                 </span>
               </div>
               <div>
-                <span className="text-slate-400 block text-[10px]">Fecha objetivo y Horario</span>
-                <span className="font-bold text-slate-800">{order.delivery.targetDate} · {order.delivery.timeSlot}</span>
+                <span className="text-slate-400 block text-[10px]">
+                  Fecha objetivo y Horario
+                </span>
+                <span className="font-bold text-slate-800">
+                  {order.delivery.targetDate} · {order.delivery.timeSlot}
+                </span>
               </div>
               <div>
-                <span className="text-slate-400 block text-[10px]">Destinatario</span>
-                <span className="font-medium text-slate-700">{order.delivery.recipientName} ({order.delivery.recipientPhone})</span>
+                <span className="text-slate-400 block text-[10px]">
+                  Destinatario
+                </span>
+                <span className="font-medium text-slate-700">
+                  {order.delivery.recipientName} (
+                  {order.delivery.recipientPhone})
+                </span>
               </div>
               <div>
-                <span className="text-slate-400 block text-[10px]">Conductor de entrega</span>
+                <span className="text-slate-400 block text-[10px]">
+                  Conductor de entrega
+                </span>
                 <span className="font-semibold text-slate-900">
-                  {order.delivery.driverName ? `${order.delivery.driverName} (${order.delivery.vehiclePlate})` : 'Pendiente de asignación de entrega'}
+                  {order.delivery.driverName
+                    ? `${order.delivery.driverName} (${order.delivery.vehiclePlate})`
+                    : 'Pendiente de asignación de entrega'}
                 </span>
               </div>
               {order.delivery.notes && (
@@ -618,69 +803,7 @@ export const OrderDetailPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Operational Route Visual Map Preview */}
-          <div className="bg-white rounded-2xl border border-[#E5EAF0] p-5 shadow-2xs">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-bold text-[#102A43] flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-[#143F73]" />
-                Ruta Operativa: Origen → Planta de Lavado → Destino
-              </h2>
-              <button
-                onClick={() => navigate('/logistics/map')}
-                className="text-xs text-[#143F73] font-semibold hover:underline"
-              >
-                Abrir Mapa Completo ↗
-              </button>
-            </div>
-
-            <div className="p-4 bg-[#F7F9FC] rounded-xl border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-teal-100 text-teal-800 font-bold flex items-center justify-center shrink-0">
-                  A
-                </div>
-                <div>
-                  <p className="font-bold text-slate-900">Recogida</p>
-                  <p className="text-slate-500 text-[11px]">{order.customerAddress.neighborhood}</p>
-                </div>
-              </div>
-
-              <div className="hidden sm:flex flex-1 items-center justify-center px-4">
-                <div className="w-full h-0.5 bg-dashed border-b-2 border-slate-300 relative flex items-center justify-center">
-                  <span className="text-[10px] bg-white px-2 py-0.5 rounded text-slate-500 border border-slate-200">
-                    Tránsito
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-[#143F73] text-white font-bold flex items-center justify-center shrink-0">
-                  P
-                </div>
-                <div>
-                  <p className="font-bold text-slate-900">{order.facilityName}</p>
-                  <p className="text-slate-500 text-[11px]">Planta de procesamiento</p>
-                </div>
-              </div>
-
-              <div className="hidden sm:flex flex-1 items-center justify-center px-4">
-                <div className="w-full h-0.5 bg-dashed border-b-2 border-slate-300 relative flex items-center justify-center">
-                  <span className="text-[10px] bg-white px-2 py-0.5 rounded text-slate-500 border border-slate-200">
-                    Despacho
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center shrink-0">
-                  B
-                </div>
-                <div>
-                  <p className="font-bold text-slate-900">Entrega</p>
-                  <p className="text-slate-500 text-[11px]">{order.deliveryAddress.neighborhood}</p>
-                </div>
-              </div>
-            </div>
-          </div>
+          <OrderRouteMap order={order} />
         </div>
       </div>
 
@@ -709,26 +832,45 @@ export const OrderDetailPage: React.FC = () => {
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-red-200">
             <div className="flex items-center gap-3 mb-4 text-red-700">
               <AlertTriangle className="w-6 h-6" />
-              <h2 className="text-base font-bold text-slate-900">Enviar lote a Cuarentena</h2>
+              <h2 className="text-base font-bold text-slate-900">
+                Enviar lote a Cuarentena
+              </h2>
             </div>
-            <form onSubmit={handleQuarantineSubmit} className="space-y-4 text-xs">
+            <form
+              onSubmit={handleQuarantineSubmit}
+              className="space-y-4 text-xs"
+            >
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Motivo de cuarentena *</label>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Motivo de cuarentena *
+                </label>
                 <select
                   value={quarantineReason}
                   onChange={(e) => setQuarantineReason(e.target.value)}
                   className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-xs"
                 >
-                  <option value="Mancha química persistente en tejido delicado">Mancha química persistente en tejido delicado</option>
-                  <option value="Daño o descosido previo a lavado">Daño o descosido previo a lavado</option>
-                  <option value="Riesgo de desteñido / transferencia de color">Riesgo de desteñido / transferencia de color</option>
-                  <option value="Contaminación por agente externo">Contaminación por agente externo</option>
-                  <option value="Falta de etiqueta de composición textil">Falta de etiqueta de composición textil</option>
+                  <option value="Mancha química persistente en tejido delicado">
+                    Mancha química persistente en tejido delicado
+                  </option>
+                  <option value="Daño o descosido previo a lavado">
+                    Daño o descosido previo a lavado
+                  </option>
+                  <option value="Riesgo de desteñido / transferencia de color">
+                    Riesgo de desteñido / transferencia de color
+                  </option>
+                  <option value="Contaminación por agente externo">
+                    Contaminación por agente externo
+                  </option>
+                  <option value="Falta de etiqueta de composición textil">
+                    Falta de etiqueta de composición textil
+                  </option>
                 </select>
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Instrucciones técnicas de revisión</label>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Instrucciones técnicas de revisión
+                </label>
                 <textarea
                   value={quarantineNotes}
                   onChange={(e) => setQuarantineNotes(e.target.value)}
@@ -764,31 +906,54 @@ export const OrderDetailPage: React.FC = () => {
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-rose-200">
             <div className="flex items-center gap-3 mb-4 text-rose-700">
               <AlertTriangle className="w-6 h-6" />
-              <h2 className="text-base font-bold text-slate-900">Registrar Incidencia Operacional</h2>
+              <h2 className="text-base font-bold text-slate-900">
+                Registrar Incidencia Operacional
+              </h2>
             </div>
-            <form onSubmit={handleCreateIncidentSubmit} className="space-y-4 text-xs">
+            <form
+              onSubmit={handleCreateIncidentSubmit}
+              className="space-y-4 text-xs"
+            >
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Tipo de incidencia *</label>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Tipo de incidencia *
+                </label>
                 <select
                   value={incType}
                   onChange={(e) => setIncType(e.target.value as IncidentType)}
                   className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-xs"
                 >
-                  <option value="MANCHA_PERSISTENTE">Mancha persistente / rebelde</option>
-                  <option value="PRENDA_DANADA">Prenda dañada previa o en proceso</option>
-                  <option value="PERDIDA_PARCIAL">Pérdida o extravío parcial</option>
-                  <option value="DIRECCION_ERRONEA">Dirección errónea o inaccesible</option>
-                  <option value="CLIENTE_AUSENTE">Cliente ausente en domicilio</option>
-                  <option value="RETRASO_OPERACIONAL">Retraso operacional grave</option>
+                  <option value="MANCHA_PERSISTENTE">
+                    Mancha persistente / rebelde
+                  </option>
+                  <option value="PRENDA_DANADA">
+                    Prenda dañada previa o en proceso
+                  </option>
+                  <option value="PERDIDA_PARCIAL">
+                    Pérdida o extravío parcial
+                  </option>
+                  <option value="DIRECCION_ERRONEA">
+                    Dirección errónea o inaccesible
+                  </option>
+                  <option value="CLIENTE_AUSENTE">
+                    Cliente ausente en domicilio
+                  </option>
+                  <option value="RETRASO_OPERACIONAL">
+                    Retraso operacional grave
+                  </option>
                   <option value="OTRO">Otro motivo operacional</option>
                 </select>
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Severidad *</label>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Severidad *
+                </label>
                 <select
                   value={incSeverity}
-                  onChange={(e) => setIncSeverity(e.target.value as IncidentSeverity)}
+                  onChange={(e) =>
+                    setIncSeverity(e.target.value as IncidentSeverity)
+                  }
                   className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-xs"
                 >
                   <option value="BAJA">Baja</option>
@@ -799,7 +964,9 @@ export const OrderDetailPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Descripción detallada del caso *</label>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Descripción detallada del caso *
+                </label>
                 <textarea
                   value={incDesc}
                   onChange={(e) => setIncDesc(e.target.value)}

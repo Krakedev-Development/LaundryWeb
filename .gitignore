@@ -7,3 +7,8 @@ coverage/
 .env*
 !.env.example
 
+
+/.npm-cache/
+
+/test-results/
+/playwright-report/

@@ -6,7 +6,10 @@ interface StatusBadgeProps {
   size?: 'sm' | 'md';
 }
 
-export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'md' }) => {
+export const StatusBadge: React.FC<StatusBadgeProps> = ({
+  status,
+  size = 'md',
+}) => {
   // Config complying with #16 & #12 (Human-readable, clear semantic meaning)
   const configMap: Record<
     OrderStatus,
@@ -39,6 +42,27 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'md' })
       text: 'text-cyan-700',
       border: 'border-cyan-200',
       dot: 'bg-cyan-500',
+    },
+    ARRIVED_FOR_PICKUP: {
+      label: 'Llegó a recogida',
+      bg: 'bg-teal-50',
+      text: 'text-teal-800',
+      border: 'border-teal-200',
+      dot: 'bg-teal-600',
+    },
+    HEADING_TO_FACILITY: {
+      label: 'Camino a planta',
+      bg: 'bg-sky-50',
+      text: 'text-sky-800',
+      border: 'border-sky-200',
+      dot: 'bg-sky-600',
+    },
+    ARRIVED_FOR_DELIVERY: {
+      label: 'Llegó a entrega',
+      bg: 'bg-emerald-50',
+      text: 'text-emerald-800',
+      border: 'border-emerald-200',
+      dot: 'bg-emerald-600',
     },
     PICKED_UP: {
       label: 'Recogida',

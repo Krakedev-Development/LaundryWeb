@@ -19,7 +19,8 @@ import {
 } from 'lucide-react';
 
 export const DriversPage: React.FC = () => {
-  const { drivers, facilities, createDriver, updateDriver, currentUser } = useApp();
+  const { drivers, facilities, createDriver, updateDriver, currentUser } =
+    useApp();
   const isAdmin = currentUser.role === 'ADMIN';
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -29,7 +30,9 @@ export const DriversPage: React.FC = () => {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
-  const [vehicleType, setVehicleType] = useState<'VAN' | 'MOTO' | 'CAMIONETA'>('VAN');
+  const [vehicleType, setVehicleType] = useState<'VAN' | 'MOTO' | 'CAMIONETA'>(
+    'VAN',
+  );
   const [vehiclePlate, setVehiclePlate] = useState('');
   const [facilityId, setFacilityId] = useState(facilities[0]?.id || 'FAC-01');
   const [zoneId, setZoneId] = useState('ZONA-NORTE');
@@ -38,7 +41,7 @@ export const DriversPage: React.FC = () => {
 
   // KPIs
   const availableCount = drivers.filter((d) => d.status === 'AVAILABLE').length;
-  const onDutyCount = drivers.filter((d) => d.status === 'ON_DUTY' || d.status === 'BUSY').length;
+  const onDutyCount = drivers.filter((d) => d.status === 'ON_SERVICE').length;
   const offlineCount = drivers.filter((d) => d.status === 'OFFLINE').length;
   const avgLoad = (
     drivers.reduce((acc, d) => acc + d.activeOrders, 0) / (drivers.length || 1)
@@ -82,8 +85,8 @@ export const DriversPage: React.FC = () => {
       zoneId === 'ZONA-NORTE'
         ? 'Zona Norte & Centro'
         : zoneId === 'ZONA-SUR'
-        ? 'Zona Sur & Bahía'
-        : 'Zona Financiera & Residencial';
+          ? 'Zona Sur & Bahía'
+          : 'Zona Financiera & Residencial';
 
     if (editingDriver) {
       updateDriver({
@@ -105,7 +108,8 @@ export const DriversPage: React.FC = () => {
         name,
         phone,
         email,
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
+        avatar:
+          'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
         vehicleType,
         vehiclePlate: vehiclePlate.toUpperCase(),
         facilityId,
@@ -197,9 +201,14 @@ export const DriversPage: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {drivers.map((driver) => {
-                const loadPercent = Math.round((driver.activeOrders / driver.maxOrders) * 100);
+                const loadPercent = Math.round(
+                  (driver.activeOrders / driver.maxOrders) * 100,
+                );
                 return (
-                  <tr key={driver.id} className="hover:bg-slate-50/70 transition-colors">
+                  <tr
+                    key={driver.id}
+                    className="hover:bg-slate-50/70 transition-colors"
+                  >
                     <td className="py-3.5 px-4 whitespace-nowrap">
                       <div className="flex items-center gap-2.5">
                         <img
@@ -208,16 +217,22 @@ export const DriversPage: React.FC = () => {
                           className="w-9 h-9 rounded-full object-cover border border-slate-200"
                         />
                         <div>
-                          <span className="font-bold text-slate-900 block">{driver.name}</span>
+                          <span className="font-bold text-slate-900 block">
+                            {driver.name}
+                          </span>
                           <span className="text-[11px] text-amber-600 font-medium flex items-center gap-1">
-                            <Star className="w-3 h-3 fill-amber-500" /> {driver.rating} ({driver.completedTripsToday} viajes hoy)
+                            <Star className="w-3 h-3 fill-amber-500" />{' '}
+                            {driver.rating} ({driver.completedTripsToday} viajes
+                            hoy)
                           </span>
                         </div>
                       </div>
                     </td>
 
                     <td className="py-3.5 px-4 whitespace-nowrap">
-                      <span className="font-semibold text-slate-800">{driver.vehicleType}</span>
+                      <span className="font-semibold text-slate-800">
+                        {driver.vehicleType}
+                      </span>
                       <span className="block font-mono text-[11px] font-bold text-sky-800">
                         {driver.vehiclePlate}
                       </span>
@@ -225,7 +240,9 @@ export const DriversPage: React.FC = () => {
 
                     <td className="py-3.5 px-4 whitespace-nowrap text-slate-600">
                       <div>{driver.phone}</div>
-                      <div className="text-[11px] text-slate-400">{driver.email}</div>
+                      <div className="text-[11px] text-slate-400">
+                        {driver.email}
+                      </div>
                     </td>
 
                     <td className="py-3.5 px-4 whitespace-nowrap font-medium text-slate-800">
@@ -244,7 +261,11 @@ export const DriversPage: React.FC = () => {
                         <div className="w-16 h-1.5 bg-slate-200 rounded-full mt-1.5 overflow-hidden">
                           <div
                             className={`h-full rounded-full ${
-                              loadPercent >= 100 ? 'bg-red-500' : loadPercent >= 60 ? 'bg-amber-500' : 'bg-emerald-500'
+                              loadPercent >= 100
+                                ? 'bg-red-500'
+                                : loadPercent >= 60
+                                  ? 'bg-amber-500'
+                                  : 'bg-emerald-500'
                             }`}
                             style={{ width: `${loadPercent}%` }}
                           />
@@ -257,20 +278,20 @@ export const DriversPage: React.FC = () => {
                         className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-md border ${
                           driver.status === 'AVAILABLE'
                             ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                            : driver.status === 'ON_DUTY'
-                            ? 'bg-amber-50 text-amber-800 border-amber-200'
-                            : driver.status === 'BUSY'
-                            ? 'bg-purple-50 text-purple-800 border-purple-200'
-                            : 'bg-slate-100 text-slate-700 border-slate-200'
+                            : driver.status === 'ON_SERVICE'
+                              ? 'bg-amber-50 text-amber-800 border-amber-200'
+                              : driver.status === 'BREAK'
+                                ? 'bg-purple-50 text-purple-800 border-purple-200'
+                                : 'bg-slate-100 text-slate-700 border-slate-200'
                         }`}
                       >
                         {driver.status === 'AVAILABLE'
                           ? 'Disponible'
-                          : driver.status === 'ON_DUTY'
-                          ? 'En Servicio'
-                          : driver.status === 'BUSY'
-                          ? 'Carga Llena'
-                          : 'Offline'}
+                          : driver.status === 'ON_SERVICE'
+                            ? 'En Servicio'
+                            : driver.status === 'BREAK'
+                              ? 'Pausa'
+                              : 'Offline'}
                       </span>
                     </td>
 
@@ -307,9 +328,13 @@ export const DriversPage: React.FC = () => {
             <div className="p-5 border-b border-slate-200/80 bg-slate-50/70 flex items-center justify-between">
               <div>
                 <h3 className="text-base font-bold text-slate-900">
-                  {editingDriver ? `Editar: ${editingDriver.name}` : 'Registrar Nuevo Chofer'}
+                  {editingDriver
+                    ? `Editar: ${editingDriver.name}`
+                    : 'Registrar Nuevo Chofer'}
                 </h3>
-                <p className="text-xs text-slate-500">Asignación vehicular, sede base y límites de carga</p>
+                <p className="text-xs text-slate-500">
+                  Asignación vehicular, sede base y límites de carga
+                </p>
               </div>
               <button
                 onClick={() => setIsDrawerOpen(false)}
@@ -319,9 +344,14 @@ export const DriversPage: React.FC = () => {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto flex-1 text-xs">
+            <form
+              onSubmit={handleSubmit}
+              className="p-5 space-y-4 overflow-y-auto flex-1 text-xs"
+            >
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Nombre completo *</label>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Nombre completo *
+                </label>
                 <input
                   type="text"
                   required
@@ -334,7 +364,9 @@ export const DriversPage: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Teléfono móvil *</label>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Teléfono móvil *
+                  </label>
                   <input
                     type="text"
                     required
@@ -344,7 +376,9 @@ export const DriversPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Correo corporativo</label>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Correo corporativo
+                  </label>
                   <input
                     type="email"
                     value={email}
@@ -356,7 +390,9 @@ export const DriversPage: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Tipo de Vehículo</label>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Tipo de Vehículo
+                  </label>
                   <select
                     value={vehicleType}
                     onChange={(e) => setVehicleType(e.target.value as any)}
@@ -368,12 +404,16 @@ export const DriversPage: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Placa Vehicular *</label>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Placa Vehicular *
+                  </label>
                   <input
                     type="text"
                     required
                     value={vehiclePlate}
-                    onChange={(e) => setVehiclePlate(e.target.value.toUpperCase())}
+                    onChange={(e) =>
+                      setVehiclePlate(e.target.value.toUpperCase())
+                    }
                     placeholder="ABC-123"
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold focus:outline-none focus:border-sky-500"
                   />
@@ -382,19 +422,25 @@ export const DriversPage: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Sede Base</label>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Sede Base
+                  </label>
                   <select
                     value={facilityId}
                     onChange={(e) => setFacilityId(e.target.value)}
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-sky-500"
                   >
                     {facilities.map((fac) => (
-                      <option key={fac.id} value={fac.id}>{fac.name}</option>
+                      <option key={fac.id} value={fac.id}>
+                        {fac.name}
+                      </option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Zona Cobertura</label>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Zona Cobertura
+                  </label>
                   <select
                     value={zoneId}
                     onChange={(e) => setZoneId(e.target.value)}
@@ -409,24 +455,30 @@ export const DriversPage: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Capacidad Máx. Pedidos</label>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Capacidad Máx. Pedidos
+                  </label>
                   <input
                     type="number"
                     value={maxOrders}
-                    onChange={(e) => setMaxOrders(parseInt(e.target.value) || 5)}
+                    onChange={(e) =>
+                      setMaxOrders(parseInt(e.target.value) || 5)
+                    }
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono focus:outline-none focus:border-sky-500"
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Estado Operativo</label>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Estado Operativo
+                  </label>
                   <select
                     value={status}
                     onChange={(e) => setStatus(e.target.value as DriverStatus)}
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-sky-500"
                   >
                     <option value="AVAILABLE">Disponible</option>
-                    <option value="ON_DUTY">En Servicio / En ruta</option>
-                    <option value="BUSY">Carga Completa (Ocupado)</option>
+                    <option value="ON_SERVICE">En Servicio / En ruta</option>
+                    <option value="BREAK">Pausa</option>
                     <option value="OFFLINE">Offline / Mantenimiento</option>
                   </select>
                 </div>
