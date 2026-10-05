@@ -2,7 +2,14 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { Logo } from '../../components/common/Logo';
-import { Lock, Mail, ArrowRight, Sparkles, ShieldCheck } from 'lucide-react';
+import {
+  Lock,
+  Mail,
+  ArrowRight,
+  Sparkles,
+  ShieldCheck,
+  Leaf,
+} from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
   const { switchRole } = useApp();
@@ -11,7 +18,9 @@ export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('admin@laundryweb.com');
   const [password, setPassword] = useState('••••••••••••');
   const [rememberMe, setRememberMe] = useState(true);
-  const [selectedDemoUser, setSelectedDemoUser] = useState<'ADMIN' | 'SUPERVISOR'>('ADMIN');
+  const [selectedDemoUser, setSelectedDemoUser] = useState<
+    'ADMIN' | 'SUPERVISOR'
+  >('ADMIN');
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,21 +53,31 @@ export const LoginPage: React.FC = () => {
               </span>
 
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 mt-4 leading-snug">
-                La operación de tu lavandería, <span className="text-[#0F4C81]">en un solo lugar.</span>
+                La operación de tu lavandería,{' '}
+                <span className="text-[#0F4C81]">en un solo lugar.</span>
               </h1>
 
               <p className="mt-3 text-xs sm:text-sm text-slate-600 leading-relaxed">
-                Control integral para recogida a domicilio, procesamiento en planta de lavado, despacho dinámico de choferes y entregas puntuales.
+                Control integral para recogida a domicilio, procesamiento en
+                planta de lavado, despacho dinámico de choferes y entregas
+                puntuales.
               </p>
             </div>
           </div>
 
           <div className="mt-8 pt-6 border-t border-slate-200/80 space-y-3">
             <div className="flex items-center gap-3">
-              <span className="text-2xl">🍃</span>
+              <Leaf
+                className="size-6 shrink-0 text-[#A5CD39]"
+                aria-hidden="true"
+              />
               <div>
-                <p className="text-xs font-bold text-slate-900">Ropa limpia, un mundo más limpio</p>
-                <p className="text-[11px] text-slate-500">Operaciones eficientes para un mejor mañana.</p>
+                <p className="text-xs font-bold text-slate-900">
+                  Ropa limpia, un mundo más limpio
+                </p>
+                <p className="text-[11px] text-slate-500">
+                  Operaciones eficientes para un mejor mañana.
+                </p>
               </div>
             </div>
           </div>
@@ -91,7 +110,9 @@ export const LoginPage: React.FC = () => {
                 }`}
               >
                 Carlos Mendoza
-                <span className="block text-[10px] font-normal opacity-85">Administrador (Total)</span>
+                <span className="block text-[10px] font-normal opacity-85">
+                  Administrador (Total)
+                </span>
               </button>
               <button
                 type="button"
@@ -103,7 +124,9 @@ export const LoginPage: React.FC = () => {
                 }`}
               >
                 Elena Rostova
-                <span className="block text-[10px] font-normal opacity-85">Supervisor (Operaciones)</span>
+                <span className="block text-[10px] font-normal opacity-85">
+                  Supervisor (Operaciones)
+                </span>
               </button>
             </div>
           </div>
@@ -159,7 +182,9 @@ export const LoginPage: React.FC = () => {
                   onChange={(e) => setRememberMe(e.target.checked)}
                   className="rounded border-slate-300 text-sky-700 focus:ring-sky-500 w-4 h-4 cursor-pointer"
                 />
-                <span className="text-xs text-slate-600">Recordarme en este equipo</span>
+                <span className="text-xs text-slate-600">
+                  Recordarme en este equipo
+                </span>
               </label>
             </div>
 

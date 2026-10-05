@@ -1,28 +1,31 @@
-import { HandoffsPage } from './features/handoffs/HandoffsPage';
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider } from './context/AppContext';
-import { AppLayout } from './components/layout/AppLayout';
+import { MainLayout } from './components/layout/MainLayout';
 
-// Pages
+import {
+  DashboardPage,
+  OrdersListPage,
+  OrderDetailPage,
+  HandoffsPage,
+  DispatchPage,
+  PlantKanbanPage,
+  DeliveriesPage,
+  IncidentsPage,
+  CustomersPage,
+  KycPage,
+  CatalogPage,
+  PromotionsPage,
+  RewardsPage,
+  DriversPage,
+  FacilitiesPage,
+  OperationalMapPage,
+  ReportsPage,
+  SettingsPage,
+} from './components/layout/routePages';
+
+// Public page
 import { LoginPage } from './features/auth/LoginPage';
-import { DashboardPage } from './features/dashboard/DashboardPage';
-import { OrdersListPage } from './features/orders/OrdersListPage';
-import { OrderDetailPage } from './features/orders/OrderDetailPage';
-import { DispatchPage } from './features/dispatch/DispatchPage';
-import { PlantKanbanPage } from './features/plant/PlantKanbanPage';
-import { DeliveriesPage } from './features/deliveries/DeliveriesPage';
-import { IncidentsPage } from './features/incidents/IncidentsPage';
-import { CustomersPage } from './features/customers/CustomersPage';
-import { KycPage } from './features/customers/KycPage';
-import { CatalogPage } from './features/commercial/CatalogPage';
-import { PromotionsPage } from './features/commercial/PromotionsPage';
-import { RewardsPage } from './features/commercial/RewardsPage';
-import { DriversPage } from './features/logistics/DriversPage';
-import { FacilitiesPage } from './features/logistics/FacilitiesPage';
-import { OperationalMapPage } from './features/logistics/OperationalMapPage';
-import { ReportsPage } from './features/reports/ReportsPage';
-import { SettingsPage } from './features/settings/SettingsPage';
 
 export default function App() {
   return (
@@ -33,7 +36,7 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
 
           {/* Authenticated workspace layout */}
-          <Route path="/" element={<AppLayout />}>
+          <Route path="/" element={<MainLayout />}>
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<DashboardPage />} />
 
