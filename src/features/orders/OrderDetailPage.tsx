@@ -1,3 +1,4 @@
+import { operationalStage } from '../../services/fulfillment';
 import { OrderRouteMap } from '../../components/maps/OrderRouteMap';
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -30,9 +31,8 @@ import { OrderStatus, IncidentType, IncidentSeverity } from '../../types';
 const demoLifecycleSteps: Partial<Record<OrderStatus, [OrderStatus, string]>> =
   {
     HEADING_TO_PICKUP: ['ARRIVED_FOR_PICKUP', 'Marcar llegada'],
-    ARRIVED_FOR_PICKUP: ['PICKED_UP', 'Confirmar recogida'],
-    HEADING_TO_FACILITY: ['AT_FACILITY', 'Registrar recepción en planta'],
-    ARRIVED_FOR_DELIVERY: ['DELIVERED', 'Confirmar entrega'],
+
+    HEADING_TO_FACILITY: ['ARRIVED_AT_FACILITY', 'Marcar llegada a planta'],
   };
 export const OrderDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -87,6 +87,7 @@ export const OrderDetailPage: React.FC = () => {
   }
 
   const isAdmin = currentUser.role === 'ADMIN';
+  const storeMode = order.fulfillment?.mode === 'STORE_STORE';
   const orderIncidents = incidents.filter((i) => i.orderId === order.id);
   const hasActiveIncidents = orderIncidents.some(
     (i) => i.status === 'OPEN' || i.status === 'IN_PROGRESS',
@@ -142,6 +143,12 @@ export const OrderDetailPage: React.FC = () => {
   return (
     <div className="space-y-8">
       {/* Header & Quick Actions */}
+      <button
+        className="text-sm text-blue-700 underline mb-4"
+        onClick={() => navigate('/operations/handoffs')}
+      >
+        Recepción y retiros: validar transferencia de este pedido
+      </button>
       <PageHeader
         title={`Solicitud ${order.id}`}
         subtitle={`Tracking: ${order.trackingNumber} · Creada el ${order.createdAt}`}
@@ -152,14 +159,19 @@ export const OrderDetailPage: React.FC = () => {
         ]}
         badge={
           <div className="flex items-center gap-2">
-            <StatusBadge status={order.status} />
+            <StatusBadge
+              status={storeMode ? order.status : operationalStage(order)}
+            />
+            <span className="text-xs text-slate-500">
+              {storeMode ? 'Ingreso y retiro en sede' : 'Servicio a domicilio'}
+            </span>
             <PriorityBadge priority={order.priority} showIcon />
           </div>
         }
         actions={
           <div className="flex items-center gap-2.5 flex-wrap">
             {/* Contextual lifecycle action button */}
-            {order.status === 'PICKUP_PENDING' && (
+            {!storeMode && operationalStage(order) === 'PICKUP_PENDING' && (
               <button
                 onClick={() => handleOpenAssign('pickup')}
                 className="px-4 py-2.5 text-xs font-bold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
@@ -169,7 +181,7 @@ export const OrderDetailPage: React.FC = () => {
               </button>
             )}
 
-            {order.status === 'PICKUP_ASSIGNED' && (
+            {operationalStage(order) === 'PICKUP_ASSIGNED' && (
               <button
                 onClick={() =>
                   handleAdvanceStatus(
@@ -184,7 +196,7 @@ export const OrderDetailPage: React.FC = () => {
               </button>
             )}
 
-            {order.status === 'PICKED_UP' && (
+            {operationalStage(order) === 'PICKED_UP' && (
               <button
                 onClick={() =>
                   handleAdvanceStatus(
@@ -199,7 +211,7 @@ export const OrderDetailPage: React.FC = () => {
               </button>
             )}
 
-            {order.status === 'AT_FACILITY' && (
+            {operationalStage(order) === 'AT_FACILITY' && (
               <button
                 onClick={() =>
                   handleAdvanceStatus(
@@ -214,7 +226,7 @@ export const OrderDetailPage: React.FC = () => {
               </button>
             )}
 
-            {order.status === 'IN_PROCESS' && (
+            {operationalStage(order) === 'IN_PROCESS' && (
               <>
                 <button
                   onClick={() => setIsQuarantineModalOpen(true)}
@@ -238,7 +250,7 @@ export const OrderDetailPage: React.FC = () => {
               </>
             )}
 
-            {order.status === 'QUARANTINE' && (
+            {operationalStage(order) === 'QUARANTINE' && (
               <button
                 onClick={() =>
                   releaseFromQuarantine(
@@ -254,7 +266,7 @@ export const OrderDetailPage: React.FC = () => {
               </button>
             )}
 
-            {order.status === 'QUALITY_CONTROL' && (
+            {operationalStage(order) === 'QUALITY_CONTROL' && (
               <button
                 onClick={() =>
                   handleAdvanceStatus(
@@ -269,17 +281,20 @@ export const OrderDetailPage: React.FC = () => {
               </button>
             )}
 
-            {order.status === 'READY_FOR_DELIVERY' && (
-              <button
-                onClick={() => handleOpenAssign('delivery')}
-                className="px-4 py-2.5 text-xs font-bold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
-              >
-                <Truck className="w-3.5 h-3.5" />
-                <span>Asignar chofer de entrega</span>
-              </button>
-            )}
+            {!storeMode &&
+              ['READY_FOR_DELIVERY', 'DELIVERY_SCHEDULED'].includes(
+                operationalStage(order),
+              ) && (
+                <button
+                  onClick={() => handleOpenAssign('delivery')}
+                  className="px-4 py-2.5 text-xs font-bold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
+                >
+                  <Truck className="w-3.5 h-3.5" />
+                  <span>Asignar chofer de entrega</span>
+                </button>
+              )}
 
-            {order.status === 'DELIVERY_ASSIGNED' && (
+            {operationalStage(order) === 'DELIVERY_ASSIGNED' && (
               <button
                 onClick={() =>
                   handleAdvanceStatus(
@@ -294,7 +309,7 @@ export const OrderDetailPage: React.FC = () => {
               </button>
             )}
 
-            {order.status === 'OUT_FOR_DELIVERY' && (
+            {operationalStage(order) === 'OUT_FOR_DELIVERY' && (
               <button
                 onClick={() =>
                   handleAdvanceStatus(
@@ -309,7 +324,7 @@ export const OrderDetailPage: React.FC = () => {
               </button>
             )}
 
-            {order.status === 'DELIVERED' && (
+            {operationalStage(order) === 'DELIVERED' && (
               <button
                 disabled={hasActiveIncidents}
                 onClick={() =>
@@ -330,15 +345,15 @@ export const OrderDetailPage: React.FC = () => {
               </button>
             )}
 
-            {demoLifecycleSteps[order.status] && (
+            {demoLifecycleSteps[operationalStage(order)] && (
               <button
                 className="px-4 py-2 rounded-lg bg-[#143F73] text-white"
                 onClick={() => {
-                  const step = demoLifecycleSteps[order.status]!;
+                  const step = demoLifecycleSteps[operationalStage(order)]!;
                   handleAdvanceStatus(step[0], step[1]);
                 }}
               >
-                {demoLifecycleSteps[order.status]![1]}
+                {demoLifecycleSteps[operationalStage(order)]![1]}
               </button>
             )}
             {/* Registrar Incidencia */}
@@ -366,7 +381,7 @@ export const OrderDetailPage: React.FC = () => {
       />
 
       {/* Quarantine Alert Warning if active */}
-      {order.status === 'QUARANTINE' && (
+      {operationalStage(order) === 'QUARANTINE' && (
         <div className="p-4 rounded-xl bg-red-50 border border-red-300 flex items-start gap-3">
           <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
           <div className="flex-1">

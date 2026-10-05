@@ -1,3 +1,4 @@
+import { operationalStage } from '../../services/fulfillment';
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
@@ -80,10 +81,10 @@ export const PlantKanbanPage: React.FC = () => {
   ];
 
   // Plant KPIs
-  const recibidasCount = orders.filter((o) => o.status === 'AT_FACILITY').length;
-  const enProcesoCount = orders.filter((o) => o.status === 'IN_PROCESS').length;
-  const listasCount = orders.filter((o) => o.status === 'READY_FOR_DELIVERY').length;
-  const cuarentenaCount = orders.filter((o) => o.status === 'QUARANTINE').length;
+  const recibidasCount = orders.filter((o) => operationalStage(o) === 'AT_FACILITY').length;
+  const enProcesoCount = orders.filter((o) => operationalStage(o) === 'IN_PROCESS').length;
+  const listasCount = orders.filter((o) => operationalStage(o) === 'READY_FOR_DELIVERY').length;
+  const cuarentenaCount = orders.filter((o) => operationalStage(o) === 'QUARANTINE').length;
 
   return (
     <div className="space-y-8">
@@ -158,7 +159,7 @@ export const PlantKanbanPage: React.FC = () => {
       {/* Kanban Board Container with relaxed layout */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-5 items-start">
         {columns.map((col) => {
-          const colOrders = plantOrders.filter((o) => col.statusList.includes(o.status));
+          const colOrders = plantOrders.filter((o) => col.statusList.includes(operationalStage(o)));
           return (
             <div
               key={col.id}
@@ -225,7 +226,7 @@ export const PlantKanbanPage: React.FC = () => {
                       </div>
 
                       {/* Quarantine Reason Callout */}
-                      {ord.status === 'QUARANTINE' && (
+                      {operationalStage(ord) === 'QUARANTINE' && (
                         <div className="mt-2.5 p-2 rounded-lg bg-rose-50 text-[11px] text-rose-800 border border-rose-200/80">
                           <p className="font-bold">Motivo: {ord.quarantineReason || 'Inspección técnica'}</p>
                           {ord.quarantineNotes && <p className="truncate mt-0.5 text-rose-700">{ord.quarantineNotes}</p>}
@@ -233,7 +234,7 @@ export const PlantKanbanPage: React.FC = () => {
                       )}
 
                       {/* Progress bar for IN_PROCESS */}
-                      {ord.status === 'IN_PROCESS' && (
+                      {operationalStage(ord) === 'IN_PROCESS' && (
                         <div className="mt-2.5">
                           <div className="flex justify-between text-[10px] text-slate-500 mb-1">
                             <span>Ciclo de lavado</span>
@@ -252,7 +253,7 @@ export const PlantKanbanPage: React.FC = () => {
 
                       {/* Action buttons inside card */}
                       <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between gap-1.5" onClick={(e) => e.stopPropagation()}>
-                        {(ord.status === 'IN_PROCESS' || ord.status === 'QUALITY_CONTROL') && (
+                        {(operationalStage(ord) === 'IN_PROCESS' || operationalStage(ord) === 'QUALITY_CONTROL') && (
                           <button
                             onClick={() => setQuarantineTargetOrder(ord)}
                             className="px-2.5 py-1 text-[11px] font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-lg transition-colors cursor-pointer"
@@ -262,7 +263,7 @@ export const PlantKanbanPage: React.FC = () => {
                           </button>
                         )}
 
-                        {ord.status === 'AT_FACILITY' && (
+                        {operationalStage(ord) === 'AT_FACILITY' && (
                           <button
                             onClick={() => updateOrderStatus(ord.id, 'IN_PROCESS', 'Iniciado lavado en planta')}
                             className="w-full py-1.5 text-xs font-semibold text-white bg-sky-700 hover:bg-sky-800 rounded-lg flex items-center justify-center gap-1 transition-colors cursor-pointer"
@@ -272,7 +273,7 @@ export const PlantKanbanPage: React.FC = () => {
                           </button>
                         )}
 
-                        {ord.status === 'IN_PROCESS' && (
+                        {operationalStage(ord) === 'IN_PROCESS' && (
                           <button
                             onClick={() => updateOrderStatus(ord.id, 'QUALITY_CONTROL', 'Avanza a inspección de calidad')}
                             className="flex-1 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg flex items-center justify-center gap-1 transition-colors cursor-pointer"
@@ -282,7 +283,7 @@ export const PlantKanbanPage: React.FC = () => {
                           </button>
                         )}
 
-                        {ord.status === 'QUALITY_CONTROL' && (
+                        {operationalStage(ord) === 'QUALITY_CONTROL' && (
                           <button
                             onClick={() => updateOrderStatus(ord.id, 'READY_FOR_DELIVERY', 'Prendas aprobadas en calidad')}
                             className="flex-1 py-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg flex items-center justify-center gap-1 transition-colors cursor-pointer"
@@ -292,7 +293,7 @@ export const PlantKanbanPage: React.FC = () => {
                           </button>
                         )}
 
-                        {ord.status === 'QUARANTINE' && (
+                        {operationalStage(ord) === 'QUARANTINE' && (
                           <button
                             onClick={() => releaseFromQuarantine(ord.id, 'QUALITY_CONTROL', 'Liberado de cuarentena tras re-procesamiento')}
                             className="w-full py-1.5 text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg flex items-center justify-center gap-1 transition-colors cursor-pointer"

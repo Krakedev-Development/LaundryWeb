@@ -2180,3 +2180,8 @@ prepareWebDemoData(
   },
   true,
 );
+
+export const INITIAL_FULFILLMENT_SCENARIOS = [
+ {id:'SOL-STORE-001',mode:'STORE_STORE',facilityId:'FAC-02',customerId:'CUST-001',handoffs:[{id:'HND-SOL-STORE-001-1',type:'CUSTOMER_TO_FACILITY',code:'583214'},{id:'HND-SOL-STORE-001-2',type:'FACILITY_TO_CUSTOMER',code:'583351'}]},
+ {id:'SOL-HOME-001',mode:'HOME_HOME',facilityId:'FAC-02',customerId:'CUST-001',pickupAssignmentId:'SOL-HOME-001-pickup',deliveryAssignmentId:'SOL-HOME-001-delivery',handoffs:[{id:'HND-SOL-HOME-001-1',type:'CUSTOMER_TO_DRIVER',code:'726483'},{id:'HND-SOL-HOME-001-2',type:'DRIVER_TO_FACILITY',code:'726620'},{id:'HND-SOL-HOME-001-3',type:'FACILITY_TO_DRIVER',code:'726757'},{id:'HND-SOL-HOME-001-4',type:'DRIVER_TO_CUSTOMER',code:'726894'}]},
+] as const;

@@ -15,6 +15,55 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
     OrderStatus,
     { label: string; bg: string; text: string; border: string; dot: string }
   > = {
+    DRAFT: {
+      label: 'Borrador',
+      bg: 'bg-slate-100',
+      text: 'text-slate-700',
+      border: 'border-slate-200',
+      dot: 'bg-slate-400',
+    },
+    PAYMENT_PENDING: {
+      label: 'Pago pendiente',
+      bg: 'bg-amber-50',
+      text: 'text-amber-700',
+      border: 'border-amber-200',
+      dot: 'bg-amber-500',
+    },
+    CONFIRMED: {
+      label: 'Confirmado',
+      bg: 'bg-blue-50',
+      text: 'text-blue-700',
+      border: 'border-blue-200',
+      dot: 'bg-blue-500',
+    },
+    AWAITING_INTAKE: {
+      label: 'Esperando ingreso',
+      bg: 'bg-amber-50',
+      text: 'text-amber-700',
+      border: 'border-amber-200',
+      dot: 'bg-amber-500',
+    },
+    READY: {
+      label: 'Listo para retiro',
+      bg: 'bg-emerald-50',
+      text: 'text-emerald-700',
+      border: 'border-emerald-200',
+      dot: 'bg-emerald-500',
+    },
+    COMPLETED: {
+      label: 'Completado',
+      bg: 'bg-emerald-50',
+      text: 'text-emerald-700',
+      border: 'border-emerald-200',
+      dot: 'bg-emerald-500',
+    },
+    ARRIVED_AT_FACILITY: {
+      label: 'Esperando recepción',
+      bg: 'bg-amber-50',
+      text: 'text-amber-700',
+      border: 'border-amber-200',
+      dot: 'bg-amber-500',
+    },
     CREATED: {
       label: 'Nueva',
       bg: 'bg-blue-50',

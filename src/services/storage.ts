@@ -1,3 +1,13 @@
+import { LocalHandoffRepository } from './LocalHandoffRepository';
+import {
+  operationalStage,
+  migrateOrder,
+  advanceOperational,
+  Handoff,
+  HandoffAudit,
+  Actor,
+} from './fulfillment';
+import { HandoffService, HandoffState } from './HandoffService';
 import { prepareWebDemoData } from './geo/WebDemoData';
 import { eligibilityReasons } from './geo/DispatchService';
 import { serviceAreaService } from './geo/ServiceAreaService';
@@ -56,6 +66,252 @@ type Listener = () => void;
 
 class StorageService {
   private listeners: Set<Listener> = new Set();
+  private workflowKey = 'lw_workflow_v2';
+  public handoffService = new HandoffService({
+    ...new LocalHandoffRepository(
+      () => this.getWorkflow(),
+      (work) => {
+        const state = this.getWorkflow();
+        work(state);
+        localStorage.setItem(this.workflowKey, JSON.stringify(state));
+        this.notify();
+      },
+    ),
+    random: () =>
+      Array.from(crypto.getRandomValues(new Uint8Array(20)), (b) =>
+        b.toString(16).padStart(2, '0'),
+      ).join(''),
+    actor: (id) => {
+      const current = this.getCurrentUser();
+      if (id === current.id)
+        return {
+          id,
+          name: current.name,
+          role: current.role,
+          facilityId: current.facilityId,
+        };
+      const staff = /^DEMO-(ADMIN|SUPERVISOR)-(FAC-\d+)$/.exec(id);
+      if (staff && this.getFacilities().some((f) => f.id === staff[2]))
+        return {
+          id,
+          name: 'Operador demo de sede',
+          role: staff[1] as 'ADMIN' | 'SUPERVISOR',
+          facilityId: staff[2],
+        };
+      const driver = this.getDrivers().find((d) => d.id === id);
+      if (driver) return { id, name: driver.name, role: 'DRIVER' };
+      throw new Error('Operador no autorizado.');
+    },
+    paid: (o) => (o as Order).pricing.paymentStatus === 'PAID',
+    blocked: (o) =>
+      this.getIncidents().some(
+        (i) => i.orderId === o.id && i.status !== 'RESOLVED',
+      ),
+    declaredCount: (o) =>
+      (o as Order).items.reduce((n, i) => n + i.quantity, 0),
+    confirmed: (state, raw, h, actor) => {
+      const d = state as ReturnType<StorageService['getWorkflow']>;
+      const o = raw as Order;
+      if (h.type === 'CUSTOMER_TO_DRIVER') o.pickup.completedAt = h.usedAt;
+      if (['DRIVER_TO_CUSTOMER', 'FACILITY_TO_CUSTOMER'].includes(h.type)) {
+        o.delivery.completedAt = h.usedAt;
+        o.delivery.recipientName = h.receipt!.recipient!;
+        o.delivery.notes = h.receipt!.relationship;
+      }
+      o.timeline.push({
+        id: 'TL-' + crypto.randomUUID(),
+        status: o.status,
+        label: 'Transferencia confirmada: ' + h.type,
+        timestamp: h.usedAt!,
+        userName: actor.name,
+        userRole: actor.role,
+        notes: 'Validación local de demo. ' + (h.receipt?.notes ?? ''),
+      });
+      if (['DRIVER_TO_FACILITY', 'DRIVER_TO_CUSTOMER'].includes(h.type)) {
+        const leg =
+          h.type === 'DRIVER_TO_FACILITY'
+            ? o.fulfillment!.inbound
+            : o.fulfillment!.outbound;
+        const driver = d.drivers.find((v) => v.id === leg.driverId);
+        if (driver) {
+          driver.activeOrders = Math.max(0, driver.activeOrders - 1);
+          driver.status = 'AVAILABLE';
+        }
+      }
+      if (o.intakeHold && !o.intakeHold.resolvedAt) {
+        d.incidents.push({
+          id: 'INC-' + h.id,
+          orderId: o.id,
+          customerId: o.customerId,
+          customerName: o.customerName,
+          type: 'OTRO',
+          severity: 'ALTA',
+          status: 'OPEN',
+          description: o.intakeHold.description,
+          evidences: [],
+          assignedTo: actor.name,
+          reportedBy: actor.name,
+          reportedRole: actor.role === 'SUPERVISOR' ? 'SUPERVISOR' : 'ADMIN',
+          createdAt: h.usedAt!,
+          internalNotes: [],
+        });
+        o.incidentsCount++;
+      }
+      if (
+        o.status === 'COMPLETED' &&
+        !d.pointsLedger.some((p) => p.orderId === o.id && p.type === 'PURCHASE')
+      ) {
+        const earned = Math.floor(o.pricing.total * 10);
+        d.pointsLedger.push({
+          id: 'PTS-' + h.id,
+          customerId: o.customerId,
+          type: 'PURCHASE',
+          points: earned,
+          reason: 'Pedido completado mediante transferencia',
+          orderId: o.id,
+          date: h.usedAt!,
+          adminUser: actor.name,
+        });
+        const customer = d.customers.find((c) => c.id === o.customerId);
+        if (customer) customer.points += earned;
+      }
+    },
+    resolved: (state, o, actor, reason) => {
+      const d = state as ReturnType<StorageService['getWorkflow']>;
+      const incident = d.incidents.find(
+        (i) => i.id === 'INC-' + o.intakeHold!.handoffId,
+      );
+      if (incident) {
+        incident.status = 'RESOLVED';
+        incident.resolvedAt = o.intakeHold!.resolvedAt;
+        incident.resolutionNotes = reason;
+      }
+    },
+  });
+  public getWorkflow(): {
+    orders: Order[];
+    drivers: Driver[];
+    incidents: Incident[];
+    pointsLedger: PointsLedgerEntry[];
+    customers: Customer[];
+    handoffs: Handoff[];
+    handoffAudits: HandoffAudit[];
+  } {
+    const raw = localStorage.getItem(this.workflowKey);
+    if (raw) {
+      const state = JSON.parse(raw);
+      state.customers ??= JSON.parse(
+        localStorage.getItem(STORAGE_KEYS.CUSTOMERS) ?? '[]',
+      );
+      return state;
+    }
+    return {
+      orders: this.getOrders(),
+      drivers: this.getDrivers(),
+      incidents: this.getIncidents(),
+      pointsLedger: this.getPointsLedger(),
+      customers: this.getCustomers(),
+      handoffs: [],
+      handoffAudits: [],
+    };
+  }
+  private initializeWorkflow() {
+    const fac = this.getFacilities();
+    fac.forEach((f) => {
+      f.acceptsCustomerDropoff ??= true;
+      f.allowsCustomerPickup ??= true;
+      f.openingHours ??= 'Lunes a sábado, 08:00–18:00';
+      f.serviceAreaIds ??= serviceAreaService.areas
+        .filter((a) => a.facilityId === f.id)
+        .map((a) => a.id);
+    });
+    localStorage.setItem(STORAGE_KEYS.FACILITIES, JSON.stringify(fac));
+    const state = this.getWorkflow();
+    for (const [id, mode] of [
+      ['SOL-STORE-001', 'STORE_STORE'],
+      ['SOL-HOME-001', 'HOME_HOME'],
+    ] as const) {
+      if (state.orders.some((o) => o.id === id)) continue;
+      const template =
+        state.orders.find((o) => o.facilityId === 'FAC-02') ?? state.orders[0];
+      if (!template) continue;
+      const o: Order = JSON.parse(JSON.stringify(template));
+      o.id = id;
+      o.status = 'PICKUP_PENDING';
+      o.workflowVersion = undefined;
+      o.fulfillment = undefined;
+      o.intakeHold = undefined;
+      o.timeline = [];
+      o.pickup.completedAt = undefined;
+      o.delivery.completedAt = undefined;
+      o.customerId = 'CUST-001';
+      o.customerName = this.getCustomers().find(
+        (c) => c.id === 'CUST-001',
+      )!.fullName;
+      o.createdAt = new Date().toISOString();
+      o.updatedAt = o.createdAt;
+      o.trackingNumber = id;
+      o.incidentsCount = 0;
+      o.quarantineReason = undefined;
+      o.previousStatus = undefined;
+      o.pricing.paymentStatus = 'PAID';
+      o.pickup.driverId = undefined;
+      o.delivery.driverId = undefined;
+      if (mode === 'STORE_STORE') {
+        const f = this.getFacilities().find((f) => f.id === o.facilityId)!;
+        o.customerAddress = {
+          ...o.customerAddress,
+          street: f.address,
+          number: '',
+          coordinates: f.coordinates,
+        };
+        o.deliveryAddress = { ...o.customerAddress };
+        o.delivery.timeSlot = 'Retiro al estar listo';
+      }
+      migrateOrder(o, mode);
+      if (mode === 'STORE_STORE') {
+        o.pricing.deliveryFee = 0;
+        o.pricing.total = Number(
+          (
+            o.pricing.subtotal +
+            o.pricing.extrasTotal -
+            o.pricing.discount
+          ).toFixed(2),
+        );
+      }
+      state.orders.unshift(o);
+    }
+    state.orders.forEach((o) => {
+      const legacy = o.workflowVersion !== 2;
+      migrateOrder(o);
+      for (const leg of [o.fulfillment!.inbound, o.fulfillment!.outbound])
+        if (leg.driverId)
+          leg.driverAssignmentId ??=
+            o.id + (leg === o.fulfillment!.inbound ? '-pickup' : '-delivery');
+      this.handoffService.initialize(
+        state,
+        o,
+        ['SOL-STORE-001', 'SOL-HOME-001'].includes(o.id),
+        legacy,
+      );
+    });
+    localStorage.setItem(this.workflowKey, JSON.stringify(state));
+  }
+  public getHandoffs() {
+    return this.getWorkflow().handoffs;
+  }
+  public getHandoffAudits() {
+    return this.getWorkflow().handoffAudits;
+  }
+  private saveWorkflowField(
+    field: 'orders' | 'drivers' | 'incidents' | 'pointsLedger',
+    value: unknown,
+  ) {
+    const state = this.getWorkflow();
+    Object.assign(state, { [field]: value });
+    localStorage.setItem(this.workflowKey, JSON.stringify(state));
+    this.notify();
+  }
 
   constructor() {
     this.initIfEmpty();
@@ -78,6 +334,7 @@ class StorageService {
       JSON.stringify(data.facilities),
     );
     localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(data.settings));
+    this.initializeWorkflow();
   }
 
   public subscribe(listener: Listener): () => void {
@@ -176,6 +433,7 @@ class StorageService {
   }
 
   public resetAll(): void {
+    localStorage.removeItem(this.workflowKey);
     localStorage.setItem(
       STORAGE_KEYS.CURRENT_USER,
       JSON.stringify(INITIAL_USERS[0]),
@@ -216,6 +474,7 @@ class StorageService {
       STORAGE_KEYS.SETTINGS,
       JSON.stringify(INITIAL_SETTINGS),
     );
+    this.initializeWorkflow();
     this.notify();
   }
 
@@ -300,6 +559,8 @@ class StorageService {
 
   // --- ORDERS ---
   public getOrders(): Order[] {
+    const workflow = localStorage.getItem(this.workflowKey);
+    if (workflow) return JSON.parse(workflow).orders;
     const raw = localStorage.getItem(STORAGE_KEYS.ORDERS);
     return raw ? JSON.parse(raw) : [];
   }
@@ -309,7 +570,14 @@ class StorageService {
   }
 
   public saveOrders(orders: Order[]): void {
-    localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(orders));
+    const state = this.getWorkflow();
+    state.orders = orders;
+    orders.forEach((o) => {
+      migrateOrder(o);
+      this.handoffService.initialize(state, o);
+      this.handoffService.refresh(state, o);
+    });
+    localStorage.setItem(this.workflowKey, JSON.stringify(state));
     this.notify();
   }
 
@@ -329,11 +597,21 @@ class StorageService {
     if (!driver) return { success: false, error: 'Chofer no encontrado' };
 
     const order = orders[orderIndex];
+    if (
+      this.getCurrentUser().role === 'SUPERVISOR' &&
+      this.getCurrentUser().facilityId !== order.facilityId
+    )
+      return {
+        success: false,
+        error: 'Esta solicitud corresponde a otra sede.',
+      };
+    if (order.fulfillment?.mode === 'STORE_STORE')
+      return { success: false, error: 'El pedido en sede no requiere chofer.' };
     const allowed =
       type === 'pickup'
         ? ['PICKUP_PENDING']
         : ['READY_FOR_DELIVERY', 'DELIVERY_SCHEDULED'];
-    if (!allowed.includes(order.status))
+    if (!allowed.includes(operationalStage(order)))
       return {
         success: false,
         error: 'La etapa ya fue asignada o no permite asignación.',
@@ -380,8 +658,11 @@ class StorageService {
       order.pickup.vehiclePlate = driver.vehiclePlate;
       if (notes) order.pickup.notes = notes;
 
-      const prevStatus = order.status;
-      order.status = 'PICKUP_ASSIGNED';
+      const prevStatus = operationalStage(order);
+      advanceOperational(order, 'PICKUP_ASSIGNED');
+      order.fulfillment!.inbound.driverId = driver.id;
+      order.fulfillment!.inbound.driverAssignmentId = order.id + '-pickup';
+      this.handoffService.refresh({ ...this.getWorkflow(), orders }, order);
       order.updatedAt = new Date().toISOString();
 
       order.timeline.push({
@@ -410,8 +691,10 @@ class StorageService {
       order.delivery.vehiclePlate = driver.vehiclePlate;
       if (notes) order.delivery.notes = notes;
 
-      const prevStatus = order.status;
-      order.status = 'DELIVERY_ASSIGNED';
+      const prevStatus = operationalStage(order);
+      advanceOperational(order, 'DELIVERY_ASSIGNED');
+      order.fulfillment!.outbound.driverId = driver.id;
+      order.fulfillment!.outbound.driverAssignmentId = order.id + '-delivery';
       order.updatedAt = new Date().toISOString();
 
       order.timeline.push({
@@ -457,6 +740,55 @@ class StorageService {
 
     const order = orders[orderIndex];
 
+    if (
+      ['PICKED_UP', 'AT_FACILITY', 'DELIVERED', 'CLOSED', 'COMPLETED'].includes(
+        newStatus,
+      )
+    )
+      return {
+        success: false,
+        error: 'Verifica y confirma el código de transferencia.',
+      };
+    if (order.intakeHold && !order.intakeHold.resolvedAt)
+      return {
+        success: false,
+        error: 'Resuelve la diferencia de prendas antes de continuar.',
+      };
+    if (
+      newStatus === 'OUT_FOR_DELIVERY' &&
+      order.fulfillment?.outbound.milestone !== 'RELEASED'
+    )
+      return {
+        success: false,
+        error: 'La sede debe confirmar la salida mediante código.',
+      };
+    if (
+      this.getCurrentUser().role === 'SUPERVISOR' &&
+      this.getCurrentUser().facilityId !== order.facilityId
+    )
+      return {
+        success: false,
+        error: 'Esta solicitud corresponde a otra sede.',
+      };
+    if (
+      [
+        'IN_PROCESS',
+        'QUALITY_CONTROL',
+        'READY_FOR_DELIVERY',
+        'READY',
+        'DELIVERY_SCHEDULED',
+      ].includes(newStatus) &&
+      order.fulfillment?.inbound.status !== 'COMPLETED'
+    )
+      return {
+        success: false,
+        error: 'Confirma primero la recepción física mediante código.',
+      };
+    if (isOverride && (!overrideReason || overrideReason.trim().length < 5))
+      return {
+        success: false,
+        error: 'Registra el motivo del override administrativo.',
+      };
     // Rule: Cannot close order if there are OPEN or IN_PROGRESS incidents
     if (newStatus === 'CLOSED' || newStatus === 'DELIVERED') {
       const incidents = this.getIncidents().filter(
@@ -474,7 +806,7 @@ class StorageService {
 
     // Rule: Order in quarantine cannot advance to READY_FOR_DELIVERY unless released
     if (
-      order.status === 'QUARANTINE' &&
+      operationalStage(order) === 'QUARANTINE' &&
       newStatus === 'READY_FOR_DELIVERY' &&
       !isOverride
     ) {
@@ -492,7 +824,7 @@ class StorageService {
       HEADING_TO_PICKUP: ['ARRIVED_FOR_PICKUP'],
       ARRIVED_FOR_PICKUP: ['PICKED_UP'],
       PICKED_UP: ['HEADING_TO_FACILITY'],
-      HEADING_TO_FACILITY: ['AT_FACILITY'],
+      HEADING_TO_FACILITY: ['ARRIVED_AT_FACILITY'],
       AT_FACILITY: ['IN_PROCESS'],
       IN_PROCESS: ['QUALITY_CONTROL', 'QUARANTINE'],
       QUALITY_CONTROL: ['READY_FOR_DELIVERY', 'QUARANTINE'],
@@ -507,7 +839,7 @@ class StorageService {
     if (
       !isOverride &&
       !['INCIDENT', 'CANCELLED', 'QUARANTINE'].includes(newStatus) &&
-      !transitions[order.status]?.includes(newStatus)
+      !transitions[operationalStage(order)]?.includes(newStatus)
     )
       return {
         success: false,
@@ -524,7 +856,7 @@ class StorageService {
       'DELIVERY_ASSIGNED',
       'OUT_FOR_DELIVERY',
       'ARRIVED_FOR_DELIVERY',
-    ].includes(order.status);
+    ].includes(operationalStage(order));
     const assignedId = deliveryPhase
       ? order.delivery.driverId
       : order.pickup.driverId;
@@ -544,7 +876,7 @@ class StorageService {
       assigned.status = 'AVAILABLE';
     }
     this.saveDrivers(drivers);
-    const prevStatus = order.status;
+    const prevStatus = operationalStage(order);
     const currentUser = this.getCurrentUser();
     const now =
       'Hoy ' +
@@ -554,10 +886,17 @@ class StorageService {
       });
 
     order.previousStatus = prevStatus;
-    order.status = newStatus;
+    advanceOperational(order, newStatus);
     order.updatedAt = new Date().toISOString();
 
     const labelMap: Record<OrderStatus, string> = {
+      DRAFT: 'Borrador',
+      PAYMENT_PENDING: 'Pago pendiente',
+      CONFIRMED: 'Confirmado',
+      AWAITING_INTAKE: 'Esperando ingreso',
+      READY: 'Listo para retiro',
+      COMPLETED: 'Completado',
+      ARRIVED_AT_FACILITY: 'Esperando recepción en planta',
       CREATED: 'Solicitud creada',
       PICKUP_PENDING: 'Esperando asignación de recogida',
       PICKUP_ASSIGNED: 'Chofer asignado para recogida',
@@ -703,6 +1042,8 @@ class StorageService {
 
   // --- INCIDENTS ---
   public getIncidents(): Incident[] {
+    const workflow = localStorage.getItem(this.workflowKey);
+    if (workflow) return JSON.parse(workflow).incidents;
     const raw = localStorage.getItem(STORAGE_KEYS.INCIDENTS);
     return raw ? JSON.parse(raw) : [];
   }
@@ -712,8 +1053,7 @@ class StorageService {
   }
 
   public saveIncidents(incidents: Incident[]): void {
-    localStorage.setItem(STORAGE_KEYS.INCIDENTS, JSON.stringify(incidents));
-    this.notify();
+    this.saveWorkflowField('incidents', incidents);
   }
 
   public createIncident(
@@ -749,7 +1089,7 @@ class StorageService {
       order.incidentsCount += 1;
       order.timeline.push({
         id: 'TL-' + Date.now(),
-        status: order.status,
+        status: operationalStage(order),
         label: `Incidencia registrada (${newId}): ${incidentData.type}`,
         timestamp:
           'Hoy ' +
@@ -786,6 +1126,23 @@ class StorageService {
     const inc = incidents.find((i) => i.id === incidentId);
     if (!inc) return { success: false };
 
+    const order = this.getOrderById(inc.orderId);
+    if (
+      status === 'RESOLVED' &&
+      order?.intakeHold?.handoffId &&
+      incidentId === 'INC-' + order.intakeHold.handoffId
+    ) {
+      try {
+        this.handoffService.resolve(
+          order.id,
+          this.getCurrentUser().id,
+          resolutionNotes ?? '',
+        );
+        return { success: true };
+      } catch {
+        return { success: false };
+      }
+    }
     const prev = inc.status;
     inc.status = status;
     const currentUser = this.getCurrentUser();
@@ -839,6 +1196,11 @@ class StorageService {
 
   // --- CUSTOMERS & KYC ---
   public getCustomers(): Customer[] {
+    const workflow = localStorage.getItem(this.workflowKey);
+    if (workflow) {
+      const customers = JSON.parse(workflow).customers;
+      if (Array.isArray(customers)) return customers;
+    }
     const raw = localStorage.getItem(STORAGE_KEYS.CUSTOMERS);
     return raw ? JSON.parse(raw) : [];
   }
@@ -848,7 +1210,9 @@ class StorageService {
   }
 
   public saveCustomers(customers: Customer[]): void {
-    localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(customers));
+    const state = this.getWorkflow();
+    state.customers = customers;
+    localStorage.setItem(this.workflowKey, JSON.stringify(state));
     this.notify();
   }
 
@@ -975,12 +1339,16 @@ class StorageService {
   }
 
   public getPointsLedger(): PointsLedgerEntry[] {
+    const workflow = localStorage.getItem(this.workflowKey);
+    if (workflow) return JSON.parse(workflow).pointsLedger;
     const raw = localStorage.getItem(STORAGE_KEYS.POINTS_LEDGER);
     return raw ? JSON.parse(raw) : [];
   }
 
   // --- DRIVERS ---
   public getDrivers(): Driver[] {
+    const workflow = localStorage.getItem(this.workflowKey);
+    if (workflow) return JSON.parse(workflow).drivers;
     const raw = localStorage.getItem(STORAGE_KEYS.DRIVERS);
     return raw ? JSON.parse(raw) : [];
   }
@@ -990,8 +1358,7 @@ class StorageService {
   }
 
   public saveDrivers(drivers: Driver[]): void {
-    localStorage.setItem(STORAGE_KEYS.DRIVERS, JSON.stringify(drivers));
-    this.notify();
+    this.saveWorkflowField('drivers', drivers);
   }
 
   public createDriver(

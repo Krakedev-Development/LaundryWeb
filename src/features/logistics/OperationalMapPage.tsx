@@ -1,3 +1,4 @@
+import { operationalStage } from '../../services/fulfillment';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
@@ -65,7 +66,7 @@ export function OperationalMapPage() {
           'PICKUP_ASSIGNED',
           'HEADING_TO_PICKUP',
           'ARRIVED_FOR_PICKUP',
-        ].includes(o.status)
+        ].includes(operationalStage(o))
       )
         points.push({
           id: o.id,
@@ -80,7 +81,7 @@ export function OperationalMapPage() {
           'DELIVERY_ASSIGNED',
           'OUT_FOR_DELIVERY',
           'ARRIVED_FOR_DELIVERY',
-        ].includes(o.status)
+        ].includes(operationalStage(o))
       )
         points.push({
           id: o.id,

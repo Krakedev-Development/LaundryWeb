@@ -1,3 +1,4 @@
+import { operationalStage } from '../../services/fulfillment';
 import React, { useEffect, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import type { Order } from '../../types';
@@ -15,14 +16,15 @@ export function OrderRouteMap({ order }: { order: Order }) {
     'ARRIVED_FOR_DELIVERY',
     'DELIVERED',
     'CLOSED',
-  ].includes(order.status);
+  ].includes(operationalStage(order));
   const toFacility = [
     'PICKED_UP',
     'HEADING_TO_FACILITY',
+    'ARRIVED_AT_FACILITY',
     'AT_FACILITY',
     'IN_PROCESS',
     'QUALITY_CONTROL',
-  ].includes(order.status);
+  ].includes(operationalStage(order));
   const driverId = delivery ? order.delivery.driverId : order.pickup.driverId;
   const driver = drivers.find((d) => d.id === driverId);
   const target = toFacility
@@ -35,7 +37,7 @@ export function OrderRouteMap({ order }: { order: Order }) {
     [error, setError] = useState(''),
     [loading, setLoading] = useState(false);
   useEffect(() => {
-    if (!origin || !target) return;
+    if (order.fulfillment?.mode === "STORE_STORE" || !origin || !target) return;
     const controller = new AbortController();
     setLoading(true);
     setError('');
@@ -55,7 +57,7 @@ export function OrderRouteMap({ order }: { order: Order }) {
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [order.id, order.status, driverId, target?.lat, target?.lng]);
+  }, [order.id, operationalStage(order), driverId, target?.lat, target?.lng]);
   const points: MapPoint[] = [
     {
       id: 'pickup',
@@ -84,6 +86,7 @@ export function OrderRouteMap({ order }: { order: Order }) {
       label: driver.name,
       coordinates: driver.location,
     });
+  if(order.fulfillment?.mode === "STORE_STORE" && facility) return <section className="rounded-2xl border border-slate-200 bg-white p-5"><h2 className="font-semibold mb-3">Sede de ingreso y retiro</h2><BaseMap center={facility.coordinates} points={[{id:facility.id,kind:"facility",label:facility.name,coordinates:facility.coordinates}]} height={300}/></section>;
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-5 space-y-3">
       <h2 className="font-semibold">Ubicaciones y ruta de la etapa actual</h2>

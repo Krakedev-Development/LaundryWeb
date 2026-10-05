@@ -1,3 +1,4 @@
+import { operationalStage } from '../../services/fulfillment';
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useNavigate } from 'react-router-dom';
@@ -37,7 +38,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobileSidebar, onOpenSearc
   const capitalizedDate = todayFormatted.charAt(0).toUpperCase() + todayFormatted.slice(1);
 
   // Notification items
-  const urgentOrders = orders.filter((o) => o.priority === 'URGENT' && o.status !== 'CLOSED');
+  const urgentOrders = orders.filter((o) => o.priority === 'URGENT' && operationalStage(o) !== 'CLOSED');
   const openIncidents = incidents.filter((i) => i.status === 'OPEN' || i.status === 'IN_PROGRESS');
   const pendingKyc = customers.filter((c) => c.kycStatus === 'PENDING');
 

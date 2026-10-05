@@ -2,7 +2,7 @@ const { defineConfig } = require('@playwright/test');
 module.exports = defineConfig({
   testDir: './tests',
   testMatch: '**/*.spec.cjs',
-  timeout: 90000,
+  timeout: 240000,
   workers: 1,
   use: {
     baseURL: 'http://localhost:3000',

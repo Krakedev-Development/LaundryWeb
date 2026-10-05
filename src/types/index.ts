@@ -1,3 +1,8 @@
+import type {
+  Fulfillment,
+  IntakeHold,
+  ActorRole,
+} from '../services/fulfillment';
 export type UserRole = 'ADMIN' | 'SUPERVISOR';
 
 export interface User {
@@ -12,6 +17,13 @@ export interface User {
 export type OrderPriority = 'URGENT' | 'HIGH' | 'NORMAL' | 'LOW';
 
 export type OrderStatus =
+  | 'DRAFT'
+  | 'PAYMENT_PENDING'
+  | 'CONFIRMED'
+  | 'AWAITING_INTAKE'
+  | 'READY'
+  | 'COMPLETED'
+  | 'ARRIVED_AT_FACILITY'
   | 'CREATED'
   | 'PICKUP_PENDING'
   | 'PICKUP_ASSIGNED'
@@ -105,12 +117,15 @@ export interface OrderTimelineEvent {
   label: string;
   timestamp: string;
   userName: string;
-  userRole: UserRole;
+  userRole: UserRole | ActorRole;
   notes?: string;
   isOverride?: boolean;
 }
 
 export interface Order {
+  fulfillment?: Fulfillment;
+  workflowVersion?: number;
+  intakeHold?: IntakeHold;
   id: string; // e.g. SOL-4587
   trackingNumber: string;
   customerId: string;
@@ -203,6 +218,10 @@ export interface Driver {
 }
 
 export interface Facility {
+  acceptsCustomerDropoff?: boolean;
+  allowsCustomerPickup?: boolean;
+  serviceAreaIds?: string[];
+  openingHours?: string;
   id: string;
   name: string;
   code: string;
@@ -327,6 +346,7 @@ export interface RewardRedemption {
 }
 
 export interface PointsLedgerEntry {
+  orderId?: string;
   id: string;
   customerId: string;
   points: number; // positive or negative

@@ -1,3 +1,4 @@
+import { operationalStage } from '../../services/fulfillment';
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
@@ -35,17 +36,23 @@ interface SidebarGroup {
   adminOnly?: boolean;
 }
 
-export const AppSidebar: React.FC<{ isOpenMobile: boolean; onCloseMobile: () => void }> = ({
-  isOpenMobile,
-  onCloseMobile,
-}) => {
+export const AppSidebar: React.FC<{
+  isOpenMobile: boolean;
+  onCloseMobile: () => void;
+}> = ({ isOpenMobile, onCloseMobile }) => {
   const { currentUser, orders, incidents, customers } = useApp();
   const isAdmin = currentUser.role === 'ADMIN';
 
   // Badge counts
-  const unassignedOrdersCount = orders.filter((o) => o.status === 'PICKUP_PENDING').length;
-  const activeIncidentsCount = incidents.filter((i) => i.status === 'OPEN' || i.status === 'IN_PROGRESS').length;
-  const pendingKycCount = customers.filter((c) => c.kycStatus === 'PENDING').length;
+  const unassignedOrdersCount = orders.filter(
+    (o) => operationalStage(o) === 'PICKUP_PENDING',
+  ).length;
+  const activeIncidentsCount = incidents.filter(
+    (i) => i.status === 'OPEN' || i.status === 'IN_PROGRESS',
+  ).length;
+  const pendingKycCount = customers.filter(
+    (c) => c.kycStatus === 'PENDING',
+  ).length;
 
   const navigationGroups: SidebarGroup[] = [
     {
@@ -66,6 +73,11 @@ export const AppSidebar: React.FC<{ isOpenMobile: boolean; onCloseMobile: () => 
           path: '/operations/orders',
           icon: <ClipboardList className="w-4 h-4 shrink-0" />,
           badge: orders.length,
+        },
+        {
+          name: 'Recepción y retiros',
+          path: '/operations/handoffs',
+          icon: <ClipboardList className="w-4 h-4 shrink-0" />,
         },
         {
           name: 'Despacho',
@@ -198,7 +210,9 @@ export const AppSidebar: React.FC<{ isOpenMobile: boolean; onCloseMobile: () => 
           {navigationGroups.map((group) => {
             if (group.adminOnly && !isAdmin) return null;
 
-            const visibleItems = group.items.filter((item) => !item.adminOnly || isAdmin);
+            const visibleItems = group.items.filter(
+              (item) => !item.adminOnly || isAdmin,
+            );
             if (visibleItems.length === 0) return null;
 
             return (
@@ -230,8 +244,8 @@ export const AppSidebar: React.FC<{ isOpenMobile: boolean; onCloseMobile: () => 
                             item.path === '/operations/incidents'
                               ? 'bg-rose-100 text-rose-800'
                               : item.path === '/operations/dispatch'
-                              ? 'bg-amber-100 text-amber-900'
-                              : 'bg-slate-100 text-slate-600'
+                                ? 'bg-amber-100 text-amber-900'
+                                : 'bg-slate-100 text-slate-600'
                           }`}
                         >
                           {item.badge}

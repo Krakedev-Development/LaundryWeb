@@ -1,3 +1,4 @@
+import { operationalStage } from '../../services/fulfillment';
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { Order, OrderStatus } from '../../types';
@@ -90,7 +91,7 @@ export const OverrideModal: React.FC<OverrideModalProps> = ({ order, isOpen, onC
               Solicitud
             </label>
             <div className="px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-semibold text-slate-700">
-              {order.id} · Estado actual: {order.status}
+              {order.id} · Estado actual: {operationalStage(order)}
             </div>
           </div>
 

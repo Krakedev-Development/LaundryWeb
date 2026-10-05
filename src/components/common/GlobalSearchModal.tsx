@@ -1,3 +1,4 @@
+import { operationalStage } from '../../services/fulfillment';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
@@ -138,7 +139,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
                         <span className="font-bold text-xs text-[#143F73] font-mono">{o.id}</span>
                         <span className="text-xs text-[#102A43] font-medium">{o.customerName}</span>
                         <span className="text-[10px] px-1.5 py-0.2 bg-slate-100 text-slate-600 rounded">
-                          {o.status}
+                          {operationalStage(o)}
                         </span>
                       </div>
                       <p className="text-[11px] text-slate-500 truncate max-w-md">

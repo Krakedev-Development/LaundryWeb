@@ -1,3 +1,4 @@
+import { operationalStage } from '../../services/fulfillment';
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
@@ -26,7 +27,9 @@ export const OrdersListPage: React.FC = () => {
   const [selectedPriority, setSelectedPriority] = useState<string>('ALL');
   const [selectedFacility, setSelectedFacility] = useState<string>('ALL');
   const [selectedDriver, setSelectedDriver] = useState<string>('ALL');
-  const [quickTab, setQuickTab] = useState<'ALL' | 'UNASSIGNED' | 'PICKUP_TODAY' | 'IN_PLANT' | 'DELIVERY' | 'CLOSED'>('ALL');
+  const [quickTab, setQuickTab] = useState<
+    'ALL' | 'UNASSIGNED' | 'PICKUP_TODAY' | 'IN_PLANT' | 'DELIVERY' | 'CLOSED'
+  >('ALL');
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
   // Modal State for Quick Assignment
@@ -36,11 +39,25 @@ export const OrdersListPage: React.FC = () => {
   const tabCounts = useMemo(() => {
     return {
       ALL: orders.length,
-      UNASSIGNED: orders.filter((o) => o.status === 'PICKUP_PENDING').length,
-      PICKUP_TODAY: orders.filter((o) => o.pickup.date.toLowerCase().includes('hoy')).length,
-      IN_PLANT: orders.filter((o) => ['AT_FACILITY', 'IN_PROCESS', 'QUALITY_CONTROL', 'QUARANTINE'].includes(o.status)).length,
-      DELIVERY: orders.filter((o) => ['READY_FOR_DELIVERY', 'DELIVERY_SCHEDULED', 'DELIVERY_ASSIGNED', 'OUT_FOR_DELIVERY'].includes(o.status)).length,
-      CLOSED: orders.filter((o) => o.status === 'CLOSED').length,
+      UNASSIGNED: orders.filter((o) => operationalStage(o) === 'PICKUP_PENDING')
+        .length,
+      PICKUP_TODAY: orders.filter((o) =>
+        o.pickup.date.toLowerCase().includes('hoy'),
+      ).length,
+      IN_PLANT: orders.filter((o) =>
+        ['AT_FACILITY', 'IN_PROCESS', 'QUALITY_CONTROL', 'QUARANTINE'].includes(
+          operationalStage(o),
+        ),
+      ).length,
+      DELIVERY: orders.filter((o) =>
+        [
+          'READY_FOR_DELIVERY',
+          'DELIVERY_SCHEDULED',
+          'DELIVERY_ASSIGNED',
+          'OUT_FOR_DELIVERY',
+        ].includes(operationalStage(o)),
+      ).length,
+      CLOSED: orders.filter((o) => operationalStage(o) === 'CLOSED').length,
     };
   }, [orders]);
 
@@ -53,32 +70,81 @@ export const OrdersListPage: React.FC = () => {
         const matchesId = order.id.toLowerCase().includes(q);
         const matchesTracking = order.trackingNumber.toLowerCase().includes(q);
         const matchesCustomer = order.customerName.toLowerCase().includes(q);
-        const matchesAddress = order.customerAddress.street.toLowerCase().includes(q) ||
+        const matchesAddress =
+          order.customerAddress.street.toLowerCase().includes(q) ||
           order.customerAddress.neighborhood.toLowerCase().includes(q);
-        if (!matchesId && !matchesTracking && !matchesCustomer && !matchesAddress) {
+        if (
+          !matchesId &&
+          !matchesTracking &&
+          !matchesCustomer &&
+          !matchesAddress
+        ) {
           return false;
         }
       }
 
       // Quick Tab Filter
-      if (quickTab === 'UNASSIGNED' && order.status !== 'PICKUP_PENDING') return false;
-      if (quickTab === 'PICKUP_TODAY' && !order.pickup.date.toLowerCase().includes('hoy')) return false;
-      if (quickTab === 'IN_PLANT' && !['AT_FACILITY', 'IN_PROCESS', 'QUALITY_CONTROL', 'QUARANTINE'].includes(order.status)) return false;
-      if (quickTab === 'DELIVERY' && !['READY_FOR_DELIVERY', 'DELIVERY_SCHEDULED', 'DELIVERY_ASSIGNED', 'OUT_FOR_DELIVERY'].includes(order.status)) return false;
-      if (quickTab === 'CLOSED' && order.status !== 'CLOSED') return false;
+      if (
+        quickTab === 'UNASSIGNED' &&
+        operationalStage(order) !== 'PICKUP_PENDING'
+      )
+        return false;
+      if (
+        quickTab === 'PICKUP_TODAY' &&
+        !order.pickup.date.toLowerCase().includes('hoy')
+      )
+        return false;
+      if (
+        quickTab === 'IN_PLANT' &&
+        ![
+          'AT_FACILITY',
+          'IN_PROCESS',
+          'QUALITY_CONTROL',
+          'QUARANTINE',
+        ].includes(operationalStage(order))
+      )
+        return false;
+      if (
+        quickTab === 'DELIVERY' &&
+        ![
+          'READY_FOR_DELIVERY',
+          'DELIVERY_SCHEDULED',
+          'DELIVERY_ASSIGNED',
+          'OUT_FOR_DELIVERY',
+        ].includes(operationalStage(order))
+      )
+        return false;
+      if (quickTab === 'CLOSED' && operationalStage(order) !== 'CLOSED')
+        return false;
 
       // Dropdown filters
-      if (selectedStatus !== 'ALL' && order.status !== selectedStatus) return false;
-      if (selectedPriority !== 'ALL' && order.priority !== selectedPriority) return false;
-      if (selectedFacility !== 'ALL' && order.facilityId !== selectedFacility) return false;
+      if (
+        selectedStatus !== 'ALL' &&
+        operationalStage(order) !== selectedStatus
+      )
+        return false;
+      if (selectedPriority !== 'ALL' && order.priority !== selectedPriority)
+        return false;
+      if (selectedFacility !== 'ALL' && order.facilityId !== selectedFacility)
+        return false;
       if (selectedDriver !== 'ALL') {
-        const isAssigned = order.pickup.driverId === selectedDriver || order.delivery.driverId === selectedDriver;
+        const isAssigned =
+          order.pickup.driverId === selectedDriver ||
+          order.delivery.driverId === selectedDriver;
         if (!isAssigned) return false;
       }
 
       return true;
     });
-  }, [orders, quickTab, searchQuery, selectedStatus, selectedPriority, selectedFacility, selectedDriver]);
+  }, [
+    orders,
+    quickTab,
+    searchQuery,
+    selectedStatus,
+    selectedPriority,
+    selectedFacility,
+    selectedDriver,
+  ]);
 
   // Sort by priority then id
   const sortedOrders = useMemo(() => {
@@ -89,14 +155,18 @@ export const OrdersListPage: React.FC = () => {
       LOW: 1,
     };
     return [...filteredOrders].sort((a, b) => {
-      const weightDiff = priorityWeight[b.priority] - priorityWeight[a.priority];
+      const weightDiff =
+        priorityWeight[b.priority] - priorityWeight[a.priority];
       if (weightDiff !== 0) return weightDiff;
       return b.id.localeCompare(a.id);
     });
   }, [filteredOrders]);
 
   const problematicOrders = orders.filter(
-    (o) => o.status === 'QUARANTINE' || o.slaStatus === 'OVERDUE' || o.incidentsCount > 0
+    (o) =>
+      operationalStage(o) === 'QUARANTINE' ||
+      o.slaStatus === 'OVERDUE' ||
+      o.incidentsCount > 0,
   );
 
   const resetFilters = () => {
@@ -108,7 +178,8 @@ export const OrdersListPage: React.FC = () => {
     setQuickTab('ALL');
   };
 
-  const activeFiltersCount = (selectedStatus !== 'ALL' ? 1 : 0) +
+  const activeFiltersCount =
+    (selectedStatus !== 'ALL' ? 1 : 0) +
     (selectedPriority !== 'ALL' ? 1 : 0) +
     (selectedFacility !== 'ALL' ? 1 : 0) +
     (selectedDriver !== 'ALL' ? 1 : 0);
@@ -139,10 +210,12 @@ export const OrdersListPage: React.FC = () => {
             </div>
             <div>
               <p className="text-xs font-bold text-slate-900">
-                Atención Requerida: {problematicOrders.length} solicitud(es) presentan excepciones operacionales
+                Atención Requerida: {problematicOrders.length} solicitud(es)
+                presentan excepciones operacionales
               </p>
               <p className="text-[11px] text-slate-500 mt-0.5">
-                Casos con SLA vencido, retención en cuarentena o incidencias activas en curso.
+                Casos con SLA vencido, retención en cuarentena o incidencias
+                activas en curso.
               </p>
             </div>
           </div>
@@ -164,8 +237,17 @@ export const OrdersListPage: React.FC = () => {
         <div className="flex items-center gap-2 overflow-x-auto pb-1">
           {[
             { key: 'ALL', label: 'Todas', count: tabCounts.ALL },
-            { key: 'UNASSIGNED', label: 'Sin Asignar', count: tabCounts.UNASSIGNED, alert: tabCounts.UNASSIGNED > 0 },
-            { key: 'PICKUP_TODAY', label: 'Recogida Hoy', count: tabCounts.PICKUP_TODAY },
+            {
+              key: 'UNASSIGNED',
+              label: 'Sin Asignar',
+              count: tabCounts.UNASSIGNED,
+              alert: tabCounts.UNASSIGNED > 0,
+            },
+            {
+              key: 'PICKUP_TODAY',
+              label: 'Recogida Hoy',
+              count: tabCounts.PICKUP_TODAY,
+            },
             { key: 'IN_PLANT', label: 'En Planta', count: tabCounts.IN_PLANT },
             { key: 'DELIVERY', label: 'En Entrega', count: tabCounts.DELIVERY },
             { key: 'CLOSED', label: 'Finalizadas', count: tabCounts.CLOSED },
@@ -185,8 +267,8 @@ export const OrdersListPage: React.FC = () => {
                   quickTab === tab.key
                     ? 'bg-white text-sky-800 shadow-2xs font-bold'
                     : tab.alert
-                    ? 'bg-amber-100 text-amber-800 font-bold'
-                    : 'bg-slate-100 text-slate-500'
+                      ? 'bg-amber-100 text-amber-800 font-bold'
+                      : 'bg-slate-100 text-slate-500'
                 }`}
               >
                 {tab.count}
@@ -243,7 +325,9 @@ export const OrdersListPage: React.FC = () => {
         {showAdvancedFilters && (
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-3 border-t border-slate-100 text-xs">
             <div>
-              <label className="block text-[11px] font-semibold text-slate-500 mb-1">Estado</label>
+              <label className="block text-[11px] font-semibold text-slate-500 mb-1">
+                Estado
+              </label>
               <select
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value)}
@@ -264,7 +348,9 @@ export const OrdersListPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold text-slate-500 mb-1">Prioridad</label>
+              <label className="block text-[11px] font-semibold text-slate-500 mb-1">
+                Prioridad
+              </label>
               <select
                 value={selectedPriority}
                 onChange={(e) => setSelectedPriority(e.target.value)}
@@ -279,7 +365,9 @@ export const OrdersListPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold text-slate-500 mb-1">Sede de Lavado</label>
+              <label className="block text-[11px] font-semibold text-slate-500 mb-1">
+                Sede de Lavado
+              </label>
               <select
                 value={selectedFacility}
                 onChange={(e) => setSelectedFacility(e.target.value)}
@@ -287,13 +375,17 @@ export const OrdersListPage: React.FC = () => {
               >
                 <option value="ALL">Todas las Sedes</option>
                 {facilities.map((f) => (
-                  <option key={f.id} value={f.id}>{f.name}</option>
+                  <option key={f.id} value={f.id}>
+                    {f.name}
+                  </option>
                 ))}
               </select>
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold text-slate-500 mb-1">Chofer Asignado</label>
+              <label className="block text-[11px] font-semibold text-slate-500 mb-1">
+                Chofer Asignado
+              </label>
               <select
                 value={selectedDriver}
                 onChange={(e) => setSelectedDriver(e.target.value)}
@@ -301,7 +393,9 @@ export const OrdersListPage: React.FC = () => {
               >
                 <option value="ALL">Todos los Choferes</option>
                 {drivers.map((d) => (
-                  <option key={d.id} value={d.id}>{d.name} ({d.vehiclePlate})</option>
+                  <option key={d.id} value={d.id}>
+                    {d.name} ({d.vehiclePlate})
+                  </option>
                 ))}
               </select>
             </div>
@@ -384,7 +478,9 @@ export const OrdersListPage: React.FC = () => {
                             {order.pickup.driverName}
                           </span>
                         ) : (
-                          <span className="text-amber-600 font-medium">Sin chofer</span>
+                          <span className="text-amber-600 font-medium">
+                            Sin chofer
+                          </span>
                         )}
                       </div>
                     </td>
@@ -407,7 +503,19 @@ export const OrdersListPage: React.FC = () => {
 
                     {/* Estado */}
                     <td className="py-4 px-5 whitespace-nowrap">
-                      <StatusBadge status={order.status} size="sm" />
+                      <StatusBadge
+                        status={
+                          order.fulfillment?.mode === 'STORE_STORE'
+                            ? order.status
+                            : operationalStage(order)
+                        }
+                        size="sm"
+                      />
+                      <span className="block text-[10px] text-slate-500 mt-1">
+                        {order.fulfillment?.mode === 'STORE_STORE'
+                          ? 'Ingreso y retiro en sede'
+                          : 'Domicilio'}
+                      </span>
                     </td>
 
                     {/* Prioridad */}
@@ -417,13 +525,19 @@ export const OrdersListPage: React.FC = () => {
 
                     {/* SLA */}
                     <td className="py-4 px-5 whitespace-nowrap">
-                      <SLABadge risk={order.slaStatus} deadline={order.slaDeadline} />
+                      <SLABadge
+                        risk={order.slaStatus}
+                        deadline={order.slaDeadline}
+                      />
                     </td>
 
                     {/* Acciones */}
-                    <td className="py-4 px-5 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                    <td
+                      className="py-4 px-5 text-right whitespace-nowrap"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <div className="flex items-center justify-end gap-2">
-                        {order.status === 'PICKUP_PENDING' && (
+                        {operationalStage(order) === 'PICKUP_PENDING' && (
                           <button
                             onClick={() => setAssigningOrder(order)}
                             className="px-3 py-1.5 text-xs font-semibold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-lg transition-colors flex items-center gap-1 shadow-xs cursor-pointer"
@@ -434,7 +548,9 @@ export const OrdersListPage: React.FC = () => {
                           </button>
                         )}
                         <button
-                          onClick={() => navigate(`/operations/orders/${order.id}`)}
+                          onClick={() =>
+                            navigate(`/operations/orders/${order.id}`)
+                          }
                           className="p-2 text-slate-500 hover:text-sky-800 hover:bg-sky-50 rounded-lg transition-colors cursor-pointer"
                           title="Ver detalle 360°"
                         >
@@ -451,8 +567,13 @@ export const OrdersListPage: React.FC = () => {
 
         {/* Footer info */}
         <div className="px-6 py-4 bg-slate-50/80 border-t border-slate-200/80 flex items-center justify-between text-xs text-slate-500">
-          <span>Mostrando {sortedOrders.length} de {orders.length} solicitudes registradas</span>
-          <span className="font-mono text-[11px] text-slate-400">LaundryWeb Clean Operations</span>
+          <span>
+            Mostrando {sortedOrders.length} de {orders.length} solicitudes
+            registradas
+          </span>
+          <span className="font-mono text-[11px] text-slate-400">
+            LaundryWeb Clean Operations
+          </span>
         </div>
       </div>
 

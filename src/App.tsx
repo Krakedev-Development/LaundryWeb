@@ -1,3 +1,4 @@
+import { HandoffsPage } from './features/handoffs/HandoffsPage';
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider } from './context/AppContext';
@@ -39,11 +40,15 @@ export default function App() {
             {/* Operations */}
             <Route path="operations/orders" element={<OrdersListPage />} />
             <Route path="operations/orders/:id" element={<OrderDetailPage />} />
+            <Route path="operations/handoffs" element={<HandoffsPage />} />
             <Route path="operations/dispatch" element={<DispatchPage />} />
             <Route path="operations/plant" element={<PlantKanbanPage />} />
             <Route path="operations/deliveries" element={<DeliveriesPage />} />
             <Route path="operations/incidents" element={<IncidentsPage />} />
-            <Route path="operations/incidents/:id" element={<IncidentsPage />} />
+            <Route
+              path="operations/incidents/:id"
+              element={<IncidentsPage />}
+            />
 
             {/* Customers */}
             <Route path="customers" element={<CustomersPage />} />

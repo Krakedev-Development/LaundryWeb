@@ -1,3 +1,4 @@
+import { operationalStage } from '../../services/fulfillment';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
@@ -28,26 +29,26 @@ export const DashboardPage: React.FC = () => {
 
   // Key Metrics
   const totalOrdersToday = orders.length;
-  const unassignedOrders = orders.filter((o) => o.status === 'PICKUP_PENDING');
-  const inDeliveryOrders = orders.filter((o) => o.status === 'OUT_FOR_DELIVERY' || o.status === 'DELIVERY_ASSIGNED');
+  const unassignedOrders = orders.filter((o) => operationalStage(o) === 'PICKUP_PENDING');
+  const inDeliveryOrders = orders.filter((o) => operationalStage(o) === 'OUT_FOR_DELIVERY' || operationalStage(o) === 'DELIVERY_ASSIGNED');
   const onTimeCount = orders.filter((o) => o.slaStatus === 'ON_TIME').length;
   const slaCompliance = Math.round((onTimeCount / (orders.length || 1)) * 100);
   const openIncidents = incidents.filter((i) => i.status === 'OPEN' || i.status === 'IN_PROGRESS');
-  const quarantineOrders = orders.filter((o) => o.status === 'QUARANTINE');
+  const quarantineOrders = orders.filter((o) => operationalStage(o) === 'QUARANTINE');
   const atRiskOrders = orders.filter((o) => o.slaStatus === 'AT_RISK' || o.slaStatus === 'OVERDUE');
   const pendingKyc = customers.filter((c) => c.kycStatus === 'PENDING');
 
   // Grouped operational stages for clear visual hierarchy
   const phasePickup = orders.filter((o) =>
-    ['CREATED', 'PICKUP_PENDING', 'PICKUP_ASSIGNED', 'HEADING_TO_PICKUP', 'PICKED_UP'].includes(o.status)
+    ['CREATED', 'PICKUP_PENDING', 'PICKUP_ASSIGNED', 'HEADING_TO_PICKUP', 'PICKED_UP'].includes(operationalStage(o))
   ).length;
 
   const phasePlant = orders.filter((o) =>
-    ['AT_FACILITY', 'IN_PROCESS', 'QUALITY_CONTROL', 'QUARANTINE'].includes(o.status)
+    ['AT_FACILITY', 'IN_PROCESS', 'QUALITY_CONTROL', 'QUARANTINE'].includes(operationalStage(o))
   ).length;
 
   const phaseDelivery = orders.filter((o) =>
-    ['READY_FOR_DELIVERY', 'DELIVERY_SCHEDULED', 'DELIVERY_ASSIGNED', 'OUT_FOR_DELIVERY', 'DELIVERED'].includes(o.status)
+    ['READY_FOR_DELIVERY', 'DELIVERY_SCHEDULED', 'DELIVERY_ASSIGNED', 'OUT_FOR_DELIVERY', 'DELIVERED'].includes(operationalStage(o))
   ).length;
 
   return (
@@ -210,19 +211,19 @@ export const DashboardPage: React.FC = () => {
                 <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
                   <span className="text-slate-400 block text-[11px]">En lavado</span>
                   <span className="text-sm font-bold text-slate-800 font-mono tabular-nums">
-                    {orders.filter((o) => o.status === 'IN_PROCESS').length}
+                    {orders.filter((o) => operationalStage(o) === 'IN_PROCESS').length}
                   </span>
                 </div>
                 <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
                   <span className="text-slate-400 block text-[11px]">Control Calidad</span>
                   <span className="text-sm font-bold text-slate-800 font-mono tabular-nums">
-                    {orders.filter((o) => o.status === 'QUALITY_CONTROL').length}
+                    {orders.filter((o) => operationalStage(o) === 'QUALITY_CONTROL').length}
                   </span>
                 </div>
                 <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
                   <span className="text-slate-400 block text-[11px]">Listas p/ entrega</span>
                   <span className="text-sm font-bold text-emerald-700 font-mono tabular-nums">
-                    {orders.filter((o) => o.status === 'READY_FOR_DELIVERY').length}
+                    {orders.filter((o) => operationalStage(o) === 'READY_FOR_DELIVERY').length}
                   </span>
                 </div>
               </div>

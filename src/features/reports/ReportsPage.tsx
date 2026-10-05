@@ -1,3 +1,4 @@
+import { operationalStage } from '../../services/fulfillment';
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { PageHeader } from '../../components/common/PageHeader';
@@ -24,7 +25,7 @@ export const ReportsPage: React.FC = () => {
 
   // KPIs
   const totalOrders = orders.length;
-  const completedOrders = orders.filter((o) => o.status === 'CLOSED' || o.status === 'DELIVERED').length;
+  const completedOrders = orders.filter((o) => operationalStage(o) === 'CLOSED' || operationalStage(o) === 'DELIVERED').length;
   const totalRevenue = orders.reduce((acc, o) => acc + o.pricing.total, 0);
   const onTimeOrders = orders.filter((o) => o.slaStatus === 'ON_TIME').length;
   const slaRate = Math.round((onTimeOrders / (totalOrders || 1)) * 100);
@@ -39,7 +40,7 @@ export const ReportsPage: React.FC = () => {
       `"${o.customerName}"`,
       `"${o.serviceType}"`,
       o.pricing.total.toFixed(2),
-      o.status,
+      operationalStage(o),
       o.slaStatus,
       o.createdAt,
     ]);

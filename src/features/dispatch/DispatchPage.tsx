@@ -1,3 +1,4 @@
+import { operationalStage } from '../../services/fulfillment';
 import { storageService } from '../../services/storage';
 import { useNavigate } from 'react-router-dom';
 import React, { useEffect, useState } from 'react';
@@ -15,10 +16,14 @@ export function DispatchPage() {
     [orderId, setOrderId] = useState(''),
     [driverId, setDriverId] = useState(''),
     [notes, setNotes] = useState('');
-  const queue = orders.filter((o) =>
-    type === 'pickup'
-      ? o.status === 'PICKUP_PENDING'
-      : ['READY_FOR_DELIVERY', 'DELIVERY_SCHEDULED'].includes(o.status),
+  const queue = orders.filter(
+    (o) =>
+      o.fulfillment?.mode !== 'STORE_STORE' &&
+      (type === 'pickup'
+        ? operationalStage(o) === 'PICKUP_PENDING'
+        : ['READY_FOR_DELIVERY', 'DELIVERY_SCHEDULED'].includes(
+            operationalStage(o),
+          )),
   );
   const order = queue.find((o) => o.id === orderId) ?? queue[0];
   const { candidates, loading, error } = useDriverCandidates(order, type);

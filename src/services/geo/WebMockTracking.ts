@@ -1,3 +1,4 @@
+import { operationalStage } from '../fulfillment';
 import {
   MockTrackingProvider,
   demoTrackingRoute,
@@ -33,24 +34,24 @@ export class WebMockTracking {
           'HEADING_TO_PICKUP',
           'OUT_FOR_DELIVERY',
           'HEADING_TO_FACILITY',
-        ].includes(o.status),
+        ].includes(operationalStage(o)),
       )
       .forEach((order) => {
         const id =
-          order.status === 'OUT_FOR_DELIVERY'
+          operationalStage(order) === 'OUT_FOR_DELIVERY'
             ? order.delivery.driverId
             : order.pickup.driverId;
         const driver = drivers.find((d) => d.id === id);
         if (!id || !driver || needed.has(id)) return;
         const destination =
-          order.status === 'HEADING_TO_FACILITY'
+          operationalStage(order) === 'HEADING_TO_FACILITY'
             ? facilities.find((f) => f.id === order.facilityId)?.coordinates
-            : order.status === 'OUT_FOR_DELIVERY'
+            : operationalStage(order) === 'OUT_FOR_DELIVERY'
               ? order.deliveryAddress.coordinates
               : order.customerAddress.coordinates;
         if (!destination) return;
         needed.add(id);
-        const key = order.id + ':' + order.status;
+        const key = order.id + ':' + operationalStage(order);
         if (this.active.get(id)?.key === key) return;
         this.stop(id);
         const controller = new AbortController();

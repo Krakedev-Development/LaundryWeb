@@ -1,3 +1,4 @@
+import { operationalStage } from '../../services/fulfillment';
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
@@ -23,16 +24,25 @@ export const DeliveriesPage: React.FC = () => {
 
   // Selected order for the right scheduling panel
   const deliveryOrders = useMemo(() => {
-    return orders.filter((o) =>
-      ['READY_FOR_DELIVERY', 'DELIVERY_SCHEDULED', 'DELIVERY_ASSIGNED', 'OUT_FOR_DELIVERY', 'DELIVERED'].includes(o.status)
+    return orders.filter(
+      (o) =>
+        o.fulfillment?.mode !== 'STORE_STORE' &&
+        [
+          'READY_FOR_DELIVERY',
+          'DELIVERY_SCHEDULED',
+          'DELIVERY_ASSIGNED',
+          'OUT_FOR_DELIVERY',
+          'DELIVERED',
+        ].includes(operationalStage(o)),
     );
   }, [orders]);
 
   const [selectedOrderId, setSelectedOrderId] = useState<string>(
-    deliveryOrders[0]?.id || ''
+    deliveryOrders[0]?.id || '',
   );
 
-  const selectedOrder = orders.find((o) => o.id === selectedOrderId) || deliveryOrders[0];
+  const selectedOrder =
+    orders.find((o) => o.id === selectedOrderId) || deliveryOrders[0];
 
   // Scheduling Form state
   const [targetDate, setTargetDate] = useState('Hoy');
@@ -45,17 +55,27 @@ export const DeliveriesPage: React.FC = () => {
   const [driverFilter, setDriverFilter] = useState('ALL');
 
   // KPIs
-  const toDeliverTodayCount = deliveryOrders.filter((o) => o.delivery.targetDate.toLowerCase().includes('hoy')).length;
-  const onRouteCount = deliveryOrders.filter((o) => o.status === 'OUT_FOR_DELIVERY').length;
-  const deliveredTodayCount = deliveryOrders.filter((o) => o.status === 'DELIVERED').length;
+  const toDeliverTodayCount = deliveryOrders.filter((o) =>
+    o.delivery.targetDate.toLowerCase().includes('hoy'),
+  ).length;
+  const onRouteCount = deliveryOrders.filter(
+    (o) => operationalStage(o) === 'OUT_FOR_DELIVERY',
+  ).length;
+  const deliveredTodayCount = deliveryOrders.filter(
+    (o) => operationalStage(o) === 'DELIVERED',
+  ).length;
   const slaRate = Math.round(
-    (deliveryOrders.filter((o) => o.slaStatus === 'ON_TIME').length / (deliveryOrders.length || 1)) * 100
+    (deliveryOrders.filter((o) => o.slaStatus === 'ON_TIME').length /
+      (deliveryOrders.length || 1)) *
+      100,
   );
 
   const filteredOrders = useMemo(() => {
     return deliveryOrders.filter((o) => {
-      if (statusFilter !== 'ALL' && o.status !== statusFilter) return false;
-      if (driverFilter !== 'ALL' && o.delivery.driverId !== driverFilter) return false;
+      if (statusFilter !== 'ALL' && operationalStage(o) !== statusFilter)
+        return false;
+      if (driverFilter !== 'ALL' && o.delivery.driverId !== driverFilter)
+        return false;
       return true;
     });
   }, [deliveryOrders, statusFilter, driverFilter]);
@@ -70,12 +90,16 @@ export const DeliveriesPage: React.FC = () => {
       selectedOrder.delivery.recipientName || selectedOrder.customerName,
       selectedOrder.delivery.recipientPhone || selectedOrder.customerPhone,
       deliveryNotes,
-      driverId || undefined
+      driverId || undefined,
     );
   };
 
   const handleConfirmDelivered = (orderId: string) => {
-    updateOrderStatus(orderId, 'DELIVERED', 'Entrega confirmada con el cliente');
+    updateOrderStatus(
+      orderId,
+      'DELIVERED',
+      'Entrega confirmada con el cliente',
+    );
   };
 
   return (
@@ -124,7 +148,9 @@ export const DeliveriesPage: React.FC = () => {
               <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
                 Listado de Entregas ({filteredOrders.length})
               </h2>
-              <p className="text-xs text-slate-500 mt-0.5">Selecciona una orden para gestionar su ruta</p>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Selecciona una orden para gestionar su ruta
+              </p>
             </div>
 
             {/* Filters */}
@@ -149,7 +175,9 @@ export const DeliveriesPage: React.FC = () => {
               >
                 <option value="ALL">Todos los Choferes</option>
                 {drivers.map((d) => (
-                  <option key={d.id} value={d.id}>{d.name}</option>
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
                 ))}
               </select>
             </div>
@@ -179,14 +207,18 @@ export const DeliveriesPage: React.FC = () => {
                       }`}
                     >
                       <td className="py-3.5 px-4">
-                        <span className="font-bold text-sky-800 font-mono text-[13px]">{ord.id}</span>
+                        <span className="font-bold text-sky-800 font-mono text-[13px]">
+                          {ord.id}
+                        </span>
                         <span className="block font-semibold text-slate-900 truncate max-w-[140px] mt-0.5">
                           {ord.customerName}
                         </span>
                       </td>
 
                       <td className="py-3.5 px-4 whitespace-nowrap">
-                        <span className="font-medium text-slate-800">{ord.delivery.targetDate}</span>
+                        <span className="font-medium text-slate-800">
+                          {ord.delivery.targetDate}
+                        </span>
                         <span className="block text-[11px] text-slate-400 font-mono mt-0.5">
                           {ord.delivery.timeSlot}
                         </span>
@@ -198,20 +230,25 @@ export const DeliveriesPage: React.FC = () => {
                             {ord.delivery.driverName}
                           </span>
                         ) : (
-                          <span className="text-amber-600 italic">Por asignar</span>
+                          <span className="text-amber-600 italic">
+                            Por asignar
+                          </span>
                         )}
                       </td>
 
                       <td className="py-3.5 px-4 whitespace-nowrap">
-                        <StatusBadge status={ord.status} size="sm" />
+                        <StatusBadge status={operationalStage(ord)} size="sm" />
                       </td>
 
                       <td className="py-3.5 px-4 whitespace-nowrap">
                         <SLABadge risk={ord.slaStatus} />
                       </td>
 
-                      <td className="py-3.5 px-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                        {ord.status === 'OUT_FOR_DELIVERY' && (
+                      <td
+                        className="py-3.5 px-4 text-right whitespace-nowrap"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {operationalStage(ord) === 'OUT_FOR_DELIVERY' && (
                           <button
                             onClick={() => handleConfirmDelivered(ord.id)}
                             className="px-3 py-1.5 text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg shadow-xs cursor-pointer"
@@ -219,9 +256,15 @@ export const DeliveriesPage: React.FC = () => {
                             Entregada
                           </button>
                         )}
-                        {ord.status === 'DELIVERY_ASSIGNED' && (
+                        {operationalStage(ord) === 'DELIVERY_ASSIGNED' && (
                           <button
-                            onClick={() => updateOrderStatus(ord.id, 'OUT_FOR_DELIVERY', 'Chofer en ruta hacia entrega')}
+                            onClick={() =>
+                              updateOrderStatus(
+                                ord.id,
+                                'OUT_FOR_DELIVERY',
+                                'Chofer en ruta hacia entrega',
+                              )
+                            }
                             className="px-3 py-1.5 text-xs font-semibold text-white bg-orange-600 hover:bg-orange-700 rounded-lg shadow-xs cursor-pointer"
                           >
                             Despachar
@@ -250,7 +293,9 @@ export const DeliveriesPage: React.FC = () => {
                   </h3>
                 </div>
                 <button
-                  onClick={() => navigate(`/operations/orders/${selectedOrder.id}`)}
+                  onClick={() =>
+                    navigate(`/operations/orders/${selectedOrder.id}`)
+                  }
                   className="text-xs text-sky-700 font-semibold hover:underline"
                 >
                   Detalle 360° ↗
@@ -266,7 +311,8 @@ export const DeliveriesPage: React.FC = () => {
                 <div className="flex items-start gap-2 text-slate-600">
                   <MapPin className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
                   <span>
-                    {selectedOrder.customerAddress.street}, {selectedOrder.customerAddress.neighborhood}
+                    {selectedOrder.customerAddress.street},{' '}
+                    {selectedOrder.customerAddress.neighborhood}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-slate-600">
@@ -278,7 +324,9 @@ export const DeliveriesPage: React.FC = () => {
               {/* Form */}
               <form onSubmit={handleSaveSchedule} className="space-y-4 text-xs">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Fecha de Entrega</label>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Fecha de Entrega
+                  </label>
                   <select
                     value={targetDate}
                     onChange={(e) => setTargetDate(e.target.value)}
@@ -291,22 +339,34 @@ export const DeliveriesPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Franja Horaria</label>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Franja Horaria
+                  </label>
                   <select
                     value={timeSlot}
                     onChange={(e) => setTimeSlot(e.target.value)}
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-sky-500"
                   >
-                    <option value="09:00 - 11:00">09:00 - 11:00 (Mañana)</option>
-                    <option value="11:00 - 13:00">11:00 - 13:00 (Mediodía)</option>
-                    <option value="14:00 - 16:00">14:00 - 16:00 (Tarde temprana)</option>
-                    <option value="16:00 - 18:00">16:00 - 18:00 (Tarde pico)</option>
+                    <option value="09:00 - 11:00">
+                      09:00 - 11:00 (Mañana)
+                    </option>
+                    <option value="11:00 - 13:00">
+                      11:00 - 13:00 (Mediodía)
+                    </option>
+                    <option value="14:00 - 16:00">
+                      14:00 - 16:00 (Tarde temprana)
+                    </option>
+                    <option value="16:00 - 18:00">
+                      16:00 - 18:00 (Tarde pico)
+                    </option>
                     <option value="18:00 - 20:00">18:00 - 20:00 (Noche)</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Chofer de Entrega</label>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Chofer de Entrega
+                  </label>
                   <select
                     value={driverId}
                     onChange={(e) => setDriverId(e.target.value)}
@@ -315,14 +375,17 @@ export const DeliveriesPage: React.FC = () => {
                     <option value="">Seleccionar chofer...</option>
                     {drivers.map((d) => (
                       <option key={d.id} value={d.id}>
-                        {d.name} ({d.zoneName} · {d.status === 'AVAILABLE' ? 'Disponible' : 'En ruta'})
+                        {d.name} ({d.zoneName} ·{' '}
+                        {d.status === 'AVAILABLE' ? 'Disponible' : 'En ruta'})
                       </option>
                     ))}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Instrucciones de Entrega</label>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Instrucciones de Entrega
+                  </label>
                   <textarea
                     rows={2}
                     value={deliveryNotes}

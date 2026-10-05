@@ -2,6 +2,8 @@
 
 MVP administrativo de Laundry Fresh construido con React, TypeScript, Vite y Tailwind CSS.
 
+Consulta la [guía del nuevo flujo y transferencias QR](FULFILLMENT-MVP.md) para ejecutar los recorridos a domicilio y en sede desde Recepción y retiros.
+
 ## Requisitos
 
 - Node.js 22.12 o superior (se recomienda Node.js 22 LTS).

@@ -1,3 +1,4 @@
+import { operationalStage } from '../../services/fulfillment';
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
@@ -402,7 +403,7 @@ export const CustomersPage: React.FC = () => {
                           <div className="flex items-center gap-2">
                             <span className="font-bold text-[#143F73] font-mono">{ord.id}</span>
                             <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-slate-100 text-slate-700">
-                              {ord.status}
+                              {operationalStage(ord)}
                             </span>
                           </div>
                           <p className="text-[11px] text-slate-500 mt-0.5">
