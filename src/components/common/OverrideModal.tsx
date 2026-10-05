@@ -33,7 +33,7 @@ export const OverrideModal: React.FC<OverrideModalProps> = ({ order, isOpen, onC
     { value: 'OUT_FOR_DELIVERY', label: 'En entrega' },
     { value: 'DELIVERED', label: 'Entregada' },
     { value: 'CLOSED', label: 'Finalizada' },
-    { value: 'QUARANTINE', label: 'Cuarentena' },
+    { value: 'QUARANTINE', label: 'Inscidencia' },
     { value: 'CANCELLED', label: 'Cancelada' },
   ];
 

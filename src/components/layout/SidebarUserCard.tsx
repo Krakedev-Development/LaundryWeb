@@ -21,12 +21,12 @@ export function SidebarUserCard({
   const role = currentUser.role === 'ADMIN' ? 'Administrador' : 'Supervisor';
   return (
     <div
-      className={`flex h-24 border-t border-slate-100 ${compact ? 'flex-col items-center justify-center gap-1 px-2 py-2' : 'items-center gap-2.5 px-4 py-4'}`}
+      className={`h-24 border-t border-white/15 ${compact ? 'flex flex-col items-center justify-center gap-1 px-2 py-2' : 'grid grid-cols-[36px_minmax(0,1fr)_32px] items-center gap-x-2 gap-y-1 px-3 py-3'}`}
     >
       <span
         role="img"
-        title={`${currentUser.name} · ${role}`}
-        aria-label={`${currentUser.name}, ${role}`}
+        title={`${currentUser.name} · ${role} · ${currentUser.email}`}
+        aria-label={`${currentUser.name}, ${role}, ${currentUser.email}`}
         className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#E8EEF5] text-xs font-semibold text-[#143F73] ring-2 ring-white"
       >
         {initials}
@@ -34,12 +34,18 @@ export function SidebarUserCard({
       {!compact && (
         <div className="min-w-0 flex-1">
           <p
-            className="truncate text-xs font-semibold text-slate-800"
+            className="truncate text-xs font-semibold text-white"
             title={currentUser.name}
           >
             {currentUser.name}
           </p>
-          <span className="mt-1 inline-flex rounded-md border border-[#143F73]/10 bg-[#143F73]/5 px-1.5 py-0.5 text-[10px] font-medium text-[#143F73]">
+          <p
+            className="mt-1 break-all text-[11px] leading-4 text-blue-100"
+            title={currentUser.email}
+          >
+            {currentUser.email}
+          </p>
+          <span className="mt-1 inline-flex rounded-md border border-white/20 bg-white/10 px-1.5 py-0.5 text-[10px] font-medium text-blue-100">
             {role}
           </span>
         </div>
@@ -53,7 +59,7 @@ export function SidebarUserCard({
           onNavigate();
           navigate('/login');
         }}
-        className="sidebar-focus flex size-10 shrink-0 items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-rose-50 hover:text-rose-700"
+        className={`sidebar-focus flex shrink-0 items-center justify-center rounded-xl text-blue-100 transition-colors hover:bg-white/10 hover:text-white ${compact ? 'size-10' : 'size-8'}`}
       >
         <LogOut className="size-4" aria-hidden="true" />
       </button>

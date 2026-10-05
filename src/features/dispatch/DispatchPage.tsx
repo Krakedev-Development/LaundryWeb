@@ -9,6 +9,19 @@ import { useDriverCandidates } from '../../components/maps/useDriverCandidates';
 import { routingService } from '../../services/geo';
 import { geoConfig } from '../../services/geo/geo.config';
 import type { RouteSummary } from '../../services/geo/geo.types';
+import {
+  ArrowRight,
+  ClipboardList,
+  Info,
+  LoaderCircle,
+  MapPin,
+  PackageCheck,
+  Plus,
+  Truck,
+  UsersRound,
+} from 'lucide-react';
+import { DriverCandidateCard } from '../../components/common/DriverCandidateCard';
+import { PriorityBadge } from '../../components/common/PriorityBadge';
 export function DispatchPage() {
   const navigate = useNavigate();
   const { orders, drivers, assignDriver } = useApp();
@@ -61,145 +74,247 @@ export function DispatchPage() {
   }, [driverId, order?.id, type]);
   return (
     <div className="space-y-6">
-      <button
-        className="text-sm text-blue-800 underline"
-        onClick={() => {
-          const demo = storageService.createDemoOrder();
-          navigate('/operations/orders/' + demo.id);
-        }}
-      >
-        Abrir solicitud de demostración
-      </button>
       <PageHeader
         title="Despacho"
         subtitle="Selecciona una solicitud, compara choferes y confirma la asignación."
-      />
-      <div className="flex gap-2">
-        {(['pickup', 'delivery'] as const).map((value) => (
+        actions={
           <button
-            key={value}
-            onClick={() => setType(value)}
-            className={
-              type === value
-                ? 'rounded-lg px-4 py-2 bg-[#143F73] text-white'
-                : 'rounded-lg px-4 py-2 bg-white border'
-            }
+            className="sidebar-focus flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-[#0F4C81] shadow-xs hover:bg-slate-50"
+            onClick={() => {
+              const demo = storageService.createDemoOrder();
+              navigate('/operations/orders/' + demo.id);
+            }}
           >
-            {value === 'pickup' ? 'Recogidas' : 'Entregas'}
+            <Plus className="size-4" aria-hidden="true" />
+            Abrir solicitud de demostración
           </button>
-        ))}
+        }
+      />
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-xs">
+        <div className="flex gap-1 rounded-xl bg-slate-100 p-1">
+          {(['pickup', 'delivery'] as const).map((value) => (
+            <button
+              key={value}
+              aria-pressed={type === value}
+              onClick={() => setType(value)}
+              className={
+                type === value
+                  ? 'sidebar-focus flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold bg-[#0F4C81] text-white shadow-sm'
+                  : 'sidebar-focus flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold text-slate-500 hover:bg-white hover:text-[#0F4C81]'
+              }
+            >
+              {value === 'pickup' ? (
+                <Truck className="size-4" aria-hidden="true" />
+              ) : (
+                <PackageCheck className="size-4" aria-hidden="true" />
+              )}
+              {value === 'pickup' ? 'Recogidas' : 'Entregas'}
+            </button>
+          ))}
+        </div>
+        <span className="flex items-center gap-2 px-2 text-xs text-slate-500">
+          <ClipboardList className="size-4 text-[#0F4C81]" aria-hidden="true" />
+          <strong className="text-[#102A43]">{queue.length}</strong> solicitudes
+          pendientes
+        </span>
       </div>
       {geoConfig.mode === 'demo' && (
-        <p className="text-sm text-amber-800">
+        <p className="flex items-center gap-2 rounded-xl border border-amber-200/70 bg-amber-50 px-4 py-3 text-xs text-amber-800">
+          <Info className="size-4 shrink-0" aria-hidden="true" />
           Escenario local: tiempos y distancias simulados.
         </p>
       )}
-      <div className="grid lg:grid-cols-[280px_1fr] gap-5">
-        <section className="space-y-2">
-          {!queue.length && <p>No hay solicitudes pendientes de asignación.</p>}
-          {queue.map((o) => (
-            <button
-              key={o.id}
-              className={
-                'block text-left w-full p-4 rounded-xl border bg-white ' +
-                (o.id === order?.id ? 'border-blue-700' : 'border-slate-200')
-              }
-              onClick={() => setOrderId(o.id)}
-            >
-              <strong>{o.id}</strong>
-              <p className="text-sm">{o.customerName}</p>
-              <p className="text-xs">
-                {o.zoneName} · {o.priority}
+      <div className="grid items-start gap-5 lg:grid-cols-[300px_minmax(0,1fr)]">
+        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
+          <div className="flex items-center gap-2 border-b border-slate-200 bg-slate-50 px-4 py-4">
+            <ClipboardList
+              className="size-4 text-[#0F4C81]"
+              aria-hidden="true"
+            />
+            <h2 className="text-sm font-bold text-[#102A43]">
+              Solicitudes por asignar
+            </h2>
+          </div>
+          <div className="max-h-[520px] space-y-2 overflow-y-auto p-3">
+            {!queue.length && (
+              <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-xs leading-relaxed text-slate-500">
+                No hay solicitudes pendientes de asignación.
               </p>
-            </button>
-          ))}
+            )}
+            {queue.map((o) => (
+              <button
+                key={o.id}
+                className={
+                  'sidebar-focus block text-left w-full p-4 rounded-xl border transition-colors ' +
+                  (o.id === order?.id
+                    ? 'border-[#0F4C81] bg-[#F0F6FC] ring-1 ring-[#0F4C81]/10'
+                    : 'border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300')
+                }
+                aria-pressed={o.id === order?.id}
+                onClick={() => setOrderId(o.id)}
+              >
+                <span className="flex flex-wrap items-center justify-between gap-2">
+                  <strong className="font-mono text-xs text-[#0F4C81]">
+                    {o.id}
+                  </strong>
+                  <PriorityBadge priority={o.priority} />
+                </span>
+                <p className="mt-2 text-sm font-semibold text-[#102A43]">
+                  {o.customerName}
+                </p>
+                <p className="mt-1.5 flex items-center gap-1 text-[11px] text-slate-500">
+                  <MapPin className="size-3 shrink-0" aria-hidden="true" />
+                  {o.zoneName}
+                </p>
+              </button>
+            ))}
+          </div>
         </section>
-        <BaseMap
-          center={destination}
-          route={route}
-          points={
-            order && destination
-              ? [
-                  {
-                    id: order.id,
-                    coordinates: destination,
-                    label: type === 'pickup' ? 'Recogida' : 'Entrega',
-                    kind: type,
-                  },
-                  ...candidates.map((c) => {
-                    const d = drivers.find((v) => v.id === c.driverId)!;
-                    return {
-                      id: d.id,
-                      coordinates: d.location,
-                      label: d.name,
-                      kind: 'driver' as const,
-                    };
-                  }),
-                ]
-              : []
-          }
-          onSelect={(id) => {
-            if (candidates.some((c) => c.driverId === id)) setDriverId(id);
-          }}
-        />
-      </div>
-      {loading && <p role="status">Calculando mejores choferes…</p>}
-      {error && <p role="alert">{error}</p>}
-      {routeError && <p role="alert">{routeError}</p>}
-      {order && !loading && !error && !candidates.length && (
-        <p>
-          No hay choferes elegibles. Revisa disponibilidad, cobertura, sede,
-          capacidad y antigüedad de ubicación.
-        </p>
-      )}
-      <section className="grid md:grid-cols-2 xl:grid-cols-3 gap-3">
-        {candidates.map((candidate, i) => {
-          const d = drivers.find((v) => v.id === candidate.driverId)!;
-          return (
-            <button
-              key={d.id}
-              className={
-                'text-left bg-white p-4 border rounded-xl ' +
-                (driverId === d.id ? 'border-blue-700' : 'border-slate-200')
-              }
-              onClick={() => setDriverId(d.id)}
-            >
-              <strong>{d.name}</strong>
-              {i === 0 && <span className="ml-2 text-xs">Recomendado</span>}
-              <p>
-                {Math.ceil(candidate.etaSeconds! / 60)} min ·{' '}
-                {(candidate.distanceMeters! / 1000).toFixed(1)} km
+        <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-xs sm:p-5">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <h2 className="flex items-center gap-2 text-sm font-bold text-[#102A43]">
+                <MapPin className="size-4 text-[#0F4C81]" aria-hidden="true" />
+                Ruta y ubicación
+              </h2>
+              <p className="mt-1 text-xs text-slate-500">
+                {order
+                  ? `${order.customerName} · ${order.zoneName}`
+                  : 'Selecciona una solicitud para consultar su destino.'}
               </p>
-              <p className="text-xs text-slate-600">
-                {candidate.reasons.join(' · ')}
-              </p>
-            </button>
-          );
-        })}
-      </section>
-      {order && (
-        <div className="flex flex-wrap gap-3">
-          <input
-            aria-label="Notas de asignación"
-            className="border rounded-lg p-2 flex-1"
-            placeholder="Notas de asignación"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-          />
-          <button
-            disabled={
-              loading || !candidates.some((c) => c.driverId === driverId)
+            </div>
+            {order && (
+              <span className="rounded-lg bg-slate-100 px-2 py-1 font-mono text-[10px] text-slate-600">
+                {order.id}
+              </span>
+            )}
+          </div>
+          <BaseMap
+            center={destination}
+            route={route}
+            points={
+              order && destination
+                ? [
+                    {
+                      id: order.id,
+                      coordinates: destination,
+                      label: type === 'pickup' ? 'Recogida' : 'Entrega',
+                      kind: type,
+                    },
+                    ...candidates.map((c) => {
+                      const d = drivers.find((v) => v.id === c.driverId)!;
+                      return {
+                        id: d.id,
+                        coordinates: d.location,
+                        label: d.name,
+                        kind: 'driver' as const,
+                      };
+                    }),
+                  ]
+                : []
             }
-            className="bg-[#143F73] text-white px-5 py-2 rounded-lg disabled:opacity-40"
-            onClick={() => {
-              if (assignDriver(order.id, driverId, type, notes))
-                setDriverId('');
+            onSelect={(id) => {
+              if (candidates.some((c) => c.driverId === id)) setDriverId(id);
             }}
-          >
-            Asignar chofer seleccionado
-          </button>
+          />
+        </section>
+      </div>
+      <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-xs sm:p-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="flex items-center gap-2 text-sm font-bold text-[#102A43]">
+              <UsersRound
+                className="size-4 text-[#0F4C81]"
+                aria-hidden="true"
+              />
+              Choferes disponibles
+            </h2>
+            <p className="mt-1 text-xs text-slate-500">
+              Compara disponibilidad, distancia y tiempo de llegada.
+            </p>
+          </div>
+          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+            {candidates.length}
+          </span>
         </div>
-      )}
+        {loading && (
+          <p
+            role="status"
+            className="flex items-center gap-2 py-4 text-xs text-slate-500"
+          >
+            <LoaderCircle
+              className="size-4 animate-spin motion-reduce:animate-none"
+              aria-hidden="true"
+            />
+            Calculando mejores choferes…
+          </p>
+        )}
+        {error && (
+          <p
+            role="alert"
+            className="rounded-xl bg-rose-50 p-4 text-xs text-rose-700"
+          >
+            {error}
+          </p>
+        )}
+        {routeError && (
+          <p
+            role="alert"
+            className="rounded-xl bg-amber-50 p-4 text-xs text-amber-800"
+          >
+            {routeError}
+          </p>
+        )}
+        {order && !loading && !error && !candidates.length && (
+          <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-5 text-xs leading-relaxed text-slate-500">
+            No hay choferes elegibles. Revisa disponibilidad, cobertura, sede,
+            capacidad y antigüedad de ubicación.
+          </p>
+        )}
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {candidates.map((candidate, i) => {
+            const d = drivers.find((v) => v.id === candidate.driverId)!;
+            return (
+              <DriverCandidateCard
+                key={d.id}
+                driver={d}
+                candidate={candidate}
+                recommended={i === 0}
+                selected={driverId === d.id}
+                onSelect={() => setDriverId(d.id)}
+              />
+            );
+          })}
+        </div>
+        {order && (
+          <div className="flex flex-wrap items-end gap-3 border-t border-slate-200 pt-4">
+            <label className="min-w-[180px] flex-1 text-xs font-semibold text-slate-600">
+              Notas de asignación{' '}
+              <span className="font-normal text-slate-400">(opcional)</span>
+              <input
+                aria-label="Notas de asignación"
+                className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-normal outline-none focus:border-[#0F4C81] focus:bg-white focus:ring-2 focus:ring-[#0F4C81]/10"
+                placeholder="Notas de asignación"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+              />
+            </label>
+            <button
+              disabled={
+                loading || !candidates.some((c) => c.driverId === driverId)
+              }
+              className="sidebar-focus flex items-center gap-2 rounded-xl bg-[#0F4C81] px-5 py-2.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-[#0A3660] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
+              onClick={() => {
+                if (assignDriver(order.id, driverId, type, notes))
+                  setDriverId('');
+              }}
+            >
+              Asignar chofer seleccionado
+              <ArrowRight className="size-4" aria-hidden="true" />
+            </button>
+          </div>
+        )}
+      </section>
     </div>
   );
 }

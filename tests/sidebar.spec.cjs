@@ -51,6 +51,10 @@ test('pinned and mini synchronize the content margin and persist the selected mo
   await expect(sidebar).toHaveAttribute('data-mode', 'pinned');
   await expect(main).toHaveCSS('margin-left', '260px');
   await expect(sidebar.getByAltText('CFL LAUNDRY CLEAN FRESH')).toBeVisible();
+  await expect(sidebar.getByAltText('CFL LAUNDRY CLEAN FRESH')).toHaveAttribute(
+    'src',
+    /logo-laundry-white\.png/,
+  );
   await page.screenshot({ path: 'test-results/sidebar-pinned.png' });
   expect(errors).toEqual([]);
 });
@@ -183,10 +187,13 @@ test('nested routes select only the closest leaf and role changes filter the nav
     'href',
     '/customers',
   );
-  await page
-    .getByRole('button', { name: 'Perfil y opciones de sesión' })
+  await sidebar
+    .getByRole('button', { name: 'Cerrar sesión', exact: true })
     .click();
   await page.getByRole('button', { name: 'Supervisor', exact: true }).click();
+  await page
+    .getByRole('button', { name: 'Ingresar', exact: true })
+    .click();
   await expect(
     sidebar.getByRole('button', { name: 'COMERCIAL', exact: true }),
   ).toHaveCount(0);
@@ -203,14 +210,14 @@ test('nested routes select only the closest leaf and role changes filter the nav
   expect(errors).toEqual([]);
 });
 
-test('light appearance, accessible notifications, keyboard search and sidebar logout remain functional', async ({
+test('blue sidebar appearance, accessible notifications, keyboard search and sidebar logout remain functional', async ({
   page,
 }) => {
   await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' });
   const errors = await openOrders(page);
   await expect(page.locator('#app-sidebar')).toHaveCSS(
     'background-color',
-    'rgb(255, 255, 255)',
+    'rgb(10, 54, 96)',
   );
   await expect(page.locator('html')).toHaveCSS('color-scheme', 'light');
   const bell = page.getByRole('button', {
@@ -269,6 +276,101 @@ test('navigation still works when saving the sidebar preference is denied', asyn
   await page.getByRole('button', { name: 'Fijar menú expandido' }).click();
   await expect(page.locator('main')).toHaveCSS('margin-left', '260px');
   expect(errors).toEqual([]);
+});
+
+test('profile appears only in the sidebar and the MVP header control restores demo data', async ({
+  page,
+}) => {
+  await openOrders(page);
+  const sidebar = page.locator('#app-sidebar');
+  const header = page.locator('header');
+  await expect(
+    sidebar.getByText('Carlos Mendoza', { exact: true }),
+  ).toBeVisible();
+  await expect(
+    sidebar.getByText('Administrador', { exact: true }),
+  ).toBeVisible();
+  await expect(
+    sidebar.getByText('admin@laundryweb.com', { exact: true }),
+  ).toBeVisible();
+  await expect(header.getByText('Carlos Mendoza', { exact: true })).toHaveCount(
+    0,
+  );
+  await expect(
+    page.getByRole('button', { name: 'Perfil y opciones de sesión' }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'Cerrar sesión', exact: true }),
+  ).toHaveCount(1);
+  await page.evaluate(() => {
+    for (const key of ['lw_drivers', 'lw_workflow_v2']) {
+      const data = JSON.parse(localStorage.getItem(key));
+      const drivers = Array.isArray(data) ? data : data.drivers;
+      drivers[0].name = 'Conductor modificado';
+      localStorage.setItem(key, JSON.stringify(data));
+    }
+  });
+  await page.goto('/logistics/drivers');
+  await expect(
+    page.locator('main').getByText('Conductor modificado', { exact: true }),
+  ).toBeVisible();
+  await header
+    .getByRole('button', { name: 'Restablecer datos demo', exact: true })
+    .click();
+  await expect(
+    page.locator('main').getByText('Conductor modificado', { exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.locator('main').getByText('Carlos Ruiz', { exact: true }),
+  ).toBeVisible();
+});
+
+test('brand stays bounded throughout repeated expand and collapse transitions', async ({
+  page,
+}) => {
+  await openOrders(page);
+  await page.mouse.move(800, 100);
+  const samples = await page.evaluate(async () => {
+    const sidebar = document.querySelector('#app-sidebar');
+    const brand = sidebar.querySelector('.sidebar-brand');
+    const images = [...brand.querySelectorAll('img')];
+    await Promise.all(images.map((img) => img.decode()));
+    const frames = [];
+    for (const label of [
+      'Usar menú compacto',
+      'Fijar menú expandido',
+      'Usar menú compacto',
+      'Fijar menú expandido',
+    ]) {
+      sidebar.querySelector(`button[aria-label="${label}"]`).click();
+      const start = performance.now();
+      await new Promise((resolve) => {
+        const sample = () => {
+          const header = brand.parentElement.getBoundingClientRect();
+          frames.push(
+            images.map((img) => {
+              const rect = img.getBoundingClientRect();
+              return {
+                width: rect.width,
+                height: rect.height,
+                insideHeader:
+                  rect.top >= header.top && rect.bottom <= header.bottom,
+              };
+            }),
+          );
+          if (performance.now() - start < 350) requestAnimationFrame(sample);
+          else resolve();
+        };
+        requestAnimationFrame(sample);
+      });
+    }
+    return frames;
+  });
+  expect(samples.length).toBeGreaterThan(4);
+  for (const [icon, full] of samples) {
+    expect(icon).toEqual({ width: 32, height: 48, insideHeader: true });
+    expect(full).toEqual({ width: 224, height: 80, insideHeader: true });
+  }
 });
 
 test('focusing a destination preloads its page before navigating', async ({

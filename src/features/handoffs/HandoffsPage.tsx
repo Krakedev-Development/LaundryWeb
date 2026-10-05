@@ -6,11 +6,34 @@ import { storageService } from '../../services/storage';
 import { HANDOFF_LABELS, Handoff } from '../../services/fulfillment';
 import { Verification } from '../../services/HandoffService';
 import { BaseMap } from '../../components/maps/BaseMap';
+import {
+  ArrowUpRight,
+  Building2,
+  CheckCircle2,
+  ClipboardList,
+  History,
+  Info,
+  LogIn,
+  LogOut,
+  PackageCheck,
+  QrCode,
+  ScanLine,
+  Truck,
+} from 'lucide-react';
+import { PageHeader } from '../../components/common/PageHeader';
+import { MetricCard } from '../../components/common/MetricCard';
 
 const button =
-  'rounded-xl bg-[#0F4C81] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-40 cursor-pointer';
+  'sidebar-focus inline-flex items-center justify-center gap-2 rounded-xl bg-[#0F4C81] px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-[#0A3660] disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:cursor-not-allowed cursor-pointer';
 const field =
-  'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm';
+  'mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-normal text-slate-800 outline-none transition-colors placeholder:text-slate-400 focus:border-[#0F4C81] focus:bg-white focus:ring-2 focus:ring-[#0F4C81]/10 disabled:text-slate-400';
+const tabIcons = [LogIn, LogOut, Truck, History];
+const statusLabels: Record<string, string> = {
+  ACTIVE: 'Vigente',
+  USED: 'Confirmada',
+  REVOKED: 'Revocada',
+  EXPIRED: 'Vencida',
+};
 const tabs = [
   'Esperando ingreso',
   'Esperando retiro',
@@ -39,6 +62,20 @@ export function HandoffsPage() {
   const state = storageService.getWorkflow();
   const facilityId = currentUser.facilityId;
   const facility = facilities.find((f) => f.id === facilityId);
+  const localHandoffs = state.handoffs.filter(
+    (h) => h.facilityId === facilityId,
+  );
+  const incoming = localHandoffs.filter(
+    (h) => h.status === 'ACTIVE' && h.type === 'CUSTOMER_TO_FACILITY',
+  ).length;
+  const outgoing = localHandoffs.filter(
+    (h) => h.status === 'ACTIVE' && h.type === 'FACILITY_TO_CUSTOMER',
+  ).length;
+  const transfers = localHandoffs.filter(
+    (h) =>
+      h.status === 'ACTIVE' &&
+      !['CUSTOMER_TO_FACILITY', 'FACILITY_TO_CUSTOMER'].includes(h.type),
+  ).length;
   const visible = state.handoffs.filter(
     (h) =>
       h.facilityId === facilityId &&
@@ -133,21 +170,43 @@ export function HandoffsPage() {
   }, [camera]);
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">
-          Recepción y retiros
-        </h1>
-        <p className="text-sm text-slate-500 mt-1">
-          Verifica el código, revisa las prendas y confirma su entrega física.
-        </p>
+      <PageHeader
+        title="Recepción y retiros"
+        subtitle="Verifica el código, revisa las prendas y confirma su entrega física."
+      />
+      <div className="grid gap-4 sm:grid-cols-3">
+        <MetricCard
+          title="Esperando ingreso"
+          value={incoming}
+          subtitle="Recepciones pendientes en sede"
+          variant="default"
+          icon={<LogIn className="size-4" />}
+        />
+        <MetricCard
+          title="Esperando retiro"
+          value={outgoing}
+          subtitle="Entregas pendientes al cliente"
+          variant="aqua"
+          icon={<PackageCheck className="size-4" />}
+        />
+        <MetricCard
+          title="Transferencias chofer"
+          value={transfers}
+          subtitle="Movimientos pendientes con chofer"
+          variant="default"
+          icon={<Truck className="size-4" />}
+        />
       </div>
-      <div className="rounded-2xl bg-blue-50 border border-blue-100 p-4 flex flex-wrap gap-4 items-center justify-between">
-        <p className="text-sm text-blue-900">
-          Demo local · los escenarios de Expo y Web funcionan de forma
-          independiente.
+      <div className="rounded-2xl bg-white border border-slate-200 p-4 shadow-xs flex flex-wrap gap-4 items-center justify-between">
+        <p className="flex items-center gap-2 text-xs text-slate-500">
+          <Info className="size-4 shrink-0 text-[#0F4C81]" aria-hidden="true" />
+          Modo demo · transferencias con datos de demostración.
         </p>
-        <label className="text-sm font-semibold">
-          Sede de operación
+        <label className="min-w-0 w-full text-xs font-semibold text-slate-600 sm:w-auto sm:min-w-64">
+          <span className="flex items-center gap-1.5">
+            <Building2 className="size-3.5" aria-hidden="true" />
+            Sede de operación
+          </span>
           <select
             aria-label="Sede de operación"
             className={field}
@@ -171,7 +230,11 @@ export function HandoffsPage() {
           </select>
         </label>
       </div>
-      <div role="tablist" className="flex flex-wrap gap-2">
+      <div
+        role="tablist"
+        aria-label="Etapas de recepción y retiro"
+        className="flex flex-wrap gap-1 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xs"
+      >
         {tabs.map((label, i) => (
           <button
             key={label}
@@ -180,7 +243,7 @@ export function HandoffsPage() {
             className={
               tab === i
                 ? button
-                : 'rounded-xl px-4 py-2.5 bg-white border border-slate-200 text-sm cursor-pointer'
+                : 'sidebar-focus flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold text-slate-500 transition-colors hover:bg-slate-100 hover:text-[#0F4C81] cursor-pointer'
             }
             onClick={() => {
               setTab(i);
@@ -191,56 +254,88 @@ export function HandoffsPage() {
               setDemoDriver(false);
             }}
           >
+            {React.createElement(tabIcons[i], {
+              className: 'size-4',
+              'aria-hidden': true,
+            })}
             {label}
           </button>
         ))}
       </div>
-      <div className="grid xl:grid-cols-[350px_1fr] gap-6">
-        <aside className="space-y-3">
-          {visible.length === 0 && (
-            <div className="bg-white border border-slate-200 rounded-2xl p-5 text-sm text-slate-500">
-              No hay transferencias en esta etapa.
-            </div>
-          )}
-          {visible.map((h) => (
-            <button
-              key={h.id}
-              className={`w-full text-left rounded-2xl border bg-white p-4 cursor-pointer ${selected?.id === h.id ? 'border-blue-500 ring-2 ring-blue-100' : 'border-slate-200'}`}
-              onClick={() => {
-                setId(h.id);
-                setCode('');
-                setVerified(null);
-                setChecked(false);
-                setDemoDriver(false);
-                setCamera(false);
-              }}
-            >
-              <strong className="block text-sm">{h.orderId}</strong>
-              <span className="block text-sm text-slate-500 mt-1">
-                {HANDOFF_LABELS[h.type]}
-              </span>
-              <span className="text-xs text-slate-500">
-                {h.status} · generación {h.generation}
-              </span>
-            </button>
-          ))}
+      <div className="grid items-start lg:grid-cols-[300px_minmax(0,1fr)] gap-5">
+        <aside className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
+          <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 p-4">
+            <h2 className="flex items-center gap-2 text-sm font-bold text-[#102A43]">
+              <ClipboardList
+                className="size-4 text-[#0F4C81]"
+                aria-hidden="true"
+              />
+              Transferencias
+            </h2>
+            <span className="rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-slate-500">
+              {visible.length}
+            </span>
+          </div>
+          <div className="max-h-[650px] space-y-2 overflow-y-auto p-3">
+            {visible.length === 0 && (
+              <div className="bg-slate-50 border border-dashed border-slate-200 rounded-xl p-6 text-center text-xs text-slate-500">
+                No hay transferencias en esta etapa.
+              </div>
+            )}
+            {visible.map((h) => (
+              <button
+                key={h.id}
+                className={`sidebar-focus w-full text-left rounded-xl border p-4 transition-colors cursor-pointer ${selected?.id === h.id ? 'border-[#0F4C81] bg-[#F0F6FC] ring-1 ring-[#0F4C81]/10' : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'}`}
+                aria-pressed={selected?.id === h.id}
+                onClick={() => {
+                  setId(h.id);
+                  setCode('');
+                  setVerified(null);
+                  setChecked(false);
+                  setDemoDriver(false);
+                  setCamera(false);
+                }}
+              >
+                <span className="flex flex-wrap items-center justify-between gap-2">
+                  <strong className="font-mono text-xs text-[#0F4C81]">
+                    {h.orderId}
+                  </strong>
+                  <span
+                    className={`rounded-md px-2 py-0.5 text-[10px] font-semibold ${h.status === 'ACTIVE' ? 'bg-sky-100 text-sky-800' : h.status === 'USED' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}
+                  >
+                    {statusLabels[h.status] ?? h.status}
+                  </span>
+                </span>
+                <span className="block text-xs font-medium text-slate-700 mt-2">
+                  {HANDOFF_LABELS[h.type]}
+                </span>
+                <span className="mt-1 block text-[11px] text-slate-400">
+                  Versión del código · {h.generation}
+                </span>
+              </button>
+            ))}
+          </div>
         </aside>
         <section className="space-y-5">
           {selected && order && (
             <>
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 space-y-4">
-                <div className="flex flex-wrap justify-between gap-2">
-                  <h2 className="text-lg font-bold">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 space-y-5 shadow-xs">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
+                  <h2 className="flex items-center gap-2 text-base font-bold text-[#102A43]">
+                    <span className="flex size-9 items-center justify-center rounded-xl bg-[#F0F6FC] text-[#0F4C81]">
+                      <PackageCheck className="size-5" aria-hidden="true" />
+                    </span>
                     {HANDOFF_LABELS[selected.type]}
                   </h2>
                   <Link
-                    className="text-sm text-blue-700 underline"
+                    className="sidebar-focus flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-2 text-xs font-semibold text-[#0F4C81] hover:bg-slate-200"
                     to={'/operations/orders/' + order.id}
                   >
                     Ver {order.id}
+                    <ArrowUpRight className="size-3.5" aria-hidden="true" />
                   </Link>
                 </div>
-                <p className="text-sm">
+                <p className="rounded-xl border border-slate-200/70 bg-slate-50 px-4 py-3 text-xs leading-relaxed text-slate-600">
                   {order.customerName} ·{' '}
                   {order.fulfillment?.mode === 'STORE_STORE'
                     ? 'Cliente ingresa y retira en sede'
@@ -254,7 +349,9 @@ export function HandoffsPage() {
                       Procesamiento y salida bloqueados por diferencia de
                       prendas
                     </strong>
-                    <p className="text-sm">{order.intakeHold.description}</p>
+                    <p className="text-xs leading-relaxed text-slate-600">
+                      {order.intakeHold.description}
+                    </p>
                     <input
                       aria-label="Resolución de incidencia"
                       placeholder="Resolución y motivo"
@@ -279,11 +376,19 @@ export function HandoffsPage() {
                   </div>
                 )}
                 {(tab !== 3 || verified) && (
-                  <>
+                  <div className="space-y-4 rounded-2xl border border-slate-200 p-4 sm:p-5">
+                    <h3 className="flex items-center gap-2 text-sm font-bold text-[#102A43]">
+                      <ScanLine
+                        className="size-4 text-[#0F4C81]"
+                        aria-hidden="true"
+                      />
+                      Verificar transferencia
+                    </h3>
                     {isDriver && (
-                      <label className="flex gap-2 text-sm">
+                      <label className="flex items-start gap-2 rounded-lg bg-amber-50 p-3 text-xs text-amber-800">
                         <input
                           type="checkbox"
+                          className="mt-0.5 size-4 shrink-0 accent-[#0F4C81]"
                           checked={demoDriver}
                           onChange={(e) => {
                             setDemoDriver(e.target.checked);
@@ -294,7 +399,7 @@ export function HandoffsPage() {
                         {leg?.driverId}
                       </label>
                     )}
-                    <label className="block text-sm font-semibold">
+                    <label className="block text-xs font-semibold text-slate-600">
                       Código de 6 dígitos o contenido QR
                       <input
                         aria-label="Código de transferencia"
@@ -313,19 +418,21 @@ export function HandoffsPage() {
                         disabled={!code.trim() || (!!isDriver && !demoDriver)}
                         onClick={() => verify()}
                       >
+                        <CheckCircle2 className="size-4" aria-hidden="true" />
                         Verificar código
                       </button>
                       <button
-                        className={button}
+                        className="sidebar-focus inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-[#0F4C81] hover:bg-slate-50"
                         onClick={() => {
                           locked.current = false;
                           setCamera(true);
                         }}
                       >
+                        <QrCode className="size-4" aria-hidden="true" />
                         Escanear QR
                       </button>
                       <button
-                        className="text-sm text-blue-700 underline cursor-pointer"
+                        className="sidebar-focus rounded-xl px-3 py-2 text-xs font-medium text-slate-500 hover:bg-slate-100 cursor-pointer"
                         onClick={() => {
                           setCode(selected.fallbackCode);
                           setVerified(null);
@@ -349,7 +456,14 @@ export function HandoffsPage() {
                       </div>
                     )}
                     {verified && (
-                      <div className="space-y-4 border-t border-slate-100 pt-4">
+                      <div className="space-y-4 border-t border-slate-200 pt-4">
+                        <h3 className="flex items-center gap-2 text-sm font-bold text-[#102A43]">
+                          <CheckCircle2
+                            className="size-4 text-emerald-600"
+                            aria-hidden="true"
+                          />
+                          Revisión y confirmación
+                        </h3>
                         <p className="text-sm text-amber-800 bg-amber-50 rounded-xl p-3">
                           {verified.warning}
                         </p>
@@ -359,7 +473,7 @@ export function HandoffsPage() {
                             'CUSTOMER_TO_DRIVER',
                             'DRIVER_TO_FACILITY',
                           ].includes(verified.handoff.type) && (
-                            <label className="text-sm">
+                            <label className="text-xs leading-relaxed text-slate-600">
                               Prendas recibidas
                               <input
                                 aria-label="Prendas recibidas"
@@ -376,7 +490,7 @@ export function HandoffsPage() {
                             'FACILITY_TO_CUSTOMER',
                           ].includes(verified.handoff.type) && (
                             <>
-                              <label className="text-sm">
+                              <label className="text-xs leading-relaxed text-slate-600">
                                 Nombre de quien retira
                                 <input
                                   aria-label="Nombre de quien retira"
@@ -385,7 +499,7 @@ export function HandoffsPage() {
                                   onChange={(e) => setRecipient(e.target.value)}
                                 />
                               </label>
-                              <label className="text-sm">
+                              <label className="text-xs leading-relaxed text-slate-600">
                                 Relación o autorización
                                 <input
                                   aria-label="Relación o autorización"
@@ -399,7 +513,7 @@ export function HandoffsPage() {
                             </>
                           )}
                         </div>
-                        <label className="block text-sm">
+                        <label className="block text-xs font-medium text-slate-600">
                           Observaciones
                           <textarea
                             className={field}
@@ -407,9 +521,10 @@ export function HandoffsPage() {
                             onChange={(e) => setNotes(e.target.value)}
                           />
                         </label>
-                        <label className="flex gap-2 text-sm">
+                        <label className="flex items-start gap-2 rounded-xl bg-slate-50 p-3 text-xs leading-relaxed text-slate-600">
                           <input
                             type="checkbox"
+                            className="mt-0.5 size-4 shrink-0 accent-[#0F4C81]"
                             checked={checked}
                             onChange={(e) => setChecked(e.target.checked)}
                           />
@@ -417,9 +532,10 @@ export function HandoffsPage() {
                         </label>
                         {currentUser.role === 'ADMIN' && (
                           <>
-                            <label className="flex gap-2 text-sm">
+                            <label className="flex items-start gap-2 rounded-xl bg-slate-50 p-3 text-xs leading-relaxed text-slate-600">
                               <input
                                 type="checkbox"
+                                className="mt-0.5 size-4 shrink-0 accent-[#0F4C81]"
                                 checked={override}
                                 onChange={(e) => setOverride(e.target.checked)}
                               />
@@ -458,7 +574,7 @@ export function HandoffsPage() {
                         </button>
                       </div>
                     )}
-                  </>
+                  </div>
                 )}
                 {tab === 3 && (
                   <>
@@ -467,7 +583,7 @@ export function HandoffsPage() {
                       Operador: {selected.usedByUserId ?? '—'}
                     </p>
                     {selected.receipt && (
-                      <p className="text-sm">
+                      <p className="text-xs leading-relaxed text-slate-600">
                         Recibidas: {selected.receipt.count ?? '—'} ·
                         Destinatario: {selected.receipt.recipient ?? '—'} ·{' '}
                         {selected.receipt.relationship} ·{' '}
@@ -485,7 +601,10 @@ export function HandoffsPage() {
                 )}
                 {currentUser.role === 'ADMIN' &&
                   !['USED', 'REVOKED'].includes(selected.status) && (
-                    <div className="border-t border-slate-100 pt-4 space-y-3">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+                      <h3 className="text-xs font-semibold text-slate-600">
+                        Gestión administrativa del código
+                      </h3>
                       <input
                         aria-label="Motivo administrativo"
                         className={field}
@@ -493,7 +612,7 @@ export function HandoffsPage() {
                         value={reason}
                         onChange={(e) => setReason(e.target.value)}
                       />
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <button
                           className={button}
                           onClick={() =>
@@ -511,7 +630,7 @@ export function HandoffsPage() {
                           Regenerar código
                         </button>
                         <button
-                          className="text-sm text-red-700 underline cursor-pointer"
+                          className="sidebar-focus rounded-lg border border-rose-200 bg-white px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-50 cursor-pointer"
                           onClick={() =>
                             run(() =>
                               storageService.handoffService.revoke(
@@ -525,7 +644,7 @@ export function HandoffsPage() {
                           Revocar código
                         </button>
                         <button
-                          className="text-sm text-amber-800 underline cursor-pointer"
+                          className="sidebar-focus rounded-lg border border-amber-200 bg-white px-3 py-2 text-xs font-semibold text-amber-800 hover:bg-amber-50 cursor-pointer"
                           onClick={() => {
                             try {
                               setVerified(
@@ -550,8 +669,14 @@ export function HandoffsPage() {
                   )}
               </div>
               {facility && (
-                <div className="rounded-2xl border border-slate-200 bg-white p-5">
-                  <h3 className="font-semibold mb-3">{facility.name}</h3>
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
+                  <h3 className="flex items-center gap-2 text-sm font-bold text-[#102A43] mb-3">
+                    <Building2
+                      className="size-4 text-[#0F4C81]"
+                      aria-hidden="true"
+                    />
+                    {facility.name}
+                  </h3>
                   <BaseMap
                     height={250}
                     center={facility.coordinates}
@@ -567,8 +692,8 @@ export function HandoffsPage() {
                 </div>
               )}
               {tab !== 3 && selected.status === 'ACTIVE' && (
-                <details className="rounded-2xl border border-slate-200 bg-white p-5">
-                  <summary className="text-sm font-semibold cursor-pointer">
+                <details className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
+                  <summary className="text-xs font-semibold text-[#0F4C81] cursor-pointer">
                     Demo: código que presenta el cliente o chofer
                   </summary>
                   <div className="bg-white p-6 w-fit">

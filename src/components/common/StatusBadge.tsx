@@ -198,7 +198,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
       dot: 'bg-slate-400',
     },
     QUARANTINE: {
-      label: 'Cuarentena',
+      label: 'Inscidencia',
       bg: 'bg-red-50',
       text: 'text-red-700',
       border: 'border-red-200',

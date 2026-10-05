@@ -7,7 +7,7 @@ export function SidebarControls({ compact }: { compact: boolean }) {
     <div
       role="group"
       aria-label="Modo de navegación"
-      className={`hidden h-9 items-center lg:flex rounded-full border border-slate-200 bg-slate-100 p-0.5 ${compact ? 'mx-auto w-10' : 'mx-3'}`}
+      className={`hidden h-9 items-center lg:flex rounded-xl border border-white/20 bg-black/10 p-0.5 ${compact ? 'mx-auto w-10' : 'mx-3'}`}
     >
       {[
         {
@@ -30,7 +30,7 @@ export function SidebarControls({ compact }: { compact: boolean }) {
           aria-label={label}
           aria-pressed={collapsed === value}
           onClick={() => setCollapsed(value)}
-          className={`sidebar-focus flex h-7 flex-1 items-center justify-center gap-2 rounded-full text-xs font-medium transition-colors ${collapsed === value ? 'bg-white text-[#143F73] shadow-sm' : 'text-slate-500 hover:text-[#143F73]'}`}
+          className={`sidebar-focus flex h-7 flex-1 items-center justify-center gap-2 rounded-lg text-xs font-medium transition-colors ${collapsed === value ? 'bg-white text-[#0F4C81] shadow-sm' : 'text-blue-100 hover:bg-white/10 hover:text-white'}`}
         >
           <Icon
             className={compact ? 'size-3.5 shrink-0' : 'size-4 shrink-0'}

@@ -22,7 +22,7 @@ export const INITIAL_USERS: User[] = [
     email: 'admin@laundryweb.com',
     role: 'ADMIN',
     avatar:
-      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+      '',
     facilityId: 'FAC-01',
   },
   {
@@ -31,7 +31,7 @@ export const INITIAL_USERS: User[] = [
     email: 'supervisor@laundryweb.com',
     role: 'SUPERVISOR',
     avatar:
-      'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80',
+      '',
     facilityId: 'FAC-01',
   },
 ];
@@ -109,7 +109,7 @@ export const INITIAL_DRIVERS: Driver[] = [
     phone: '+51 987 654 321',
     email: 'carlos.ruiz@laundryweb.com',
     avatar:
-      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
+      '',
     vehicleType: 'VAN',
     vehiclePlate: 'ABC-123',
     facilityId: 'FAC-01',
@@ -134,7 +134,7 @@ export const INITIAL_DRIVERS: Driver[] = [
     phone: '+51 981 123 456',
     email: 'mateo.quispe@laundryweb.com',
     avatar:
-      'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80',
+      '',
     vehicleType: 'VAN',
     vehiclePlate: 'XYZ-789',
     facilityId: 'FAC-02',
@@ -159,7 +159,7 @@ export const INITIAL_DRIVERS: Driver[] = [
     phone: '+51 992 445 566',
     email: 'javier.arriola@laundryweb.com',
     avatar:
-      'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=120&auto=format&fit=crop&q=80',
+      '',
     vehicleType: 'MOTO',
     vehiclePlate: 'MOT-442',
     facilityId: 'FAC-03',
@@ -184,7 +184,7 @@ export const INITIAL_DRIVERS: Driver[] = [
     phone: '+51 976 889 900',
     email: 'andrea.morales@laundryweb.com',
     avatar:
-      'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=120&auto=format&fit=crop&q=80',
+      '',
     vehicleType: 'VAN',
     vehiclePlate: 'VWT-505',
     facilityId: 'FAC-01',
@@ -209,7 +209,7 @@ export const INITIAL_DRIVERS: Driver[] = [
     phone: '+51 965 334 221',
     email: 'diego.valdivia@laundryweb.com',
     avatar:
-      'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=120&auto=format&fit=crop&q=80',
+      '',
     vehicleType: 'CAMIONETA',
     vehiclePlate: 'PKU-881',
     facilityId: 'FAC-02',
@@ -234,7 +234,7 @@ export const INITIAL_DRIVERS: Driver[] = [
     phone: '+51 944 112 887',
     email: 'lucia.santillan@laundryweb.com',
     avatar:
-      'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=120&auto=format&fit=crop&q=80',
+      '',
     vehicleType: 'VAN',
     vehiclePlate: 'ECO-204',
     facilityId: 'FAC-03',
@@ -259,7 +259,7 @@ export const INITIAL_DRIVERS: Driver[] = [
     phone: '+51 955 776 332',
     email: 'fernando.castro@laundryweb.com',
     avatar:
-      'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=120&auto=format&fit=crop&q=80',
+      '',
     vehicleType: 'MOTO',
     vehiclePlate: 'MOT-991',
     facilityId: 'FAC-01',
@@ -284,7 +284,7 @@ export const INITIAL_DRIVERS: Driver[] = [
     phone: '+51 933 221 445',
     email: 'gabriel.zuniga@laundryweb.com',
     avatar:
-      'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=120&auto=format&fit=crop&q=80',
+      '',
     vehicleType: 'VAN',
     vehiclePlate: 'FST-319',
     facilityId: 'FAC-02',
@@ -317,9 +317,9 @@ export const INITIAL_CUSTOMERS: Customer[] = [
     kycReviewedAt: '2026-09-15 10:20',
     kycReviewedBy: 'Carlos Mendoza',
     kycDocumentUrl:
-      'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80',
+      '',
     kycSelfieUrl:
-      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
+      '',
     addresses: [
       {
         street: 'Calle Grimaldo del Solar',
@@ -351,9 +351,9 @@ export const INITIAL_CUSTOMERS: Customer[] = [
     kycReviewedAt: '2026-08-01 14:00',
     kycReviewedBy: 'Carlos Mendoza',
     kycDocumentUrl:
-      'https://images.unsplash.com/photo-1450133064473-71024230f91b?w=600&auto=format&fit=crop&q=80',
+      '',
     kycSelfieUrl:
-      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80',
+      '',
     addresses: [
       {
         street: 'Av. La Marina',
@@ -385,9 +385,9 @@ export const INITIAL_CUSTOMERS: Customer[] = [
     kycStatus: 'PENDING',
     kycSubmittedAt: '2026-09-29 09:15',
     kycDocumentUrl:
-      'https://images.unsplash.com/photo-1628155930542-3c7a64e2c833?w=600&auto=format&fit=crop&q=80',
+      '',
     kycSelfieUrl:
-      'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=400&auto=format&fit=crop&q=80',
+      '',
     addresses: [
       {
         street: 'Av. Javier Prado Oeste',
@@ -420,9 +420,9 @@ export const INITIAL_CUSTOMERS: Customer[] = [
     kycReviewedAt: '2026-07-22 11:30',
     kycReviewedBy: 'Elena Rostova',
     kycDocumentUrl:
-      'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop&q=80',
+      '',
     kycSelfieUrl:
-      'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&auto=format&fit=crop&q=80',
+      '',
     addresses: [
       {
         street: 'Malecón de la Reserva',
@@ -458,9 +458,9 @@ export const INITIAL_CUSTOMERS: Customer[] = [
     kycRejectionReason:
       'La foto del documento de identidad no es legible y los bordes están recortados.',
     kycDocumentUrl:
-      'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=600&auto=format&fit=crop&q=80',
+      '',
     kycSelfieUrl:
-      'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&auto=format&fit=crop&q=80',
+      '',
     addresses: [
       {
         street: 'Av. Salaverry',
@@ -491,9 +491,9 @@ export const INITIAL_CUSTOMERS: Customer[] = [
     kycStatus: 'PENDING',
     kycSubmittedAt: '2026-09-29 14:02',
     kycDocumentUrl:
-      'https://images.unsplash.com/photo-1584438784894-089d6a62b8fa?w=600&auto=format&fit=crop&q=80',
+      '',
     kycSelfieUrl:
-      'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80',
+      '',
     addresses: [
       {
         street: 'Calle Dos de Mayo',
@@ -926,7 +926,7 @@ export const INITIAL_ORDERS: Order[] = [
       {
         id: 'TL-23',
         status: 'QUARANTINE',
-        label: 'Puesto en CUARENTENA por inspección técnica',
+        label: 'Puesto en INSCIDENCIA por inspección técnica',
         timestamp: 'Hoy 11:15',
         userName: 'Mariana Silva',
         userRole: 'SUPERVISOR',
@@ -1641,7 +1641,7 @@ export const INITIAL_INCIDENTS: Incident[] = [
     evidences: [
       {
         id: 'EVD-01',
-        url: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=500&auto=format&fit=crop&q=80',
+        url: '',
         caption:
           'Detalle de la orla inferior del vestido con residuo químico previo',
         uploadedAt: '2026-09-29 11:15',

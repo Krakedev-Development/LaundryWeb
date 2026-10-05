@@ -315,7 +315,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     if (res.success) {
       showToast({
         type: 'warning',
-        title: 'Lote enviado a CUARENTENA',
+        title: 'Lote enviado a INSCIDENCIA',
         message: `Motivo: ${reason}`,
       });
       return true;
@@ -336,7 +336,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     if (res.success) {
       showToast({
         type: 'success',
-        title: 'Orden liberada de cuarentena',
+        title: 'Orden liberada de inscidencia',
         message: `Ha avanzado a control de calidad para inspección final.`,
       });
       return true;

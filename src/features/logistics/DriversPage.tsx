@@ -1,3 +1,4 @@
+import { IconPlaceholder } from '../../components/common/IconPlaceholder';
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { PageHeader } from '../../components/common/PageHeader';
@@ -108,8 +109,7 @@ export const DriversPage: React.FC = () => {
         name,
         phone,
         email,
-        avatar:
-          'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
+        avatar: '',
         vehicleType,
         vehiclePlate: vehiclePlate.toUpperCase(),
         facilityId,
@@ -211,10 +211,10 @@ export const DriversPage: React.FC = () => {
                   >
                     <td className="py-3.5 px-4 whitespace-nowrap">
                       <div className="flex items-center gap-2.5">
-                        <img
-                          src={driver.avatar}
-                          alt={driver.name}
-                          className="w-9 h-9 rounded-full object-cover border border-slate-200"
+                        <IconPlaceholder
+                          kind="user"
+                          label={driver.name}
+                          className="size-9 rounded-full"
                         />
                         <div>
                           <span className="font-bold text-slate-900 block">

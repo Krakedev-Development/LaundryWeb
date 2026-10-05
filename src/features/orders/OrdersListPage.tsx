@@ -214,7 +214,7 @@ export const OrdersListPage: React.FC = () => {
                 presentan excepciones operacionales
               </p>
               <p className="text-[11px] text-slate-500 mt-0.5">
-                Casos con SLA vencido, retención en cuarentena o incidencias
+                Casos con SLA vencido, retención en inscidencia o incidencias
                 activas en curso.
               </p>
             </div>
@@ -342,7 +342,7 @@ export const OrdersListPage: React.FC = () => {
                 <option value="QUALITY_CONTROL">Control de calidad</option>
                 <option value="READY_FOR_DELIVERY">Lista para entrega</option>
                 <option value="OUT_FOR_DELIVERY">En entrega</option>
-                <option value="QUARANTINE">Cuarentena</option>
+                <option value="QUARANTINE">Inscidencia</option>
                 <option value="CLOSED">Finalizada</option>
               </select>
             </div>

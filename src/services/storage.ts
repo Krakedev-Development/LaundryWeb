@@ -9,6 +9,7 @@ import {
 } from './fulfillment';
 import { HandoffService, HandoffState } from './HandoffService';
 import { prepareWebDemoData } from './geo/WebDemoData';
+import { prepareHandoffDemoData } from './HandoffDemoData';
 import { eligibilityReasons } from './geo/DispatchService';
 import { serviceAreaService } from './geo/ServiceAreaService';
 import {
@@ -295,6 +296,7 @@ class StorageService {
         legacy,
       );
     });
+    prepareHandoffDemoData(state, fac, this.handoffService);
     localStorage.setItem(this.workflowKey, JSON.stringify(state));
   }
   public getHandoffs() {
@@ -813,7 +815,7 @@ class StorageService {
       return {
         success: false,
         error:
-          'La orden se encuentra en CUARENTENA. Debe ser liberada técnicamente antes de pasar a Lista para entrega.',
+          'La orden se encuentra en INSCIDENCIA. Debe ser liberada técnicamente antes de pasar a Lista para entrega.',
       };
     }
 
@@ -916,7 +918,7 @@ class StorageService {
       CLOSED: 'Solicitud finalizada y cerrada',
       INCIDENT: 'Incidencia operacional activa',
       CANCELLED: 'Solicitud cancelada',
-      QUARANTINE: 'Lote enviado a CUARENTENA para revisión',
+      QUARANTINE: 'Lote enviado a INSCIDENCIA para revisión',
     };
 
     order.timeline.push({
@@ -970,7 +972,7 @@ class StorageService {
     return this.updateOrderStatus(
       orderId,
       'QUARANTINE',
-      `Cuarentena: ${reason}. ${notes || ''}`,
+      `Inscidencia: ${reason}. ${notes || ''}`,
     );
   }
 
@@ -989,7 +991,7 @@ class StorageService {
     return this.updateOrderStatus(
       orderId,
       targetStatus,
-      `Liberado de cuarentena: ${resolutionNotes || 'Tratamiento aprobado'}`,
+      `Liberado de inscidencia: ${resolutionNotes || 'Tratamiento aprobado'}`,
     );
   }
 

@@ -133,7 +133,7 @@ export function AppSidebar() {
                 : 'pinned'
         }
         style={{ width: compact ? SIDEBAR_MINI_WIDTH : SIDEBAR_EXPANDED_WIDTH }}
-        className={`sidebar-motion fixed inset-y-0 left-0 z-40 flex flex-col border-r border-slate-200 bg-white text-slate-800 transition-[width,transform] duration-200 ease-out ${isLargeScreen || mobileOpen ? 'translate-x-0' : '-translate-x-full'} ${hover.previewOpen ? 'shadow-2xl ring-1 ring-slate-200' : 'shadow-xs'}`}
+        className={`sidebar-motion fixed inset-y-0 left-0 z-40 flex flex-col overflow-hidden border-r border-white/15 bg-[#0A3660] text-white transition-[width,transform] duration-200 ease-out ${isLargeScreen || mobileOpen ? 'translate-x-0' : '-translate-x-full'} ${hover.previewOpen ? 'shadow-2xl ring-1 ring-[#0A3660]/20' : 'shadow-xs'}`}
         onPointerEnter={hover.onPointerEnter}
         onPointerLeave={hover.onPointerLeave}
         onFocusCapture={hover.onFocusCapture}
@@ -153,7 +153,7 @@ export function AppSidebar() {
               const Icon = module.icon;
               const active = module.id === accordion.activeModuleId;
               const expanded = !compact && accordion.expanded.has(module.id);
-              const moduleStyle = `sidebar-focus flex items-center rounded-xl border text-xs font-semibold tracking-wide transition-colors ${compact ? 'size-10 justify-center' : 'min-h-11 w-full gap-3 px-3'} ${active ? 'border-[#143F73]/20 bg-[#143F73]/[0.07] text-[#143F73]' : 'border-transparent text-slate-600 hover:bg-slate-50 hover:text-[#143F73]'}`;
+              const moduleStyle = `sidebar-focus flex items-center rounded-xl border text-xs font-semibold tracking-wide transition-colors ${compact ? 'size-10 justify-center' : 'min-h-11 w-full gap-3 px-3'} ${active ? 'border-white/25 bg-white/15 text-white' : 'border-transparent text-blue-100 hover:bg-white/10 hover:text-white'}`;
               return (
                 <div key={module.id} data-sidebar-module={module.id}>
                   {module.id === 'home' ? (
@@ -213,7 +213,7 @@ export function AppSidebar() {
                         className={`grid transition-[grid-template-rows] duration-200 ease-out ${expanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
                       >
                         <div className="min-h-0 overflow-hidden">
-                          <div className="ml-5 mt-1 space-y-0.5 border-l border-slate-200 pb-1 pl-3">
+                          <div className="ml-5 mt-1 space-y-0.5 border-l border-white/20 pb-1 pl-3">
                             {module.items.map((item) => {
                               const itemActive =
                                 item.path === accordion.activePath;
@@ -229,7 +229,7 @@ export function AppSidebar() {
                                   title={item.label}
                                   onClick={closeMobile}
                                   aria-current={itemActive ? 'page' : false}
-                                  className={`sidebar-focus flex min-h-10 items-center gap-2 rounded-lg px-3 text-[13px] transition-colors ${itemActive ? 'bg-[#143F73]/[0.07] font-semibold text-[#143F73]' : 'text-slate-600 hover:bg-slate-50 hover:text-[#143F73]'}`}
+                                  className={`sidebar-focus flex min-h-10 items-center gap-2 rounded-lg px-3 text-[13px] transition-colors ${itemActive ? 'bg-white/15 font-semibold text-white' : 'text-blue-100 hover:bg-white/10 hover:text-white'}`}
                                 >
                                   {itemActive && (
                                     <span
@@ -243,7 +243,7 @@ export function AppSidebar() {
                                   {count > 0 && (
                                     <span
                                       aria-label={`${count} pendientes`}
-                                      className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums ${item.badge === 'incidents' ? 'bg-amber-50 text-amber-800' : 'bg-slate-100 text-slate-600'}`}
+                                      className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums ${item.badge === 'incidents' ? 'bg-amber-50 text-amber-800' : 'bg-white/15 text-white'}`}
                                     >
                                       {count}
                                     </span>
