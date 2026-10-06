@@ -1,39 +1,25 @@
 const { test, expect } = require('@playwright/test');
 
-test('reference login layout preserves demo access for both roles and password visibility', async ({
+test('original login layout preserves demo access for both roles', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1672, height: 941 });
   await page.goto('/login', { waitUntil: 'domcontentloaded' });
   await expect(
-    page.getByRole('heading', { name: 'Iniciar sesión' }),
+    page.getByRole('heading', { name: 'Acceso a la plataforma' }),
   ).toBeVisible();
   await expect(
-    page.getByRole('button', { name: 'Administrador', exact: true }),
-  ).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.getByLabel('Correo', { exact: true })).toHaveValue(
+    page.getByRole('button', { name: /Carlos Mendoza/ }),
+  ).toBeVisible();
+  await expect(page.locator('input[type="email"]')).toHaveValue(
     'admin@laundryweb.com',
   );
-  await page.getByLabel('Contraseña', { exact: true }).fill('demo-password');
-  await page
-    .getByRole('button', { name: 'Mostrar contraseña', exact: true })
-    .click();
-  await expect(page.getByLabel('Contraseña', { exact: true })).toHaveAttribute(
-    'type',
-    'text',
-  );
-  await page
-    .getByRole('button', { name: 'Ocultar contraseña', exact: true })
-    .click();
-  await expect(page.getByLabel('Contraseña', { exact: true })).toHaveAttribute(
-    'type',
-    'password',
-  );
+  await page.locator('input[type="password"]').fill('demo-password');
   await page.screenshot({
-    path: 'test-results/login-reference-desktop.png',
+    path: 'test-results/login-original-desktop.png',
     fullPage: true,
   });
-  await page.getByRole('button', { name: 'Ingresar', exact: true }).click();
+  await page.getByRole('button', { name: 'Iniciar sesión', exact: true }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
   await expect(
     page.locator('#app-sidebar').getByText('Administrador', { exact: true }),
@@ -42,11 +28,11 @@ test('reference login layout preserves demo access for both roles and password v
     .locator('#app-sidebar')
     .getByRole('button', { name: 'Cerrar sesión', exact: true })
     .click();
-  await page.getByRole('button', { name: 'Supervisor', exact: true }).click();
-  await expect(page.getByLabel('Correo', { exact: true })).toHaveValue(
+  await page.getByRole('button', { name: /Elena Rostova/ }).click();
+  await expect(page.locator('input[type="email"]')).toHaveValue(
     'supervisor@laundryweb.com',
   );
-  await page.getByRole('button', { name: 'Ingresar', exact: true }).click();
+  await page.getByRole('button', { name: 'Iniciar sesión', exact: true }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
   await expect(
     page.locator('#app-sidebar').getByText('Supervisor', { exact: true }),
@@ -62,11 +48,11 @@ test('login keeps all fields usable without horizontal overflow on mobile and ta
   ]) {
     await page.setViewportSize(viewport);
     await page.goto('/login', { waitUntil: 'domcontentloaded' });
-    await expect(page.getByLabel('Correo', { exact: true })).toBeVisible();
-    await expect(page.getByLabel('Contraseña', { exact: true })).toBeVisible();
-    await page.getByLabel('Recordarme', { exact: true }).uncheck();
+    await expect(page.locator('input[type="email"]')).toBeVisible();
+    await expect(page.locator('input[type="password"]')).toBeVisible();
+    await page.getByLabel('Recordarme en este equipo', { exact: true }).uncheck();
     await expect(
-      page.getByLabel('Recordarme', { exact: true }),
+      page.getByLabel('Recordarme en este equipo', { exact: true }),
     ).not.toBeChecked();
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth),

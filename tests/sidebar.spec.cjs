@@ -190,9 +190,9 @@ test('nested routes select only the closest leaf and role changes filter the nav
   await sidebar
     .getByRole('button', { name: 'Cerrar sesión', exact: true })
     .click();
-  await page.getByRole('button', { name: 'Supervisor', exact: true }).click();
+  await page.getByRole('button', { name: /Elena Rostova/ }).click();
   await page
-    .getByRole('button', { name: 'Ingresar', exact: true })
+    .getByRole('button', { name: 'Iniciar sesión', exact: true })
     .click();
   await expect(
     sidebar.getByRole('button', { name: 'COMERCIAL', exact: true }),
