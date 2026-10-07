@@ -20,8 +20,14 @@ import {
 } from 'lucide-react';
 
 export const DriversPage: React.FC = () => {
-  const { drivers, facilities, createDriver, updateDriver, currentUser } =
-    useApp();
+  const {
+    drivers,
+    facilities,
+    createDriver,
+    updateDriver,
+    currentUser,
+    showToast,
+  } = useApp();
   const isAdmin = currentUser.role === 'ADMIN';
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -89,45 +95,54 @@ export const DriversPage: React.FC = () => {
           ? 'Zona Sur & Bahía'
           : 'Zona Financiera & Residencial';
 
-    if (editingDriver) {
-      updateDriver({
-        ...editingDriver,
-        name,
-        phone,
-        email,
-        vehicleType,
-        vehiclePlate: vehiclePlate.toUpperCase(),
-        facilityId,
-        facilityName,
-        zoneId,
-        zoneName,
-        maxOrders,
-        status,
-      });
-    } else {
-      createDriver({
-        name,
-        phone,
-        email,
-        avatar: '',
-        vehicleType,
-        vehiclePlate: vehiclePlate.toUpperCase(),
-        facilityId,
-        facilityName,
-        zoneId,
-        zoneName,
-        status,
-        maxOrders,
-        location: {
-          lat: -12.0464,
-          lng: -77.0428,
-          address: 'Base Sede',
-          lastUpdated: 'Reciente',
-        },
+    try {
+      if (editingDriver) {
+        updateDriver({
+          ...editingDriver,
+          name,
+          phone,
+          email,
+          vehicleType,
+          vehiclePlate: vehiclePlate.toUpperCase(),
+          facilityId,
+          facilityName,
+          zoneId,
+          zoneName,
+          maxOrders,
+          status,
+        });
+      } else {
+        createDriver({
+          name,
+          phone,
+          email,
+          avatar: '',
+          vehicleType,
+          vehiclePlate: vehiclePlate.toUpperCase(),
+          facilityId,
+          facilityName,
+          zoneId,
+          zoneName,
+          status,
+          maxOrders,
+          location: {
+            lat: facility?.coordinates.lat ?? 0,
+            lng: facility?.coordinates.lng ?? 0,
+            address: facility?.address ?? '',
+            lastUpdated: new Date().toISOString(),
+            simulated: true,
+          },
+        });
+      }
+
+      setIsDrawerOpen(false);
+    } catch (error) {
+      showToast({
+        type: 'error',
+        title: 'No se pudo guardar el chofer',
+        message: error instanceof Error ? error.message : String(error),
       });
     }
-
-    setIsDrawerOpen(false);
   };
 
   return (

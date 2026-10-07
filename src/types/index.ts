@@ -317,7 +317,7 @@ export interface Incident {
   evidences: IncidentEvidence[];
   assignedTo: string;
   reportedBy: string;
-  reportedRole: UserRole;
+  reportedRole: UserRole | ActorRole;
   createdAt: string;
   resolvedAt?: string;
   resolutionNotes?: string;
@@ -392,6 +392,8 @@ export interface RewardRedemption {
   date: string;
   status: RedemptionStatus;
   reviewedBy?: string;
+  reviewedAt?: string;
+  pointsReserved?: boolean; // New requests reserve points; legacy requests were already debited.
   notes?: string;
 }
 

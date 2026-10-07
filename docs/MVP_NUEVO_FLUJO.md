@@ -30,13 +30,13 @@ El límite de carga del chofer es opcional. Mapbox Matrix calcula tiempos por ca
 
 ## Permisos y datos
 
-El administrador configura catálogo, promociones, horarios y políticas, revisa KYC, crea choferes y gestiona excepciones críticas. El supervisor opera su sede y recibe vistas sin documentos, biometría ni notas sensibles. El cliente accede a sus pedidos, precios, mensajes, pagos, cargos, notificaciones y puntos. El chofer accede a sus asignaciones y su ruta; no tiene registro público. Los canjes nuevos de la app reservan puntos mientras están pendientes; la aprobación registra un único débito y el rechazo libera la reserva. El administrador registra después la entrega. Los movimientos anteriores se conservan. El chat con chofer exige una asignación vigente y no expone su teléfono personal.
+**Administrador y Supervisor acceden exclusivamente a LaundryWeb. LaundryApp admite únicamente Cliente y Chofer.** El administrador configura catálogo, promociones, horarios y políticas, revisa KYC, crea choferes y gestiona excepciones críticas. El supervisor opera su sede y recibe vistas sin documentos, biometría ni notas sensibles. El cliente accede a sus pedidos, precios, mensajes, pagos, cargos, notificaciones y puntos. El chofer accede a sus asignaciones y su ruta; no tiene registro público. Los canjes nuevos de la app reservan puntos mientras están pendientes. Su revisión corresponde al Administrador en la web. Como ambas demostraciones son independientes, la solicitud de la app permanece local; en la web el control «Simular solicitud · MVP» prepara otra solicitud local para mostrar aprobación, rechazo y entrega. La aprobación registra un único débito y el rechazo libera la reserva; ambos requieren motivo y dejan auditoría. Los movimientos anteriores se conservan. El chat con chofer exige una asignación vigente y no expone su teléfono personal.
 
 Los fixtures usan iconos para personas y verificaciones. Las fotografías reales cargadas por el usuario durante el registro pueden revisarse en la misma instalación. Una promoción puede usar una imagen propia opcional. Se mantienen los logos oficiales, sin emojis ni imágenes genéricas.
 
 LaundryWeb guarda su repositorio local en el navegador. LaundryApp guarda su repositorio en AsyncStorage, su sesión nativa en SecureStore y el borrador de solicitud localmente. La app conserva los pedidos originales ORD-001, ORD-002 y ORD-003, saldo y puntos del cliente existente. También conserva su mínimo anterior de $5 como configuración local de demostración, editable; no establece un mínimo contractual para ambas plataformas.
 
-**App y web son demostraciones independientes.** Un pedido creado en Expo Go no aparecerá en LaundryWeb ni en otro teléfono. Para representar el ciclo completo se cambia entre cliente, operador y chofer dentro de la misma instalación. No se implementó un backend, pasarela real, SMS, push remoto ni sincronización entre dispositivos.
+**App y web son demostraciones independientes.** Un pedido creado en Expo Go no aparecerá en LaundryWeb ni en otro teléfono. La app muestra acciones de cliente y chofer mediante ejemplos preparados en distintas etapas. El ciclo de operaciones se demuestra en la web con sus perfiles Administrador y Supervisor; sus controles MVP pueden representar acciones del cliente o chofer sin crear perfiles administrativos móviles. No se implementó un backend, pasarela real, SMS, push remoto ni sincronización entre dispositivos.
 
 ## Decisiones en revisión
 
@@ -66,16 +66,20 @@ Los botones del login cargan estas cuentas; contraseña de demostración `123456
 |---|---|
 | Cliente de los nuevos fixtures | cliente@demo.laundry |
 | Chofer de los nuevos fixtures | chofer@demo.laundry |
-| Administrador | admin@test.com |
-| Supervisor de sede Central | supervisor@demo.laundry |
 | Cliente original | cliente@test.com |
 | Chofer original | chofer@test.com |
 
-Los nuevos choferes creados por el administrador también usan `123456` en este MVP local.
+La creación y configuración de choferes se realiza exclusivamente en LaundryWeb por el Administrador y afecta a su flota local. No crea automáticamente una cuenta en la app independiente.
 
-Fixtures comunes: SOL-HH-001, SOL-HS-001, SOL-SH-001, SOL-SS-001 y SOL-WEIGHT-001. En la app, iniciar como cliente demo para presentar el código; cambiar a administrador con sede Central para recibir, pesar e inspeccionar; regresar al cliente para aceptar ajustes y pagar; regresar al operador para procesar y liberar. En tramos a domicilio, asignar al chofer y usar su cuenta para marcar ruta/llegada y confirmar recogida o entrega. Cada fase conserva los datos al cambiar de cuenta.
+Fixtures comunes: SOL-HH-001, SOL-HS-001, SOL-SH-001, SOL-SS-001 y SOL-WEIGHT-001. En la app hay además ejemplos preparados que conservan su avance al recargar:
 
-LaundryWeb: `npm.cmd run dev`. Las solicitudes, recepción, despacho y planta trabajan sobre el mismo repositorio del navegador. Los controles rotulados MVP permiten al administrador representar la respuesta del cliente sin cambiar a una cuenta móvil; registran el actor cliente en auditoría.
+- APP-DEMO-PICKUP: el chofer demo inicia ruta, marca llegada, verifica y confirma la recogida; el cliente presenta su código.
+- APP-DEMO-DELIVERY: salida de planta ya preparada; el chofer demuestra ruta y entrega final, y el cliente presenta su código.
+- APP-DEMO-ADJUSTMENT: peso e inspección ya preparados; el cliente acepta o rechaza el ajuste y realiza el pago demo.
+
+Estos ejemplos agregan datos nuevos y no reemplazan pedidos, saldos ni historial guardado. Si la configuración o disponibilidad existente impide preparar un ejemplo, se conserva el repositorio previo. Recepción, pesaje, inspección, procesamiento, asignación, KYC, configuración y revisión de canjes se realizan en LaundryWeb.
+
+LaundryWeb: `npm.cmd run dev`. Su login conserva Carlos Mendoza (Administrador, `admin@laundryweb.com`) y Elena Rostova (Supervisor, `supervisor@laundryweb.com`). Las solicitudes, recepción, despacho y planta trabajan sobre el mismo repositorio del navegador. Los controles rotulados MVP permiten al administrador representar la respuesta del cliente sin cambiar a una cuenta móvil; registran el actor cliente en auditoría.
 
 ## Validación y mantenimiento
 
@@ -97,12 +101,12 @@ El dominio portable es canónico en LaundryWeb. `npm.cmd run domain:sync` actual
 
 La validación automatizada cubre los cuatro ciclos, QR, permisos, pago, pesaje, ajustes, reservas, reprogramación, cancelación, rutas, persistencia y fallos de almacenamiento. La exportación Android/iOS no sustituye la prueba física de escaneo, permisos y mapas en un teléfono con Expo Go.
 
-## Resultado de validación — 6 de octubre de 2026
+## Resultado de validación — 7 de octubre de 2026
 
-- 42 pruebas de lógica, permisos, códigos, geografía y persistencia: aprobadas.
-- 18 pruebas de interfaz de LaundryWeb: aprobadas.
-- 3 recorridos de LaundryApp en su exportación web: aprobados, incluido el ciclo por peso entre cuentas, el checkout con reserva única y la navegación a sede.
+- 46 pruebas de lógica, permisos, códigos, geografía y persistencia: aprobadas.
+- 20 pruebas de interfaz de LaundryWeb: aprobadas, incluida la revisión administrativa de canjes y el acceso operativo del Supervisor.
+- 4 recorridos de LaundryApp en su exportación web: aprobados; login exclusivo de Cliente/Chofer, cierre de sesiones administrativas antiguas, ajuste y pago, recogida con mapa y checkout con reserva única.
 - TypeScript en ambos proyectos, build de LaundryWeb y exportaciones Android, iOS y web de Expo: completados.
-- Las dependencias nativas agregadas coinciden con las versiones indicadas por el SDK de Expo instalado.
+- App y web mantienen demostraciones independientes. Las copias del dominio comparten contratos y reglas, sin sincronización de datos.
 
-Queda pendiente la comprobación física de cámara, permisos, escaneo y mapas en Expo Go. Estos resultados prueban la demostración local; no prueban sincronización entre instalaciones ni servicios de producción.
+Queda pendiente la comprobación física de cámara, permisos, escaneo y mapas en Expo Go. Las pruebas de exportación e interfaz no sustituyen esa comprobación en un teléfono.

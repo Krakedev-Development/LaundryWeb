@@ -552,19 +552,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const updateRedemptionStatus = (
     id: string,
-    status: RewardRedemption['status'],
+    status: RewardRedemption["status"],
     notes?: string,
   ) => {
-    const res = storageService.updateRedemptionStatus(id, status, notes);
-    if (res.success) {
+    try {
+      const res = storageService.updateRedemptionStatus(id, status, notes);
+      if (res.success) {
+        showToast({
+          type: status === "APPROVED" ? "success" : "info",
+          title: `Canje de recompensa ${status}`,
+          message: notes,
+        });
+        return true;
+      }
+      return false;
+    } catch (error) {
       showToast({
-        type: status === 'APPROVED' ? 'success' : 'info',
-        title: `Canje de recompensa ${status}`,
-        message: notes,
+        type: "error",
+        title: "No se pudo revisar el canje",
+        message: error instanceof Error ? error.message : String(error),
       });
-      return true;
+      return false;
     }
-    return false;
   };
 
   const updateSettings = (st: SystemSettings) => {

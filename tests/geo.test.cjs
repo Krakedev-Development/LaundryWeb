@@ -242,7 +242,9 @@ test('unreachable pairs remain null and 429 blocks subsequent requests without r
   );
   assert.equal(calls, 1);
 });
-test('route cache includes waypoints/profile, caches valid responses and expires', async () => {
+test('route cache includes waypoints/profile, caches valid responses and expires', async (t) => {
+  let time = 1000;
+  t.mock.method(Date, 'now', () => time);
   const provider = new DemoGeoProvider();
   let calls = 0;
   const original = provider.getRoute.bind(provider);
@@ -262,7 +264,7 @@ test('route cache includes waypoints/profile, caches valid responses and expires
     routeCacheKey(DEMO_CENTER, DEMO_CENTER),
     routeCacheKey(DEMO_CENTER, DEMO_CENTER, { profile: 'driving-traffic' }),
   );
-  await new Promise((resolve) => setTimeout(resolve, 20));
+  time += 20;
   await cache.getRoute(DEMO_CENTER, DEMO_CENTER);
   assert.equal(calls, 3);
 });

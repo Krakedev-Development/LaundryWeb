@@ -66,6 +66,7 @@ const STORAGE_KEYS = {
 };
 
 type Listener = () => void;
+type WebBusinessState = BusinessState & { redemptions?: RewardRedemption[] };
 
 class StorageService {
   private listeners: Set<Listener> = new Set();
@@ -156,7 +157,7 @@ class StorageService {
           evidences: [],
           assignedTo: actor.name,
           reportedBy: actor.name,
-          reportedRole: actor.role === 'SUPERVISOR' ? 'SUPERVISOR' : 'ADMIN',
+          reportedRole: actor.role,
           createdAt: h.usedAt!,
           internalNotes: [],
         });
@@ -210,14 +211,15 @@ class StorageService {
     covers: (address, facilityId) => serviceAreaService.findArea(address.coordinates)?.facilityId === facilityId,
     handoffs: this.handoffService,
   });
-  public getWorkflow(): BusinessState {
+  public getWorkflow(): WebBusinessState {
     const raw = localStorage.getItem(this.workflowKey);
     if (raw) {
       const state = JSON.parse(raw);
       state.customers ??= JSON.parse(
-        localStorage.getItem(STORAGE_KEYS.CUSTOMERS) ?? '[]',
+        localStorage.getItem(STORAGE_KEYS.CUSTOMERS) ?? "[]",
       );
-      return ensureBusinessState(state);
+      state.redemptions ??= this.getRedemptions();
+      return ensureBusinessState(state) as WebBusinessState;
     }
     return ensureBusinessState({
       orders: this.getOrders(),
@@ -518,9 +520,15 @@ class StorageService {
     }
   }
   public refreshDemoLocations() {
+    const user = this.getCurrentUser();
     const drivers = this.getDrivers();
     drivers.forEach((d) => {
-      if (d.location.simulated && d.status !== 'OFFLINE')
+      if (
+        (user.role === "ADMIN" ||
+          (user.role === "SUPERVISOR" && user.facilityId === d.facilityId)) &&
+        d.location.simulated &&
+        d.status !== "OFFLINE"
+      )
         d.location.lastUpdated = new Date().toISOString();
     });
     this.saveDrivers(drivers);
@@ -1427,14 +1435,43 @@ class StorageService {
   public createDriver(
     driverData: Omit<
       Driver,
-      'id' | 'activeOrders' | 'rating' | 'completedTripsToday'
+      "id" | "activeOrders" | "rating" | "completedTripsToday"
     >,
   ): Driver {
-    if(this.getCurrentUser().role!=='ADMIN')throw new Error('Solo el administrador puede crear choferes.');
+    if (this.getCurrentUser().role !== "ADMIN")
+      throw new Error("Solo el administrador puede crear choferes.");
     const drivers = this.getDrivers();
-    const newId = 'DRV-' + (109 + drivers.length);
+    const facility = this.getFacilities().find(
+      (f) => f.id === driverData.facilityId && f.status === "ACTIVE",
+    );
+    if (!facility) throw Error("Selecciona una sede activa.");
+    if (
+      !driverData.name.trim() ||
+      !driverData.phone.trim() ||
+      !driverData.vehiclePlate.trim() ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(driverData.email.trim())
+    )
+      throw Error("Completa nombre, teléfono, correo válido y placa.");
+    if (
+      drivers.some(
+        (d) => d.email.toLowerCase() === driverData.email.trim().toLowerCase(),
+      )
+    )
+      throw Error("Ya existe un chofer con este correo.");
+    if (!Number.isFinite(driverData.maxOrders) || driverData.maxOrders < 1)
+      throw Error("La capacidad debe ser mayor a cero.");
+    const newId = "DRV-" + crypto.randomUUID();
     const newDriver: Driver = {
       ...driverData,
+      name: driverData.name.trim(),
+      email: driverData.email.trim().toLowerCase(),
+      facilityName: facility.name,
+      location: {
+        ...facility.coordinates,
+        address: facility.address,
+        lastUpdated: new Date().toISOString(),
+        simulated: true,
+      },
       id: newId,
       activeOrders: 0,
       rating: 5.0,
@@ -1447,8 +1484,8 @@ class StorageService {
     this.addAuditLog({
       userName: currentUser.name,
       userRole: currentUser.role,
-      action: 'CHOFER_CREADO',
-      entity: 'Driver',
+      action: "CHOFER_CREADO",
+      entity: "Driver",
       entityId: newId,
       newValue: newDriver.name,
       notes: `Vehículo: ${newDriver.vehicleType} - Placa: ${newDriver.vehiclePlate}`,
@@ -1633,26 +1670,129 @@ class StorageService {
   }
 
   public getRedemptions(): RewardRedemption[] {
-    const raw = localStorage.getItem(STORAGE_KEYS.REDEMPTIONS);
-    return raw ? JSON.parse(raw) : [];
+    const workflow = localStorage.getItem(this.workflowKey);
+    const saved = workflow ? JSON.parse(workflow).redemptions : undefined;
+    if (Array.isArray(saved)) return saved;
+    return JSON.parse(localStorage.getItem(STORAGE_KEYS.REDEMPTIONS) ?? "[]");
   }
+
+  public requestDemoReward(
+    customerId: string,
+    rewardId: string,
+  ): RewardRedemption {
+    if (this.getCurrentUser().role !== "ADMIN")
+      throw Error(
+        "Solo el Administrador puede simular una solicitud de canje en este MVP web.",
+      );
+    const state = this.getWorkflow();
+    state.redemptions ??= this.getRedemptions();
+    const customer = state.customers.find((c) => c.id === customerId);
+    const reward = this.getRewards().find(
+      (r) => r.id === rewardId && r.status === "ACTIVE",
+    );
+    if (!customer || !reward)
+      throw Error("Selecciona un cliente y una recompensa activa.");
+    const reserved = state.redemptions
+      .filter(
+        (r) =>
+          r.customerId === customerId &&
+          r.status === "PENDING" &&
+          r.pointsReserved,
+      )
+      .reduce((sum, r) => sum + r.pointsSpent, 0);
+    const purchases = state.orders.filter(
+      (o) => o.customerId === customerId && o.status === "COMPLETED",
+    );
+    const spend = purchases.reduce((sum, o) => sum + o.pricing.total, 0);
+    if (
+      customer.points - reserved < reward.pointsCost ||
+      customer.completedOrders < reward.minPurchases ||
+      spend < reward.minSpend
+    )
+      throw Error(
+        "El cliente no cumple los requisitos del canje o tiene puntos reservados.",
+      );
+    const redemption: RewardRedemption = {
+      id: "RED-" + crypto.randomUUID(),
+      customerId,
+      customerName: customer.fullName,
+      rewardId,
+      rewardName: reward.name,
+      pointsSpent: reward.pointsCost,
+      date: new Date().toISOString(),
+      status: "PENDING",
+      pointsReserved: true,
+    };
+    state.redemptions.push(redemption);
+    state.businessAudits.push({
+      id: crypto.randomUUID(),
+      actorId: customerId,
+      actorRole: "CLIENT",
+      action: "DEMO_REWARD_REQUESTED",
+      reason:
+        "Solicitud local simulada por Administrador; no sincroniza con LaundryApp.",
+      at: redemption.date,
+    });
+    localStorage.setItem(this.workflowKey, JSON.stringify(state));
+    this.notify();
+    return redemption;
+  }
+
 
   public updateRedemptionStatus(
     redemptionId: string,
-    status: RewardRedemption['status'],
+    status: RewardRedemption["status"],
     notes?: string,
   ): { success: boolean } {
-    if (this.getCurrentUser().role !== 'ADMIN') throw Error('Solo el administrador revisa canjes.');
-    const redemptions = this.getRedemptions();
-    const red = redemptions.find((r) => r.id === redemptionId);
+    const user = this.getCurrentUser();
+    if (user.role !== "ADMIN")
+      throw Error("Solo el administrador revisa canjes.");
+    if (!notes?.trim())
+      throw Error("Escribe el motivo de la revisión o entrega.");
+    const state = this.getWorkflow();
+    state.redemptions ??= this.getRedemptions();
+    const red = state.redemptions.find((r) => r.id === redemptionId);
     if (!red) return { success: false };
-
-    const currentUser = this.getCurrentUser();
+    if (red.status === status) return { success: true };
+    if (!(
+      (red.status === "PENDING" &&
+        (status === "APPROVED" || status === "REJECTED")) ||
+      (red.status === "APPROVED" && status === "DELIVERED")
+    ))
+      throw Error(
+        "Transición de canje no permitida; la entrega requiere aprobación.",
+      );
+    const at = new Date().toISOString();
+    if (red.pointsReserved && status === "APPROVED") {
+      const customer = state.customers.find((c) => c.id === red.customerId);
+      if (!customer || customer.points < red.pointsSpent)
+        throw Error("Saldo de puntos insuficiente para aprobar.");
+      customer.points -= red.pointsSpent;
+      state.pointsLedger.push({
+        id: red.id,
+        customerId: red.customerId,
+        points: -red.pointsSpent,
+        type: "REDEMPTION",
+        reason: notes.trim(),
+        date: at,
+        adminUser: user.name,
+      });
+    }
+    red.pointsReserved = false;
     red.status = status;
-    red.reviewedBy = currentUser.name;
-    if (notes) red.notes = notes;
-
-    localStorage.setItem(STORAGE_KEYS.REDEMPTIONS, JSON.stringify(redemptions));
+    red.reviewedBy = user.name;
+    red.reviewedAt = at;
+    red.notes = notes.trim();
+    state.businessAudits.push({
+      id: crypto.randomUUID(),
+      actorId: user.id,
+      actorRole: user.role,
+      action: "REWARD_" + status,
+      reason: red.id + ": " + notes.trim(),
+      at,
+    });
+    // Review, balance, ledger and audit share one durable write. Legacy debits remain untouched.
+    localStorage.setItem(this.workflowKey, JSON.stringify(state));
     this.notify();
     return { success: true };
   }

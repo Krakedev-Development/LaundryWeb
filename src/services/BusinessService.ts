@@ -1450,7 +1450,7 @@ export class BusinessService {
         evidences: [],
         assignedTo: 'Operaciones',
         reportedBy: a.name,
-        reportedRole: a.role === 'SUPERVISOR' ? 'SUPERVISOR' : 'ADMIN',
+        reportedRole: a.role,
         createdAt: this.now(),
         internalNotes: [],
       });
