@@ -52,14 +52,15 @@ export function eligibilityReasons(
   target: DispatchTarget,
   now = Date.now(),
   staleSeconds = 120,
+  enforceLimit = false,
 ) {
   const reasons: string[] = [];
-  if (driver.status !== 'AVAILABLE') reasons.push('Chofer no disponible');
+  if (!['AVAILABLE','ON_SERVICE'].includes(driver.status)) reasons.push('Chofer no disponible');
   if (
     !Number.isFinite(driver.maxOrders) ||
     driver.maxOrders <= 0 ||
     !Number.isFinite(driver.activeOrders) ||
-    driver.activeOrders >= driver.maxOrders ||
+    (enforceLimit && driver.activeOrders >= driver.maxOrders) ||
     driver.activeOrders < 0
   )
     reasons.push('Sin capacidad disponible');
@@ -126,15 +127,17 @@ export class DispatchService {
     private provider: GeoProvider,
     private maxCandidates = 10,
     private staleSeconds = 120,
+    private enforceLimit = false,
   ) {}
   async candidates(
     drivers: DispatchDriver[],
     target: DispatchTarget,
     signal?: AbortSignal,
+    enforceLimit = this.enforceLimit,
   ) {
     const eligible = drivers.filter(
       (d) =>
-        !eligibilityReasons(d, target, Date.now(), this.staleSeconds).length,
+        !eligibilityReasons(d, target, Date.now(), this.staleSeconds, enforceLimit).length,
     );
     // Straight-line distance only shortlists candidates; ranking uses road travel times.
     const shortlist = eligible

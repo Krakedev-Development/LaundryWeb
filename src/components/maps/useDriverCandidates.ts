@@ -1,3 +1,4 @@
+import {storageService} from '../../services/storage';
 import { useEffect, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { dispatchService } from '../../services/geo';
@@ -12,6 +13,7 @@ export function useDriverCandidates(
   type: 'pickup' | 'delivery',
 ) {
   const { drivers } = useApp();
+  const policy=storageService.getWorkflow().businessPolicy;
   const [candidates, setCandidates] = useState<DriverCandidate[]>([]),
     [loading, setLoading] = useState(false),
     [error, setError] = useState('');
@@ -46,7 +48,7 @@ export function useDriverCandidates(
           facilityId: d.facilityId,
           zoneId: d.zoneId,
           activeOrders: d.activeOrders,
-          maxOrders: d.maxOrders,
+          maxOrders: policy.driverLimit??d.maxOrders,
           rating: d.rating,
           authorizedZoneIds: d.authorizedZoneIds,
         })),
@@ -57,6 +59,7 @@ export function useDriverCandidates(
           zoneId: area?.id ?? order.zoneId,
         },
         controller.signal,
+        policy.enforceDriverLimit,
       )
       .then((value) => {
         if (!controller.signal.aborted) setCandidates(value);
@@ -73,6 +76,8 @@ export function useDriverCandidates(
     order?.facilityId,
     type,
     snapshot,
+    policy.enforceDriverLimit,
+    policy.driverLimit,
     coordinates?.lat,
     coordinates?.lng,
   ]);

@@ -407,7 +407,7 @@ export const CustomersPage: React.FC = () => {
                             </span>
                           </div>
                           <p className="text-[11px] text-slate-500 mt-0.5">
-                            {ord.serviceType} · ${ord.pricing.total.toFixed(2)}
+                            {ord.serviceType} · {ord.pricing.amountKnown===false?'Pendiente de pesaje':`${ord.pricing.total.toFixed(2)}`}
                           </p>
                         </div>
                         <ArrowUpRight className="w-4 h-4 text-slate-400" />

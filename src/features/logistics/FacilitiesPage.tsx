@@ -17,7 +17,8 @@ import {
 } from 'lucide-react';
 
 export const FacilitiesPage: React.FC = () => {
-  const { facilities, createFacility, updateFacility, currentUser } = useApp();
+  const { facilities, createFacility, updateFacility, currentUser, showToast } =
+    useApp();
   const isAdmin = currentUser.role === 'ADMIN';
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -34,14 +35,36 @@ export const FacilitiesPage: React.FC = () => {
   const [managerName, setManagerName] = useState('Roberto Gómez');
   const [status, setStatus] = useState<'ACTIVE' | 'MAINTENANCE'>('ACTIVE');
 
+  const [acceptsCustomerDropoff, setAcceptsCustomerDropoff] = useState(true);
+  const [allowsCustomerPickup, setAllowsCustomerPickup] = useState(true);
+  const [days, setDays] = useState([1, 2, 3, 4, 5, 6]);
+  const [open, setOpen] = useState('08:00'),
+    [close, setClose] = useState('18:00');
+  const [lat, setLat] = useState(-2.1229),
+    [lng, setLng] = useState(-79.8682);
   // KPIs
   const totalFacilities = facilities.length;
-  const totalCapacityKg = facilities.reduce((acc, f) => acc + f.capacityMaxKgDay, 0);
-  const currentTotalLoadKg = facilities.reduce((acc, f) => acc + f.currentLoadKgDay, 0);
-  const avgUtilization = Math.round((currentTotalLoadKg / (totalCapacityKg || 1)) * 100);
+  const totalCapacityKg = facilities.reduce(
+    (acc, f) => acc + f.capacityMaxKgDay,
+    0,
+  );
+  const currentTotalLoadKg = facilities.reduce(
+    (acc, f) => acc + f.currentLoadKgDay,
+    0,
+  );
+  const avgUtilization = Math.round(
+    (currentTotalLoadKg / (totalCapacityKg || 1)) * 100,
+  );
 
   const handleOpenCreate = () => {
     setEditingFacility(null);
+    setAcceptsCustomerDropoff(true);
+    setAllowsCustomerPickup(true);
+    setDays([1, 2, 3, 4, 5, 6]);
+    setOpen('08:00');
+    setClose('18:00');
+    setLat(-2.1229);
+    setLng(-79.8682);
     setName('');
     setCode('HUB-NUEVO');
     setAddress('Av. Los Fresnos 450');
@@ -56,6 +79,13 @@ export const FacilitiesPage: React.FC = () => {
 
   const handleOpenEdit = (facility: Facility) => {
     setEditingFacility(facility);
+    setAcceptsCustomerDropoff(facility.acceptsCustomerDropoff !== false);
+    setAllowsCustomerPickup(facility.allowsCustomerPickup !== false);
+    setDays(facility.operatingSchedule?.days ?? [1, 2, 3, 4, 5, 6]);
+    setOpen(facility.operatingSchedule?.open ?? '08:00');
+    setClose(facility.operatingSchedule?.close ?? '18:00');
+    setLat(facility.coordinates.lat);
+    setLng(facility.coordinates.lng);
     setName(facility.name);
     setCode(facility.code);
     setAddress(facility.address);
@@ -72,35 +102,50 @@ export const FacilitiesPage: React.FC = () => {
     e.preventDefault();
     if (!name.trim()) return;
 
-    if (editingFacility) {
-      updateFacility({
-        ...editingFacility,
-        name,
-        code,
-        address,
-        city,
-        zone,
-        capacityMaxKgDay,
-        phone,
-        managerName,
-        status,
-      });
-    } else {
-      createFacility({
-        name,
-        code,
-        address,
-        city,
-        zone,
-        capacityMaxKgDay,
-        phone,
-        managerName,
-        status,
-        coordinates: { lat: -12.0464, lng: -77.0428 },
+    try {
+      if (editingFacility) {
+        updateFacility({
+          ...editingFacility,
+          name,
+          code,
+          address,
+          city,
+          zone,
+          capacityMaxKgDay,
+          phone,
+          managerName,
+          status,
+          acceptsCustomerDropoff,
+          allowsCustomerPickup,
+          operatingSchedule: { days, open, close },
+          coordinates: { lat, lng },
+        });
+      } else {
+        createFacility({
+          name,
+          code,
+          address,
+          city,
+          zone,
+          capacityMaxKgDay,
+          phone,
+          managerName,
+          status,
+          acceptsCustomerDropoff,
+          allowsCustomerPickup,
+          operatingSchedule: { days, open, close },
+          coordinates: { lat, lng },
+        });
+      }
+
+      setIsDrawerOpen(false);
+    } catch (error) {
+      showToast({
+        type: 'error',
+        title: 'No se pudo guardar la sede',
+        message: error instanceof Error ? error.message : 'Revisa los datos.',
       });
     }
-
-    setIsDrawerOpen(false);
   };
 
   return (
@@ -158,7 +203,9 @@ export const FacilitiesPage: React.FC = () => {
       {/* Facilities Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {facilities.map((fac) => {
-          const loadPct = Math.round((fac.currentLoadKgDay / fac.capacityMaxKgDay) * 100);
+          const loadPct = Math.round(
+            (fac.currentLoadKgDay / fac.capacityMaxKgDay) * 100,
+          );
           return (
             <div
               key={fac.id}
@@ -180,7 +227,9 @@ export const FacilitiesPage: React.FC = () => {
                   </span>
                 </div>
 
-                <h3 className="font-bold text-base text-slate-900">{fac.name}</h3>
+                <h3 className="font-bold text-base text-slate-900">
+                  {fac.name}
+                </h3>
                 <p className="text-xs text-slate-500 flex items-center gap-1 mt-1">
                   <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                   <span className="truncate">{fac.address}</span>
@@ -189,11 +238,35 @@ export const FacilitiesPage: React.FC = () => {
                   Zona: {fac.zone}
                 </p>
 
+                <p className="text-xs text-slate-600 mt-2">
+                  {fac.acceptsCustomerDropoff
+                    ? 'Ingreso habilitado'
+                    : 'Sin ingreso directo'}{' '}
+                  ·{' '}
+                  {fac.allowsCustomerPickup
+                    ? 'Retiro habilitado'
+                    : 'Sin retiro directo'}
+                </p>
+                {fac.operatingSchedule && (
+                  <p className="text-xs text-slate-500">
+                    {fac.operatingSchedule.open}–{fac.operatingSchedule.close} ·{' '}
+                    {fac.operatingSchedule.days
+                      .map(
+                        (day) =>
+                          ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'][
+                            day
+                          ],
+                      )
+                      .join(', ')}
+                  </p>
+                )}
                 {/* Capacity Bar */}
                 <div className="mt-4 p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 text-xs space-y-1.5">
                   <div className="flex justify-between font-mono">
                     <span className="text-slate-500">Carga del día:</span>
-                    <strong className="text-slate-800">{fac.currentLoadKgDay} / {fac.capacityMaxKgDay} kg</strong>
+                    <strong className="text-slate-800">
+                      {fac.currentLoadKgDay} / {fac.capacityMaxKgDay} kg
+                    </strong>
                   </div>
                   <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
                     <div
@@ -205,7 +278,9 @@ export const FacilitiesPage: React.FC = () => {
                   </div>
                   <div className="flex justify-between text-[11px] text-slate-500 pt-0.5">
                     <span>{fac.activeOrders} órdenes en proceso</span>
-                    <span className="font-bold text-slate-700">{loadPct}% utilizado</span>
+                    <span className="font-bold text-slate-700">
+                      {loadPct}% utilizado
+                    </span>
                   </div>
                 </div>
 
@@ -213,7 +288,9 @@ export const FacilitiesPage: React.FC = () => {
                 <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-600 space-y-1.5">
                   <div className="flex items-center gap-2">
                     <User className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Jefe de Planta: <strong>{fac.managerName}</strong></span>
+                    <span>
+                      Jefe de Planta: <strong>{fac.managerName}</strong>
+                    </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Phone className="w-3.5 h-3.5 text-slate-400" />
@@ -245,9 +322,13 @@ export const FacilitiesPage: React.FC = () => {
             <div className="p-5 border-b border-slate-200/80 bg-slate-50/70 flex items-center justify-between">
               <div>
                 <h3 className="text-base font-bold text-slate-900">
-                  {editingFacility ? `Editar: ${editingFacility.name}` : 'Registrar Nueva Sede'}
+                  {editingFacility
+                    ? `Editar: ${editingFacility.name}`
+                    : 'Registrar Nueva Sede'}
                 </h3>
-                <p className="text-xs text-slate-500">Configuración de planta y capacidad industrial diaria</p>
+                <p className="text-xs text-slate-500">
+                  Configuración de planta y capacidad industrial diaria
+                </p>
               </div>
               <button
                 onClick={() => setIsDrawerOpen(false)}
@@ -257,9 +338,14 @@ export const FacilitiesPage: React.FC = () => {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto flex-1 text-xs">
+            <form
+              onSubmit={handleSubmit}
+              className="p-5 space-y-4 overflow-y-auto flex-1 text-xs"
+            >
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Nombre de la Sede *</label>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Nombre de la Sede *
+                </label>
                 <input
                   type="text"
                   required
@@ -272,7 +358,9 @@ export const FacilitiesPage: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Código Identificador *</label>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Código Identificador *
+                  </label>
                   <input
                     type="text"
                     required
@@ -283,18 +371,24 @@ export const FacilitiesPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Capacidad Máx (kg/día)</label>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Capacidad Máx (kg/día)
+                  </label>
                   <input
                     type="number"
                     value={capacityMaxKgDay}
-                    onChange={(e) => setCapacityMaxKgDay(parseInt(e.target.value) || 0)}
+                    onChange={(e) =>
+                      setCapacityMaxKgDay(parseInt(e.target.value) || 0)
+                    }
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono focus:outline-none focus:border-sky-500"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Dirección completa</label>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Dirección completa
+                </label>
                 <input
                   type="text"
                   value={address}
@@ -305,7 +399,9 @@ export const FacilitiesPage: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Zona de Cobertura</label>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Zona de Cobertura
+                  </label>
                   <input
                     type="text"
                     value={zone}
@@ -314,7 +410,9 @@ export const FacilitiesPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Estado</label>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Estado
+                  </label>
                   <select
                     value={status}
                     onChange={(e) => setStatus(e.target.value as any)}
@@ -328,7 +426,9 @@ export const FacilitiesPage: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Jefe de Planta</label>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Jefe de Planta
+                  </label>
                   <input
                     type="text"
                     value={managerName}
@@ -337,7 +437,9 @@ export const FacilitiesPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Teléfono Directo</label>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Teléfono Directo
+                  </label>
                   <input
                     type="text"
                     value={phone}
@@ -347,6 +449,102 @@ export const FacilitiesPage: React.FC = () => {
                 </div>
               </div>
 
+              <fieldset className="space-y-3 rounded-xl bg-slate-50 border border-slate-200 p-4">
+                <legend className="font-bold">Recepción y horarios</legend>
+                <label className="flex gap-2">
+                  <input
+                    type="checkbox"
+                    checked={acceptsCustomerDropoff}
+                    onChange={(e) =>
+                      setAcceptsCustomerDropoff(e.target.checked)
+                    }
+                  />
+                  Permite ingreso del cliente
+                </label>
+                <label className="flex gap-2">
+                  <input
+                    type="checkbox"
+                    checked={allowsCustomerPickup}
+                    onChange={(e) => setAllowsCustomerPickup(e.target.checked)}
+                  />
+                  Permite retiro del cliente
+                </label>
+                <div className="flex flex-wrap gap-3">
+                  {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map(
+                    (name, index) => (
+                      <label key={name} className="flex gap-1">
+                        <input
+                          type="checkbox"
+                          checked={days.includes(index)}
+                          onChange={(e) =>
+                            setDays(
+                              e.target.checked
+                                ? [...days, index]
+                                : days.filter((d) => d !== index),
+                            )
+                          }
+                        />
+                        {name}
+                      </label>
+                    ),
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <label>
+                    Apertura
+                    <input
+                      aria-label="Apertura"
+                      type="time"
+                      required
+                      value={open}
+                      onChange={(e) => setOpen(e.target.value)}
+                      className="w-full p-2 border border-slate-200 rounded-lg"
+                    />
+                  </label>
+                  <label>
+                    Cierre
+                    <input
+                      aria-label="Cierre"
+                      type="time"
+                      required
+                      value={close}
+                      onChange={(e) => setClose(e.target.value)}
+                      className="w-full p-2 border border-slate-200 rounded-lg"
+                    />
+                  </label>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <label>
+                    Latitud
+                    <input
+                      aria-label="Latitud de la sede"
+                      type="number"
+                      step="any"
+                      required
+                      value={lat}
+                      onChange={(e) => setLat(Number(e.target.value))}
+                      className="w-full p-2 border border-slate-200 rounded-lg"
+                    />
+                  </label>
+                  <label>
+                    Longitud
+                    <input
+                      aria-label="Longitud de la sede"
+                      type="number"
+                      step="any"
+                      required
+                      value={lng}
+                      onChange={(e) => setLng(Number(e.target.value))}
+                      className="w-full p-2 border border-slate-200 rounded-lg"
+                    />
+                  </label>
+                </div>
+                <p className="text-slate-500">
+                  Las franjas se configuran dentro de estos horarios. La
+                  cobertura depende de las zonas autorizadas del módulo
+                  geográfico.
+                </p>
+              </fieldset>
               <div className="pt-4 border-t border-slate-200 flex justify-end gap-2">
                 <button
                   type="button"

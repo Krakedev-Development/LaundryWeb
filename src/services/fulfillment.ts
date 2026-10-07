@@ -1,11 +1,21 @@
 /** Portable local demo contract. Both apps use equivalent data, never runtime synchronization. */
-export type FulfillmentMode = 'HOME_HOME' | 'STORE_STORE';
+export type FulfillmentMode = 'HOME_HOME' | 'HOME_STORE' | 'STORE_HOME' | 'STORE_STORE';
+export const modeFor = (inbound: 'DRIVER' | 'CUSTOMER', outbound: 'DRIVER' | 'CUSTOMER'): FulfillmentMode =>
+  `${inbound === 'DRIVER' ? 'HOME' : 'STORE'}_${outbound === 'DRIVER' ? 'HOME' : 'STORE'}` as FulfillmentMode;
+export const handoffTypesFor = (mode: FulfillmentMode): HandoffType[] => [
+  ...(mode.startsWith('HOME') ? ['CUSTOMER_TO_DRIVER', 'DRIVER_TO_FACILITY'] : ['CUSTOMER_TO_FACILITY']),
+  ...(mode.endsWith('HOME') ? ['FACILITY_TO_DRIVER', 'DRIVER_TO_CUSTOMER'] : ['FACILITY_TO_CUSTOMER']),
+] as HandoffType[];
 export type BusinessStatus =
   | 'DRAFT'
   | 'PAYMENT_PENDING'
   | 'CONFIRMED'
   | 'AWAITING_INTAKE'
   | 'AT_FACILITY'
+  | 'WEIGHING'
+  | 'INSPECTION'
+  | 'PRICING_PENDING'
+  | 'CUSTOMER_APPROVAL_PENDING'
   | 'IN_PROCESS'
   | 'QUALITY_CONTROL'
   | 'READY'
@@ -35,6 +45,7 @@ export interface FulfillmentLeg {
   address?: unknown;
   date: string;
   timeSlot: string;
+  timeSlotId?: string;
   driverAssignmentId?: string;
   driverId?: string;
   handoffIds: string[];
@@ -183,7 +194,7 @@ export function migrateOrder(
       'QUARANTINE',
     ].includes(original);
   const leg = (out: boolean): FulfillmentLeg => ({
-    method: mode === 'STORE_STORE' ? 'CUSTOMER' : 'DRIVER',
+    method: (out ? mode.endsWith('STORE') : mode.startsWith('STORE')) ? 'CUSTOMER' : 'DRIVER',
     facilityId: order.facilityId,
     address: out
       ? (order.delivery?.address ?? order.deliveryAddress)
@@ -237,7 +248,7 @@ export function operationalStage<
   if (!f) return order.status;
   if (order.status === 'INCIDENT' && order.quarantineReason)
     return 'QUARANTINE' as T['status'];
-  if (f.mode === 'STORE_STORE')
+  if ((order.status === 'AWAITING_INTAKE' && f.inbound.method === 'CUSTOMER') || (order.status === 'READY' && f.outbound.method === 'CUSTOMER') || order.status === 'COMPLETED')
     return (
       order.status === 'READY'
         ? 'READY_FOR_DELIVERY'

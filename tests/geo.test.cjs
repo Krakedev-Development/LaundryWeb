@@ -107,7 +107,7 @@ test('eligibility excludes unavailable, full, stale and unauthorized drivers bef
     origins = values;
     return original(values, destinations);
   };
-  const candidates = await new DispatchService(provider).candidates(
+  const candidates = await new DispatchService(provider,10,120,true).candidates(
     drivers,
     target,
   );

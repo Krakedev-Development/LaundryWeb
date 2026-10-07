@@ -1,4 +1,6 @@
 import { operationalStage } from '../../services/fulfillment';
+import { MODE_LABELS, nextAction } from '../../services/BusinessService';
+import { storageService } from '../../services/storage';
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
@@ -23,6 +25,7 @@ export const OrdersListPage: React.FC = () => {
 
   // Search & Filter States
   const [searchQuery, setSearchQuery] = useState('');
+  const [mode,setMode] = useState('ALL');
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
   const [selectedPriority, setSelectedPriority] = useState<string>('ALL');
   const [selectedFacility, setSelectedFacility] = useState<string>('ALL');
@@ -64,6 +67,7 @@ export const OrdersListPage: React.FC = () => {
   // Filtered orders
   const filteredOrders = useMemo(() => {
     return orders.filter((order) => {
+      if (mode !== 'ALL' && order.fulfillment?.mode !== mode) return false;
       // Text Search
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
@@ -144,6 +148,7 @@ export const OrdersListPage: React.FC = () => {
     selectedPriority,
     selectedFacility,
     selectedDriver,
+    mode,
   ]);
 
   // Sort by priority then id
@@ -232,6 +237,7 @@ export const OrdersListPage: React.FC = () => {
       )}
 
       {/* Main Filter Toolbar */}
+      <div className="flex flex-wrap items-center gap-3"><label htmlFor="fulfillment-mode" className="text-sm font-semibold">Modalidad</label><select id="fulfillment-mode" value={mode} onChange={e=>setMode(e.target.value)} className="p-3 border border-slate-200 rounded-xl bg-white"><option value="ALL">Todas las modalidades</option>{Object.entries(MODE_LABELS).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></div>
       <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-5">
         {/* Quick Segmented Tabs */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1">
@@ -463,7 +469,7 @@ export const OrdersListPage: React.FC = () => {
                         {order.serviceType}
                       </div>
                       <div className="text-[11px] text-slate-500 font-mono tabular-nums mt-0.5">
-                        {order.itemCount} prendas · ${order.pricing.total}
+                        {order.itemCount} prendas · {order.pricing.amountKnown === false ? 'Importe pendiente de pesaje' : `$${order.pricing.total}`}
                       </div>
                     </td>
 
@@ -512,9 +518,9 @@ export const OrdersListPage: React.FC = () => {
                         size="sm"
                       />
                       <span className="block text-[10px] text-slate-500 mt-1">
-                        {order.fulfillment?.mode === 'STORE_STORE'
-                          ? 'Ingreso y retiro en sede'
-                          : 'Domicilio'}
+                        {MODE_LABELS[order.fulfillment?.mode ?? 'HOME_HOME']}
+                        {order.businessVersion===3&&<span className="block text-xs text-slate-500 mt-1">Precio: {order.pricing.pricingStatus} · Pago: {order.pricing.paymentStatus}<br/>Entrada: {order.fulfillment?.inbound.status} · Salida: {order.fulfillment?.outbound.status}</span>}
+                        {order.businessVersion === 3 && <span className="block text-blue-800 mt-1 whitespace-normal max-w-48">{nextAction(order,storageService.getWorkflow())}</span>}
                       </span>
                     </td>
 

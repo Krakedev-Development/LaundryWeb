@@ -7,6 +7,7 @@ import {
   migrateOrder,
   operationalStage,
   WorkflowOrder,
+  handoffTypesFor,
 } from "./fulfillment";
 
 export interface HandoffState {
@@ -27,6 +28,7 @@ export interface HandoffPort {
   transaction(work: (state: HandoffState) => void): void;
   actor(id: string): Actor;
   paid(order: WorkflowOrder): boolean;
+  intakeAllowed?(order: WorkflowOrder): boolean;
   declaredCount(order: WorkflowOrder): number;
   blocked?(order: WorkflowOrder): boolean;
   random(): string;
@@ -111,7 +113,7 @@ export class HandoffService {
     actor: Actor,
     override = false,
   ) {
-    if (!this.port.paid(order))
+    if (!this.port.paid(order) && !(inbound(h.type) && this.port.intakeAllowed?.(order)))
       throw new Error("El pago debe estar confirmado.");
     if (order.facilityId !== h.facilityId)
       throw new Error("La sede del pedido cambió; revisa la transferencia.");
@@ -160,19 +162,19 @@ export class HandoffService {
     const stage = operationalStage(order);
     const valid: Record<HandoffType, boolean> = {
       CUSTOMER_TO_FACILITY:
-        order.fulfillment!.mode === "STORE_STORE" &&
+        order.fulfillment!.inbound.method === "CUSTOMER" &&
         order.status === "AWAITING_INTAKE",
       CUSTOMER_TO_DRIVER: stage === "ARRIVED_FOR_PICKUP",
       DRIVER_TO_FACILITY: stage === "ARRIVED_AT_FACILITY",
       FACILITY_TO_DRIVER:
         order.status === "READY" &&
-        order.fulfillment!.mode === "HOME_HOME" &&
+        order.fulfillment!.outbound.method === "DRIVER" &&
         order.fulfillment!.outbound.milestone === "ASSIGNED",
       DRIVER_TO_CUSTOMER:
         stage === "ARRIVED_FOR_DELIVERY" &&
         this.used(order.id, "FACILITY_TO_DRIVER"),
       FACILITY_TO_CUSTOMER:
-        order.status === "READY" && order.fulfillment!.mode === "STORE_STORE",
+        order.status === "READY" && order.fulfillment!.outbound.method === "CUSTOMER",
     };
     if (!valid[h.type])
       throw new Error("Esta transferencia no corresponde a la etapa actual.");
@@ -191,20 +193,13 @@ export class HandoffService {
     legacy = false,
   ) {
     migrateOrder(order);
-    const types: HandoffType[] =
-      order.fulfillment!.mode === "STORE_STORE"
-        ? ["CUSTOMER_TO_FACILITY", "FACILITY_TO_CUSTOMER"]
-        : [
-            "CUSTOMER_TO_DRIVER",
-            "DRIVER_TO_FACILITY",
-            "FACILITY_TO_DRIVER",
-            "DRIVER_TO_CUSTOMER",
-          ];
+    const types = handoffTypesFor(order.fulfillment!.mode);
     types.forEach((type, index) => {
-      if (state.handoffs.some((h) => h.orderId === order.id && h.type === type))
-        return;
+      const existing = state.handoffs.find((h) => h.orderId === order.id && h.type === type && !['REVOKED','EXPIRED'].includes(h.status));
+      const ids = (inbound(type) ? order.fulfillment!.inbound : order.fulfillment!.outbound).handoffIds;
+      if (existing) { if (!ids.includes(existing.id)) ids.push(existing.id); return; }
       let code: string;
-      if (fixture)
+      if (fixture && ['SOL-STORE-001','SOL-HOME-001'].includes(order.id))
         code = String(
           (order.id === "SOL-STORE-001" ? 583214 : 726483) + index * 137,
         );
@@ -222,7 +217,7 @@ export class HandoffService {
         );
       }
       const now = new Date().toISOString();
-      const id = fixture
+      const id = fixture && ['SOL-STORE-001','SOL-HOME-001'].includes(order.id)
         ? `HND-${order.id}-${index + 1}`
         : `HND-${this.port.random()}`;
       const h: Handoff = {
@@ -230,11 +225,11 @@ export class HandoffService {
         orderId: order.id,
         type,
         facilityId: order.facilityId,
-        qrToken: fixture
+        qrToken: fixture && ['SOL-STORE-001','SOL-HOME-001'].includes(order.id)
           ? `demo-${order.id}-${type}-e7b451cf6d924a08`
           : this.port.random(),
         fallbackCode: code,
-        generation: 1,
+        generation: 1 + Math.max(0, ...state.handoffs.filter(h => h.orderId === order.id && h.type === type).map(h => h.generation)),
         status: "PENDING",
         attempts: 0,
         maxAttempts: 5,
@@ -290,11 +285,11 @@ export class HandoffService {
           : order.fulfillment!.outbound;
         h.driverAssignmentId = leg.driverAssignmentId;
         const active =
-          this.port.paid(order) &&
+          (this.port.paid(order) || (inbound(h.type) && this.port.intakeAllowed?.(order))) &&
           !order.quarantineReason &&
           !(order.intakeHold && !order.intakeHold.resolvedAt) &&
           ((h.type === "CUSTOMER_TO_FACILITY" &&
-            order.fulfillment!.mode === "STORE_STORE" &&
+            order.fulfillment!.inbound.method === "CUSTOMER" &&
             order.status === "AWAITING_INTAKE") ||
             (h.type === "CUSTOMER_TO_DRIVER" &&
               stage === "ARRIVED_FOR_PICKUP") ||
@@ -307,7 +302,7 @@ export class HandoffService {
               stage === "ARRIVED_FOR_DELIVERY") ||
             (h.type === "FACILITY_TO_CUSTOMER" &&
               order.status === "READY" &&
-              order.fulfillment!.mode === "STORE_STORE"));
+              order.fulfillment!.outbound.method === "CUSTOMER"));
         if (active && h.status === "PENDING") {
           h.status = "ACTIVE";
           h.activatedAt = new Date().toISOString();

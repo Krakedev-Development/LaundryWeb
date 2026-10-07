@@ -73,7 +73,7 @@ export const LoginPage: React.FC = () => {
               />
               <div>
                 <p className="text-xs font-bold text-slate-900">
-                  Ropa limpia, un mundo más limpio
+                  Tu ropa siempre limpia, fresca y natural.
                 </p>
                 <p className="text-[11px] text-slate-500">
                   Operaciones eficientes para un mejor mañana.

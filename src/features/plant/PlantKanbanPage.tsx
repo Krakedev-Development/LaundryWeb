@@ -47,6 +47,9 @@ export const PlantKanbanPage: React.FC = () => {
     statusList: OrderStatus[];
     isQuarantine?: boolean;
   }[] = [
+    { id:'WEIGHING',title:'Pesaje',subtitle:'Peso real y unidad de tarifa',statusList:['WEIGHING'] },
+    { id:'INSPECTION',title:'Inspección',subtitle:'Restricciones y estado de prendas',statusList:['INSPECTION'] },
+    { id:'CUSTOMER_APPROVAL_PENDING',title:'Precio y aprobación',subtitle:'Ajustes o pago pendientes',statusList:['PRICING_PENDING','CUSTOMER_APPROVAL_PENDING'] },
     {
       id: 'AT_FACILITY',
       title: 'Recibidas en Planta',
@@ -157,7 +160,7 @@ export const PlantKanbanPage: React.FC = () => {
       </div>
 
       {/* Kanban Board Container with relaxed layout */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-5 items-start">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 items-start">
         {columns.map((col) => {
           const colOrders = plantOrders.filter((o) => col.statusList.includes(operationalStage(o)));
           return (

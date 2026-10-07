@@ -33,6 +33,10 @@ export type OrderStatus =
   | 'ARRIVED_FOR_DELIVERY'
   | 'PICKED_UP'
   | 'AT_FACILITY'
+  | 'WEIGHING'
+  | 'INSPECTION'
+  | 'PRICING_PENDING'
+  | 'CUSTOMER_APPROVAL_PENDING'
   | 'IN_PROCESS'
   | 'QUALITY_CONTROL'
   | 'READY_FOR_DELIVERY'
@@ -48,6 +52,8 @@ export type OrderStatus =
 export type SLARisk = 'ON_TIME' | 'ATTENTION' | 'AT_RISK' | 'OVERDUE';
 
 export interface OrderItem {
+  pricingModel?: 'FIXED' | 'PER_WEIGHT';
+  restrictions?: string[];
   id: string;
   name: string;
   quantity: number;
@@ -63,6 +69,22 @@ export interface OrderExtra {
 }
 
 export interface OrderPricing {
+  pricingModel?: 'FIXED' | 'PER_WEIGHT';
+  pricingStatus?:
+    | 'ESTIMATED'
+    | 'PENDING_WEIGHT'
+    | 'CALCULATED'
+    | 'ADJUSTMENT_PENDING'
+    | 'FINAL';
+  pricePerWeightUnit?: number;
+  weightUnit?: 'LB' | 'KG';
+  measuredWeight?: number;
+  taxRate?: number;
+  taxAmount?: number;
+  adjustmentsTotal?: number;
+  amountPaid?: number;
+  amountDue?: number;
+  amountKnown?: boolean;
   subtotal: number;
   discount: number;
   extrasTotal: number;
@@ -70,11 +92,24 @@ export interface OrderPricing {
   total: number;
   currency: string;
   promoCodeApplied?: string;
+  promotionSnapshot?: {
+    id: string;
+    discountType: 'PERCENTAGE' | 'FIXED';
+    discountValue: number;
+    minOrderAmount: number;
+  };
   paymentMethod: 'TARJETA' | 'TRANSFERENCIA' | 'BILLETERA' | 'EFECTIVO';
-  paymentStatus: 'PAID' | 'PENDING' | 'REFUNDED';
+  paymentStatus:
+    | 'PENDING_AMOUNT'
+    | 'PAID'
+    | 'PENDING'
+    | 'FAILED'
+    | 'REFUNDED'
+    | 'PARTIALLY_REFUNDED';
 }
 
 export interface Address {
+  label?: string;
   street: string;
   number: string;
   complement?: string;
@@ -123,6 +158,13 @@ export interface OrderTimelineEvent {
 }
 
 export interface Order {
+  businessVersion?: number;
+  catalogServiceId?: string;
+  processingHours?: number;
+  inspectionCompleted?: boolean;
+  customerMessage?: string;
+  nextAction?: string;
+  policyReview?: string;
   fulfillment?: Fulfillment;
   workflowVersion?: number;
   intakeHold?: IntakeHold;
@@ -218,6 +260,7 @@ export interface Driver {
 }
 
 export interface Facility {
+  operatingSchedule?: { days: number[]; open: string; close: string };
   acceptsCustomerDropoff?: boolean;
   allowsCustomerPickup?: boolean;
   serviceAreaIds?: string[];
@@ -287,6 +330,12 @@ export interface Incident {
 }
 
 export interface CatalogItem {
+  compatibleWithWeight?:boolean;
+  pricingModel?: 'FIXED' | 'PER_WEIGHT';
+  pricePerWeightUnit?: number;
+  weightUnit?: 'LB' | 'KG';
+  restrictions?: string[];
+  customerSelectable?: boolean;
   id: string;
   name: string;
   category: 'PRENDAS' | 'SERVICIOS' | 'EXTRAS';
@@ -303,6 +352,7 @@ export interface CatalogItem {
 export type DiscountType = 'PERCENTAGE' | 'FIXED';
 
 export interface Promotion {
+  imageUrl?: string;
   id: string;
   name: string;
   code: string;
@@ -360,7 +410,7 @@ export interface AuditLog {
   id: string;
   timestamp: string;
   userName: string;
-  userRole: UserRole;
+  userRole: UserRole | ActorRole;
   action: string;
   entity: string;
   entityId: string;

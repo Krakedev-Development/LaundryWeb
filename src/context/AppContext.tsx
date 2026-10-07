@@ -136,16 +136,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   const [currentUser, setCurrentUser] = useState<User>(
     storageService.getCurrentUser(),
   );
-  const [orders, setOrders] = useState<Order[]>(storageService.getOrders());
+  const [orders, setOrders] = useState<Order[]>(storageService.getOperationalOrders());
   const [customers, setCustomers] = useState<Customer[]>(
-    storageService.getCustomers(),
+    storageService.getOperationalCustomers(),
   );
-  const [drivers, setDrivers] = useState<Driver[]>(storageService.getDrivers());
+  const [drivers, setDrivers] = useState<Driver[]>(storageService.getOperationalDrivers());
   const [facilities, setFacilities] = useState<Facility[]>(
-    storageService.getFacilities(),
+    storageService.getOperationalFacilities(),
   );
   const [incidents, setIncidents] = useState<Incident[]>(
-    storageService.getIncidents(),
+    storageService.getOperationalIncidents(),
   );
   const [catalog, setCatalog] = useState<CatalogItem[]>(
     storageService.getCatalog(),
@@ -155,13 +155,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   );
   const [rewards, setRewards] = useState<Reward[]>(storageService.getRewards());
   const [redemptions, setRedemptions] = useState<RewardRedemption[]>(
-    storageService.getRedemptions(),
+    storageService.getOperationalRedemptions(),
   );
   const [pointsLedger, setPointsLedger] = useState<PointsLedgerEntry[]>(
-    storageService.getPointsLedger(),
+    storageService.getOperationalPointsLedger(),
   );
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(
-    storageService.getAuditLogs(),
+    storageService.getOperationalAuditLogs(),
   );
   const [settings, setSettings] = useState<SystemSettings>(
     storageService.getSettings(),
@@ -170,17 +170,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const refreshState = () => {
     setCurrentUser(storageService.getCurrentUser());
-    setOrders(storageService.getOrders());
-    setCustomers(storageService.getCustomers());
-    setDrivers(storageService.getDrivers());
-    setFacilities(storageService.getFacilities());
-    setIncidents(storageService.getIncidents());
+    setOrders(storageService.getOperationalOrders());
+    setCustomers(storageService.getOperationalCustomers());
+    setDrivers(storageService.getOperationalDrivers());
+    setFacilities(storageService.getOperationalFacilities());
+    setIncidents(storageService.getOperationalIncidents());
     setCatalog(storageService.getCatalog());
     setPromotions(storageService.getPromotions());
     setRewards(storageService.getRewards());
-    setRedemptions(storageService.getRedemptions());
-    setPointsLedger(storageService.getPointsLedger());
-    setAuditLogs(storageService.getAuditLogs());
+    setRedemptions(storageService.getOperationalRedemptions());
+    setPointsLedger(storageService.getOperationalPointsLedger());
+    setAuditLogs(storageService.getOperationalAuditLogs());
     setSettings(storageService.getSettings());
   };
 
@@ -196,9 +196,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     if (geoConfig.trackingMode !== 'mock') return () => tracking.dispose();
     const reconcile = () =>
       tracking.reconcile(
-        storageService.getOrders(),
-        storageService.getDrivers(),
-        storageService.getFacilities(),
+        storageService.getOperationalOrders(),
+        storageService.getOperationalDrivers(),
+        storageService.getOperationalFacilities(),
         (id, coordinates, updatedAt) =>
           storageService.publishDemoLocation(id, coordinates, updatedAt),
       );

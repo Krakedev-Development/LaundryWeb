@@ -1,4 +1,6 @@
 import { IconPlaceholder } from '../../components/common/IconPlaceholder';
+import { OrderBusinessPanel } from './OrderBusinessPanel';
+import { MODE_LABELS } from '../../services/BusinessService';
 import { operationalStage } from '../../services/fulfillment';
 import { OrderRouteMap } from '../../components/maps/OrderRouteMap';
 import React, { useState } from 'react';
@@ -164,7 +166,7 @@ export const OrderDetailPage: React.FC = () => {
               status={storeMode ? order.status : operationalStage(order)}
             />
             <span className="text-xs text-slate-500">
-              {storeMode ? 'Ingreso y retiro en sede' : 'Servicio a domicilio'}
+              {MODE_LABELS[order.fulfillment?.mode ?? 'HOME_HOME']}
             </span>
             <PriorityBadge priority={order.priority} showIcon />
           </div>
@@ -172,7 +174,7 @@ export const OrderDetailPage: React.FC = () => {
         actions={
           <div className="flex items-center gap-2.5 flex-wrap">
             {/* Contextual lifecycle action button */}
-            {!storeMode && operationalStage(order) === 'PICKUP_PENDING' && (
+            {order.fulfillment?.inbound.method === 'DRIVER' && operationalStage(order) === 'PICKUP_PENDING' && (
               <button
                 onClick={() => handleOpenAssign('pickup')}
                 className="px-4 py-2.5 text-xs font-bold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
@@ -212,7 +214,7 @@ export const OrderDetailPage: React.FC = () => {
               </button>
             )}
 
-            {operationalStage(order) === 'AT_FACILITY' && (
+            {order.businessVersion !== 3 && operationalStage(order) === 'AT_FACILITY' && (
               <button
                 onClick={() =>
                   handleAdvanceStatus(
@@ -282,7 +284,7 @@ export const OrderDetailPage: React.FC = () => {
               </button>
             )}
 
-            {!storeMode &&
+            {order.fulfillment?.outbound.method === 'DRIVER' &&
               ['READY_FOR_DELIVERY', 'DELIVERY_SCHEDULED'].includes(
                 operationalStage(order),
               ) && (
@@ -382,6 +384,7 @@ export const OrderDetailPage: React.FC = () => {
       />
 
       {/* Quarantine Alert Warning if active */}
+      {order.businessVersion === 3 && <OrderBusinessPanel order={order}/>}
       {operationalStage(order) === 'QUARANTINE' && (
         <div className="p-4 rounded-xl bg-red-50 border border-red-300 flex items-start gap-3">
           <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
@@ -702,7 +705,7 @@ export const OrderDetailPage: React.FC = () => {
               <div className="w-full sm:w-56 p-3 bg-[#F7F9FC] rounded-xl border border-[#E5EAF0] space-y-1 font-mono text-xs">
                 <div className="flex justify-between text-slate-500">
                   <span>Subtotal:</span>
-                  <span>${order.pricing.subtotal.toFixed(2)}</span>
+                  <span>{order.pricing.amountKnown===false?'Por calcular':`${order.pricing.subtotal.toFixed(2)}`}</span>
                 </div>
                 {order.pricing.discount > 0 && (
                   <div className="flex justify-between text-emerald-700">
@@ -718,9 +721,11 @@ export const OrderDetailPage: React.FC = () => {
                   <span>Envío:</span>
                   <span>${order.pricing.deliveryFee.toFixed(2)}</span>
                 </div>
+                {order.pricing.adjustmentsTotal!==undefined&&<div className="flex justify-between text-slate-500"><span>Ajustes:</span><span>{order.pricing.adjustmentsTotal.toFixed(2)}</span></div>}
+                {order.pricing.taxAmount!==undefined&&<div className="flex justify-between text-slate-500"><span>IVA:</span><span>{order.pricing.taxAmount.toFixed(2)}</span></div>}
                 <div className="flex justify-between font-bold text-sm text-[#143F73] pt-1 border-t border-slate-200">
                   <span>Total:</span>
-                  <span>${order.pricing.total.toFixed(2)}</span>
+                  <span>{order.pricing.amountKnown === false ? 'Pendiente de pesaje' : `$${order.pricing.total.toFixed(2)}`}</span>
                 </div>
               </div>
             </div>
