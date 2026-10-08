@@ -8,11 +8,11 @@ const {
   migrateOrder,
   operationalStage,
 } = require('../src/services/fulfillment.ts');
-function setup(mode = 'STORE_STORE') {
+function setup(mode = 'HOME_STORE') {
   let state = {
     orders: [
       {
-        id: mode === 'STORE_STORE' ? 'SOL-STORE-001' : 'SOL-HOME-001',
+        id: mode === 'HOME_STORE' ? 'SOL-STORE-001' : 'SOL-HOME-001',
         customerId: 'CLIENT',
         facilityId: 'FAC-02',
         status: 'PICKUP_PENDING',
@@ -58,6 +58,17 @@ function setup(mode = 'STORE_STORE') {
   });
   migrateOrder(state.orders[0], mode);
   service.initialize(state, state.orders[0], true);
+  if (mode === 'HOME_STORE') {
+    Object.assign(state.orders[0].fulfillment.inbound, {
+      driverId: 'DRIVER',
+      driverAssignmentId: 'PICKUP',
+      milestone: 'ARRIVED_AT_FACILITY',
+    });
+    const pickup = state.handoffs.find((h) => h.type === 'CUSTOMER_TO_DRIVER');
+    pickup.status = 'USED';
+    pickup.usedAt = new Date().toISOString();
+    service.refresh(state, state.orders[0]);
+  }
   const h = (type) =>
     state.handoffs.find(
       (h) => h.type === type && !['REVOKED', 'USED'].includes(h.status),
@@ -86,10 +97,10 @@ function setup(mode = 'STORE_STORE') {
     setPaid: (v) => (paid = v),
   };
 }
-test('STORE_STORE completes through verified receipt, processing and authorized third-party pickup', () => {
+test('HOME_STORE completes through verified receipt, processing and authorized third-party pickup', () => {
   const s = setup();
   assert.equal(s.state.orders[0].status, 'AWAITING_INTAKE');
-  const first = s.confirm('CUSTOMER_TO_FACILITY');
+  const first = s.confirm('DRIVER_TO_FACILITY');
   assert.equal(s.state.orders[0].status, 'AT_FACILITY');
   s.service.confirm('SUP', { ticket: first.ticket, count: 3 });
   assert.equal(s.confirmations, 1);
@@ -101,7 +112,7 @@ test('STORE_STORE completes through verified receipt, processing and authorized 
     relationship: 'Persona autorizada con código',
   });
   assert.equal(s.state.orders[0].status, 'COMPLETED');
-  assert.equal(s.state.handoffs.filter((h) => h.status === 'USED').length, 2);
+  assert.equal(s.state.handoffs.filter((h) => h.status === 'USED').length, 3);
   assert.equal(s.state.orders[0].fulfillment.outbound.status, 'COMPLETED');
 });
 test('HOME_HOME requires four custody transfers with separate travel milestones', () => {
@@ -136,26 +147,26 @@ test('HOME_HOME requires four custody transfers with separate travel milestones'
 });
 test('verification never changes custody and rejects unpaid, wrong actor and wrong facility without attempts', () => {
   const s = setup();
-  const h = s.h('CUSTOMER_TO_FACILITY');
+  const h = s.h('DRIVER_TO_FACILITY');
   s.service.verify(s.service.payload(h), 'SUP');
   assert.equal(s.state.orders[0].status, 'AWAITING_INTAKE');
-  assert.equal(s.h('CUSTOMER_TO_FACILITY').status, 'ACTIVE');
+  assert.equal(s.h('DRIVER_TO_FACILITY').status, 'ACTIVE');
   for (const actor of ['CLIENT', 'DRIVER', 'OTHER'])
     assert.throws(() => s.service.verify(h.fallbackCode, actor, h.id));
-  assert.equal(s.h('CUSTOMER_TO_FACILITY').attempts, 0);
+  assert.equal(s.h('DRIVER_TO_FACILITY').attempts, 0);
   s.setPaid(false);
   assert.throws(() => s.service.verify(h.fallbackCode, 'SUP'), /pago/);
-  assert.equal(s.h('CUSTOMER_TO_FACILITY').attempts, 0);
+  assert.equal(s.h('DRIVER_TO_FACILITY').attempts, 0);
 });
 test('invalid global code does not lock any order; contextual bad attempts lock and regeneration revokes old generation', () => {
   const s = setup();
-  const h = s.h('CUSTOMER_TO_FACILITY');
+  const h = s.h('DRIVER_TO_FACILITY');
   assert.throws(() => s.service.verify('000000', 'SUP'));
-  assert.equal(s.h('CUSTOMER_TO_FACILITY').attempts, 0);
+  assert.equal(s.h('DRIVER_TO_FACILITY').attempts, 0);
   const verified = s.service.verify(h.fallbackCode, 'SUP');
   for (let i = 0; i < 5; i++)
     assert.throws(() => s.service.verify('000000', 'SUP', h.id));
-  assert.equal(s.h('CUSTOMER_TO_FACILITY').status, 'LOCKED');
+  assert.equal(s.h('DRIVER_TO_FACILITY').status, 'LOCKED');
   assert.throws(() =>
     s.service.regenerate(h.id, 'SUP', 'Revisado por operador'),
   );
@@ -173,14 +184,14 @@ test('invalid global code does not lock any order; contextual bad attempts lock 
     s.service.confirm('SUP', { ticket: verified.ticket, count: 3 }),
   );
   assert.throws(() => s.service.verify(h.fallbackCode, 'SUP'));
-  s.confirm('CUSTOMER_TO_FACILITY');
+  s.confirm('DRIVER_TO_FACILITY');
   assert.throws(() =>
     s.service.regenerate(newer.id, 'ADMIN', 'Cambio posterior a recepción'),
   );
 });
 test('confirmation rechecks payment, actor, current stage and receipt; old tickets cannot bypass validations', () => {
   const s = setup();
-  const v = s.service.verify(s.h('CUSTOMER_TO_FACILITY').fallbackCode, 'SUP');
+  const v = s.service.verify(s.h('DRIVER_TO_FACILITY').fallbackCode, 'SUP');
   s.setPaid(false);
   assert.throws(
     () => s.service.confirm('SUP', { ticket: v.ticket, count: 3 }),
@@ -203,7 +214,7 @@ test('confirmation rechecks payment, actor, current stage and receipt; old ticke
 });
 test('intake discrepancy records physical custody and blocks release until reasoned resolution', () => {
   const s = setup();
-  s.confirm('CUSTOMER_TO_FACILITY', 'SUP', {
+  s.confirm('DRIVER_TO_FACILITY', 'SUP', {
     count: 2,
     notes: 'Una prenda no fue entregada',
   });
@@ -229,13 +240,13 @@ test('intake discrepancy records physical custody and blocks release until reaso
 });
 test('default code remains usable after days, local persistence round-trip retains receipts/audit and expired/revoked codes fail', () => {
   const s = setup();
-  const h = s.h('CUSTOMER_TO_FACILITY');
+  const h = s.h('DRIVER_TO_FACILITY');
   h.createdAt = '2020-01-01T00:00:00Z';
   assert.equal(h.expiresAt, undefined);
   s.service.verify(h.fallbackCode, 'SUP');
-  s.h('CUSTOMER_TO_FACILITY').expiresAt = '2020-01-02T00:00:00Z';
+  s.h('DRIVER_TO_FACILITY').expiresAt = '2020-01-02T00:00:00Z';
   assert.throws(() => s.service.verify(h.fallbackCode, 'SUP'), /vencido/);
-  delete s.h('CUSTOMER_TO_FACILITY').expiresAt;
+  delete s.h('DRIVER_TO_FACILITY').expiresAt;
   s.service.revoke(h.id, 'ADMIN', 'Reemplazo solicitado por cliente');
   assert.throws(() => s.service.verify(h.fallbackCode, 'SUP'), /revocado/);
   const json = JSON.stringify(s.state);
@@ -262,7 +273,7 @@ test('migration preserves legacy history and derives logistics from business sta
 
 test('administrative override requires reason, rechecks payment and facility, never reuses a completed handoff', () => {
   const s = setup();
-  const h = s.h('CUSTOMER_TO_FACILITY');
+  const h = s.h('DRIVER_TO_FACILITY');
   for (let i = 0; i < 5; i++)
     assert.throws(() => s.service.verify('000000', 'SUP', h.id));
   assert.throws(() =>

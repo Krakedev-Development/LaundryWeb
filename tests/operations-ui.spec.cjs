@@ -46,10 +46,11 @@ test('assignment controls, keyboard dismissal and operation screens work at desk
   });
   await page.goto('/operations/handoffs');
   await page.getByLabel('Sede de operación').selectOption('FAC-02');
+  await page.getByRole('tab', { name: 'Transferencias chofer', exact: true }).click();
   await page
     .getByRole('button')
-    .filter({ hasText: 'SOL-STORE-001' })
-    .filter({ hasText: 'Ingreso del cliente en sede' })
+    .filter({ hasText: 'SOL-DEMO-FAC-02-CHOFER' })
+    .filter({ hasText: 'Ingreso del chofer en planta' })
     .click();
   await page
     .getByRole('button', { name: 'Demo: cargar código preparado', exact: true })

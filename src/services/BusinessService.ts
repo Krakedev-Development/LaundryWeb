@@ -14,6 +14,7 @@ import {
   advanceOperational,
   handoffTypesFor,
   modeFor,
+  migrateOrder,
   type Actor,
   type FulfillmentLeg,
   type Handoff,
@@ -205,6 +206,58 @@ export function ensureBusinessState(
     'promotionUses',
   ] as const)
     state[key] ??= [];
+  for (const order of state.orders ?? []) {
+    const oldDropoff = order.fulfillment?.inbound.method === 'CUSTOMER';
+    if (
+      oldDropoff &&
+      state.handoffs?.some(
+        (h) =>
+          h.orderId === order.id &&
+          h.type === 'CUSTOMER_TO_FACILITY' &&
+          h.status === 'USED',
+      )
+    )
+      order.fulfillment!.inbound.status = 'COMPLETED';
+    if (order.fulfillment) migrateOrder(order);
+    if (order.pickupNeedsScheduling) {
+      for (const reservation of state.reservations ?? []) {
+        if (
+          reservation.orderId === order.id &&
+          reservation.leg === 'inbound' &&
+          reservation.active
+        ) {
+          const slot = state.timeSlots?.find(
+            (s) => s.id === reservation.slotId,
+          );
+          if (slot) slot.reservedCount = Math.max(0, slot.reservedCount - 1);
+          reservation.active = false;
+        }
+      }
+      state.routeStops
+        ?.filter(
+          (stop) =>
+            stop.orderId === order.id &&
+            stop.leg === 'inbound' &&
+            stop.status === 'ACTIVE',
+        )
+        .forEach((stop) => {
+          stop.status = 'SKIPPED';
+        });
+      const address = state.customers?.find((c) => c.id === order.customerId)
+        ?.addresses[0];
+      order.fulfillment!.inbound.address = address;
+      if (address) order.customerAddress = address;
+      order.customerMessage =
+        'Confirma dirección y horario para la recogida a domicilio. El ingreso del cliente en sede ya no está disponible.';
+    }
+  }
+  state.handoffs?.forEach((handoff) => {
+    if (handoff.type === 'CUSTOMER_TO_FACILITY' && handoff.status !== 'USED')
+      handoff.status = 'REVOKED';
+  });
+  state.timeSlots?.forEach((slot) => {
+    if (slot.context === 'FACILITY_DROPOFF') slot.active = false;
+  });
   return state as BusinessState;
 }
 export interface BusinessRepository {
@@ -242,12 +295,12 @@ export interface CreateOrderInput {
 const money = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 const terminal = (o: Order) => ['COMPLETED', 'CANCELLED'].includes(o.status);
 export const MODE_LABELS = {
-  HOME_HOME: 'Recogida y entrega a domicilio',
-  HOME_STORE: 'Recogida a domicilio · retiro en sede',
-  STORE_HOME: 'Ingreso en sede · entrega a domicilio',
-  STORE_STORE: 'Ingreso y retiro en sede',
+  HOME_HOME: 'Domicilio completo · recogida y entrega',
+  HOME_STORE: 'Pick up · recogida a domicilio y retiro en sede',
 };
 export function nextAction(order: Order, state: BusinessState): string {
+  if (order.pickupNeedsScheduling)
+    return 'Confirmar dirección y horario de recogida a domicilio';
   if (terminal(order))
     return order.status === 'CANCELLED'
       ? 'Solicitud cancelada'
@@ -291,9 +344,7 @@ export function nextAction(order: Order, state: BusinessState): string {
     return 'Iniciar procesamiento';
   if (order.status === 'IN_PROCESS') return 'Pasar a control de calidad';
   if (order.status === 'QUALITY_CONTROL') return 'Marcar prendas listas';
-  return order.fulfillment?.inbound.method === 'CUSTOMER'
-    ? 'Cliente: presentar código de ingreso'
-    : 'Asignar o confirmar recogida';
+  return 'Asignar o confirmar recogida';
 }
 export function recordBusinessCustody(
   state: BusinessState,
@@ -420,10 +471,10 @@ export class BusinessService {
     leg: 'inbound' | 'outbound',
     method: 'CUSTOMER' | 'DRIVER',
   ): SlotContext {
+    if (leg === 'inbound' && method !== 'DRIVER')
+      throw Error('La recogida debe ser a domicilio.');
     return leg === 'inbound'
-      ? method === 'DRIVER'
-        ? 'DRIVER_PICKUP'
-        : 'FACILITY_DROPOFF'
+      ? 'DRIVER_PICKUP'
       : method === 'DRIVER'
         ? 'DRIVER_DELIVERY'
         : 'FACILITY_PICKUP';
@@ -507,12 +558,10 @@ export class BusinessService {
     inbound: 'DRIVER' | 'CUSTOMER',
     outbound: 'DRIVER' | 'CUSTOMER',
   ) {
+    modeFor(inbound, outbound);
     const f = this.port.facilities().find((f) => f.id === id);
     if (!f || f.status !== 'ACTIVE') throw Error('La sede no está disponible.');
-    if (
-      (inbound === 'CUSTOMER' && !f.acceptsCustomerDropoff) ||
-      (outbound === 'CUSTOMER' && !f.allowsCustomerPickup)
-    )
+    if (outbound === 'CUSTOMER' && !f.allowsCustomerPickup)
       throw Error('La sede no admite esta modalidad.');
     return f;
   }
@@ -620,6 +669,7 @@ export class BusinessService {
     }).pricing;
   }
   create(input: CreateOrderInput): Order {
+    modeFor(input.inbound, input.outbound);
     const actor = this.actor();
     if (actor.role !== 'CLIENT' || actor.id !== input.customerId)
       throw Error('La solicitud pertenece al cliente autenticado.');
@@ -1152,6 +1202,7 @@ export class BusinessService {
       throw Error('El tramo ya inició o tiene una transferencia confirmada.');
     const slot = s.timeSlots.find((x) => x.id === f.timeSlotId);
     if (
+      !o.pickupNeedsScheduling &&
       slot &&
       s.businessPolicy.cutoffMinutes !== undefined &&
       new Date(`${slot.date}T${slot.start}:00`).getTime() -
@@ -1223,6 +1274,8 @@ export class BusinessService {
         o.fulfillment!.outbound.method,
       );
       if (leg === 'inbound') {
+        o.pickupNeedsScheduling = false;
+        o.customerMessage = undefined;
         o.customerAddress = address;
         o.pickup = { date: f.date, timeSlot: f.timeSlot };
       } else {
@@ -1594,6 +1647,7 @@ export class BusinessService {
       const f = o.fulfillment![leg];
       if (
         f.method !== 'DRIVER' ||
+        (leg === 'inbound' && o.pickupNeedsScheduling) ||
         f.driverId ||
         f.milestone !== 'PENDING' ||
         (leg === 'inbound' && o.status !== 'AWAITING_INTAKE') ||
@@ -1806,6 +1860,14 @@ export class BusinessService {
     });
   }
   saveSlot(slot: TimeSlot) {
+    if (
+      !['DRIVER_PICKUP', 'DRIVER_DELIVERY', 'FACILITY_PICKUP'].includes(
+        slot.context,
+      )
+    )
+      throw Error(
+        'La modalidad de ingreso del cliente en sede ya no está disponible.',
+      );
     this.staff(undefined, true);
     this.port.transaction((s) => {
       if (

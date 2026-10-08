@@ -43,3 +43,7 @@ Para eliminar el build generado:
 ```bash
 npm run clean
 ```
+
+## Modalidades vigentes
+
+Solo se ofrecen **domicilio completo** (recogida y entrega a domicilio) y **pick up** (recogida a domicilio y retiro del cliente en sede). La entrega inicial del cliente en el local no está disponible. Los pedidos guardados con ingreso pendiente requieren confirmar una recogida a domicilio; se conservan pagos y constancias anteriores.

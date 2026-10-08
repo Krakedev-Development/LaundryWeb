@@ -29,14 +29,13 @@ export function DispatchPage() {
     [orderId, setOrderId] = useState(''),
     [driverId, setDriverId] = useState(''),
     [notes, setNotes] = useState('');
-  const queue = orders.filter(
-    (o) =>
-      o.fulfillment?.mode !== 'STORE_STORE' &&
-      (type === 'pickup'
-        ? operationalStage(o) === 'PICKUP_PENDING'
-        : ['READY_FOR_DELIVERY', 'DELIVERY_SCHEDULED'].includes(
-            operationalStage(o),
-          )),
+  const queue = orders.filter((o) =>
+    type === 'pickup'
+      ? !o.pickupNeedsScheduling && operationalStage(o) === 'PICKUP_PENDING'
+      : o.fulfillment?.outbound.method === 'DRIVER' &&
+        ['READY_FOR_DELIVERY', 'DELIVERY_SCHEDULED'].includes(
+          operationalStage(o),
+        ),
   );
   const order = queue.find((o) => o.id === orderId) ?? queue[0];
   const { candidates, loading, error } = useDriverCandidates(order, type);

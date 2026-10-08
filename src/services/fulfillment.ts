@@ -1,11 +1,24 @@
+import { normalizeHomePickup } from './fulfillmentPolicy';
 /** Portable local demo contract. Both apps use equivalent data, never runtime synchronization. */
-export type FulfillmentMode = 'HOME_HOME' | 'HOME_STORE' | 'STORE_HOME' | 'STORE_STORE';
-export const modeFor = (inbound: 'DRIVER' | 'CUSTOMER', outbound: 'DRIVER' | 'CUSTOMER'): FulfillmentMode =>
-  `${inbound === 'DRIVER' ? 'HOME' : 'STORE'}_${outbound === 'DRIVER' ? 'HOME' : 'STORE'}` as FulfillmentMode;
-export const handoffTypesFor = (mode: FulfillmentMode): HandoffType[] => [
-  ...(mode.startsWith('HOME') ? ['CUSTOMER_TO_DRIVER', 'DRIVER_TO_FACILITY'] : ['CUSTOMER_TO_FACILITY']),
-  ...(mode.endsWith('HOME') ? ['FACILITY_TO_DRIVER', 'DRIVER_TO_CUSTOMER'] : ['FACILITY_TO_CUSTOMER']),
-] as HandoffType[];
+export type FulfillmentMode = 'HOME_HOME' | 'HOME_STORE';
+export const modeFor = (
+  inbound: 'DRIVER' | 'CUSTOMER',
+  outbound: 'DRIVER' | 'CUSTOMER',
+): FulfillmentMode => {
+  if (inbound !== 'DRIVER' || !['DRIVER', 'CUSTOMER'].includes(outbound))
+    throw Error(
+      'La recogida debe ser a domicilio. Solo se admite domicilio completo o pick up.',
+    );
+  return outbound === 'DRIVER' ? 'HOME_HOME' : 'HOME_STORE';
+};
+export const handoffTypesFor = (mode: FulfillmentMode): HandoffType[] =>
+  [
+    'CUSTOMER_TO_DRIVER',
+    'DRIVER_TO_FACILITY',
+    ...(mode.endsWith('HOME')
+      ? ['FACILITY_TO_DRIVER', 'DRIVER_TO_CUSTOMER']
+      : ['FACILITY_TO_CUSTOMER']),
+  ] as HandoffType[];
 export type BusinessStatus =
   | 'DRAFT'
   | 'PAYMENT_PENDING'
@@ -125,6 +138,8 @@ export interface IntakeHold {
   resolution?: string;
 }
 export interface WorkflowOrder {
+  legacyInbound?: FulfillmentLeg;
+  pickupNeedsScheduling?: boolean;
   id: string;
   customerId: string;
   facilityId: string;
@@ -172,9 +187,12 @@ const outboundStages: Record<string, Milestone> = {
 /** Read old rows once without inventing custody evidence or deleting existing history. */
 export function migrateOrder(
   order: WorkflowOrder,
-  mode: FulfillmentMode = 'HOME_HOME',
+  mode: FulfillmentMode | 'STORE_HOME' | 'STORE_STORE' = 'HOME_HOME',
 ): void {
-  if (order.workflowVersion === 2 && order.fulfillment) return;
+  if (order.workflowVersion === 2 && order.fulfillment) {
+    normalizeHomePickup(order);
+    return;
+  }
   const original = order.status;
   if (original === 'QUARANTINE')
     order.quarantineReason ??= 'Revisión técnica pendiente (registro anterior)';
@@ -194,7 +212,9 @@ export function migrateOrder(
       'QUARANTINE',
     ].includes(original);
   const leg = (out: boolean): FulfillmentLeg => ({
-    method: (out ? mode.endsWith('STORE') : mode.startsWith('STORE')) ? 'CUSTOMER' : 'DRIVER',
+    method: (out ? mode.endsWith('STORE') : mode.startsWith('STORE'))
+      ? 'CUSTOMER'
+      : 'DRIVER',
     facilityId: order.facilityId,
     address: out
       ? (order.delivery?.address ?? order.deliveryAddress)
@@ -214,7 +234,11 @@ export function migrateOrder(
         ? 'DELIVERED'
         : (inboundStages[original] ?? 'PENDING'),
   });
-  order.fulfillment = { mode, inbound: leg(false), outbound: leg(true) };
+  order.fulfillment = {
+    mode: mode.endsWith('HOME') ? 'HOME_HOME' : 'HOME_STORE',
+    inbound: leg(false),
+    outbound: leg(true),
+  };
   order.status = completed
     ? 'COMPLETED'
     : original === 'QUARANTINE'
@@ -233,6 +257,7 @@ export function migrateOrder(
           ? 'AWAITING_INTAKE'
           : original;
   order.workflowVersion = 2;
+  normalizeHomePickup(order);
 }
 
 /** Existing map/dispatch views consume a derived logistics stage, never a second order status. */
@@ -248,7 +273,11 @@ export function operationalStage<
   if (!f) return order.status;
   if (order.status === 'INCIDENT' && order.quarantineReason)
     return 'QUARANTINE' as T['status'];
-  if ((order.status === 'AWAITING_INTAKE' && f.inbound.method === 'CUSTOMER') || (order.status === 'READY' && f.outbound.method === 'CUSTOMER') || order.status === 'COMPLETED')
+  if (
+    (order.status === 'AWAITING_INTAKE' && f.inbound.method === 'CUSTOMER') ||
+    (order.status === 'READY' && f.outbound.method === 'CUSTOMER') ||
+    order.status === 'COMPLETED'
+  )
     return (
       order.status === 'READY'
         ? 'READY_FOR_DELIVERY'
@@ -287,6 +316,13 @@ export function operationalStage<
 
 export function advanceOperational(order: WorkflowOrder, target: string): void {
   migrateOrder(order);
+  if (
+    order.pickupNeedsScheduling &&
+    (target in inboundStages || target === 'PICKUP_PENDING')
+  )
+    throw Error(
+      'Confirma primero dirección y horario de recogida a domicilio.',
+    );
   const f = order.fulfillment!;
   if (
     target in inboundStages ||

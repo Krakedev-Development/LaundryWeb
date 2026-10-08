@@ -33,9 +33,7 @@ export function AppSidebar() {
   const accordion = useExpandedModules(modules);
   const badges = {
     dispatch: orders.filter(
-      (order) =>
-        order.fulfillment?.mode !== 'STORE_STORE' &&
-        operationalStage(order) === 'PICKUP_PENDING',
+      (order) => operationalStage(order) === 'PICKUP_PENDING',
     ).length,
     incidents: incidents.filter((incident) =>
       ['OPEN', 'IN_PROGRESS'].includes(incident.status),

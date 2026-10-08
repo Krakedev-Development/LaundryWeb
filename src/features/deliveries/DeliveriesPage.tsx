@@ -26,7 +26,7 @@ export const DeliveriesPage: React.FC = () => {
   const deliveryOrders = useMemo(() => {
     return orders.filter(
       (o) =>
-        o.fulfillment?.mode !== 'STORE_STORE' &&
+        o.fulfillment?.outbound.method === 'DRIVER' &&
         [
           'READY_FOR_DELIVERY',
           'DELIVERY_SCHEDULED',

@@ -158,6 +158,8 @@ export interface OrderTimelineEvent {
 }
 
 export interface Order {
+  legacyInbound?: import('../services/fulfillment').FulfillmentLeg;
+  pickupNeedsScheduling?: boolean;
   businessVersion?: number;
   catalogServiceId?: string;
   processingHours?: number;
@@ -330,7 +332,7 @@ export interface Incident {
 }
 
 export interface CatalogItem {
-  compatibleWithWeight?:boolean;
+  compatibleWithWeight?: boolean;
   pricingModel?: 'FIXED' | 'PER_WEIGHT';
   pricePerWeightUnit?: number;
   weightUnit?: 'LB' | 'KG';

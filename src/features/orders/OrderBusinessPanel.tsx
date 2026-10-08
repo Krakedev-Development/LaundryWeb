@@ -27,9 +27,13 @@ export function OrderBusinessPanel({ order }: { order: Order }) {
     [reason, setReason] = useState(''),
     [message, setMessage] = useState('');
   const [slotId, setSlotId] = useState(''),
-    [leg, setLeg] = useState<'inbound' | 'outbound'>('outbound'),
+    [leg, setLeg] = useState<'inbound' | 'outbound'>(
+      order.pickupNeedsScheduling ? 'inbound' : 'outbound',
+    ),
     [method, setMethod] = useState<'DRIVER' | 'CUSTOMER'>(
-      order.fulfillment!.outbound.method,
+      order.pickupNeedsScheduling
+        ? 'DRIVER'
+        : order.fulfillment!.outbound.method,
     );
   const [chat, setChat] = useState('');
   const run = (work: () => unknown) => {
@@ -55,9 +59,7 @@ export function OrderBusinessPanel({ order }: { order: Order }) {
     changes = state.changes.filter((c) => c.orderId === order.id);
   const context =
     leg === 'inbound'
-      ? method === 'DRIVER'
-        ? 'DRIVER_PICKUP'
-        : 'FACILITY_DROPOFF'
+      ? 'DRIVER_PICKUP'
       : method === 'DRIVER'
         ? 'DRIVER_DELIVERY'
         : 'FACILITY_PICKUP';
@@ -76,6 +78,19 @@ export function OrderBusinessPanel({ order }: { order: Order }) {
         </div>
       </div>
       <div className="p-6 space-y-6">
+        {order.pickupNeedsScheduling && (
+          <p className="rounded-xl bg-amber-50 p-4 text-sm text-amber-800">
+            Confirma la dirección y una nueva franja de recogida a domicilio. El
+            ingreso pendiente del cliente en sede se retiró y no tiene una
+            recogida asignada.
+          </p>
+        )}
+        {order.legacyInbound?.status === 'COMPLETED' && (
+          <p className="text-sm text-slate-600">
+            La recepción anterior del cliente en sede se conserva como
+            constancia histórica. El pedido continúa desde su etapa actual.
+          </p>
+        )}
         <div className="grid md:grid-cols-4 gap-4">
           {[
             [
@@ -320,6 +335,11 @@ export function OrderBusinessPanel({ order }: { order: Order }) {
                   value={leg}
                   onChange={(e) => {
                     setLeg(e.target.value as typeof leg);
+                    setMethod(
+                      e.target.value === 'inbound'
+                        ? 'DRIVER'
+                        : order.fulfillment!.outbound.method,
+                    );
                     setSlotId('');
                   }}
                 >
@@ -336,7 +356,9 @@ export function OrderBusinessPanel({ order }: { order: Order }) {
                   }}
                 >
                   <option value="DRIVER">Domicilio</option>
-                  <option value="CUSTOMER">Sede</option>
+                  {leg === 'outbound' && (
+                    <option value="CUSTOMER">Pick up · retiro en sede</option>
+                  )}
                 </select>
                 <select
                   className={inputClass}

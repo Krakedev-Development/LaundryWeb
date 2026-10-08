@@ -35,7 +35,6 @@ export const FacilitiesPage: React.FC = () => {
   const [managerName, setManagerName] = useState('Roberto Gómez');
   const [status, setStatus] = useState<'ACTIVE' | 'MAINTENANCE'>('ACTIVE');
 
-  const [acceptsCustomerDropoff, setAcceptsCustomerDropoff] = useState(true);
   const [allowsCustomerPickup, setAllowsCustomerPickup] = useState(true);
   const [days, setDays] = useState([1, 2, 3, 4, 5, 6]);
   const [open, setOpen] = useState('08:00'),
@@ -58,7 +57,6 @@ export const FacilitiesPage: React.FC = () => {
 
   const handleOpenCreate = () => {
     setEditingFacility(null);
-    setAcceptsCustomerDropoff(true);
     setAllowsCustomerPickup(true);
     setDays([1, 2, 3, 4, 5, 6]);
     setOpen('08:00');
@@ -79,7 +77,6 @@ export const FacilitiesPage: React.FC = () => {
 
   const handleOpenEdit = (facility: Facility) => {
     setEditingFacility(facility);
-    setAcceptsCustomerDropoff(facility.acceptsCustomerDropoff !== false);
     setAllowsCustomerPickup(facility.allowsCustomerPickup !== false);
     setDays(facility.operatingSchedule?.days ?? [1, 2, 3, 4, 5, 6]);
     setOpen(facility.operatingSchedule?.open ?? '08:00');
@@ -115,7 +112,7 @@ export const FacilitiesPage: React.FC = () => {
           phone,
           managerName,
           status,
-          acceptsCustomerDropoff,
+          acceptsCustomerDropoff: false,
           allowsCustomerPickup,
           operatingSchedule: { days, open, close },
           coordinates: { lat, lng },
@@ -131,7 +128,7 @@ export const FacilitiesPage: React.FC = () => {
           phone,
           managerName,
           status,
-          acceptsCustomerDropoff,
+          acceptsCustomerDropoff: false,
           allowsCustomerPickup,
           operatingSchedule: { days, open, close },
           coordinates: { lat, lng },
@@ -239,10 +236,6 @@ export const FacilitiesPage: React.FC = () => {
                 </p>
 
                 <p className="text-xs text-slate-600 mt-2">
-                  {fac.acceptsCustomerDropoff
-                    ? 'Ingreso habilitado'
-                    : 'Sin ingreso directo'}{' '}
-                  ·{' '}
                   {fac.allowsCustomerPickup
                     ? 'Retiro habilitado'
                     : 'Sin retiro directo'}
@@ -451,16 +444,6 @@ export const FacilitiesPage: React.FC = () => {
 
               <fieldset className="space-y-3 rounded-xl bg-slate-50 border border-slate-200 p-4">
                 <legend className="font-bold">Recepción y horarios</legend>
-                <label className="flex gap-2">
-                  <input
-                    type="checkbox"
-                    checked={acceptsCustomerDropoff}
-                    onChange={(e) =>
-                      setAcceptsCustomerDropoff(e.target.checked)
-                    }
-                  />
-                  Permite ingreso del cliente
-                </label>
                 <label className="flex gap-2">
                   <input
                     type="checkbox"

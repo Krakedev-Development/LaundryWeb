@@ -27,19 +27,14 @@ const button =
   'sidebar-focus inline-flex items-center justify-center gap-2 rounded-xl bg-[#0F4C81] px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-[#0A3660] disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:cursor-not-allowed cursor-pointer';
 const field =
   'mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-normal text-slate-800 outline-none transition-colors placeholder:text-slate-400 focus:border-[#0F4C81] focus:bg-white focus:ring-2 focus:ring-[#0F4C81]/10 disabled:text-slate-400';
-const tabIcons = [LogIn, LogOut, Truck, History];
+const tabIcons = [LogOut, Truck, History];
 const statusLabels: Record<string, string> = {
   ACTIVE: 'Vigente',
   USED: 'Confirmada',
   REVOKED: 'Revocada',
   EXPIRED: 'Vencida',
 };
-const tabs = [
-  'Esperando ingreso',
-  'Esperando retiro',
-  'Transferencias chofer',
-  'Historial',
-];
+const tabs = ['Esperando retiro', 'Transferencias chofer', 'Historial'];
 export function HandoffsPage() {
   const { orders, facilities, currentUser } = useApp();
   const [tab, setTab] = useState(0);
@@ -65,9 +60,6 @@ export function HandoffsPage() {
   const localHandoffs = state.handoffs.filter(
     (h) => h.facilityId === facilityId,
   );
-  const incoming = localHandoffs.filter(
-    (h) => h.status === 'ACTIVE' && h.type === 'CUSTOMER_TO_FACILITY',
-  ).length;
   const outgoing = localHandoffs.filter(
     (h) => h.status === 'ACTIVE' && h.type === 'FACILITY_TO_CUSTOMER',
   ).length;
@@ -79,16 +71,14 @@ export function HandoffsPage() {
   const visible = state.handoffs.filter(
     (h) =>
       h.facilityId === facilityId &&
-      (tab === 3
+      (tab === 2
         ? true
         : h.status === 'ACTIVE' &&
           (tab === 0
-            ? h.type === 'CUSTOMER_TO_FACILITY'
-            : tab === 1
-              ? h.type === 'FACILITY_TO_CUSTOMER'
-              : !['CUSTOMER_TO_FACILITY', 'FACILITY_TO_CUSTOMER'].includes(
-                  h.type,
-                ))),
+            ? h.type === 'FACILITY_TO_CUSTOMER'
+            : !['CUSTOMER_TO_FACILITY', 'FACILITY_TO_CUSTOMER'].includes(
+                h.type,
+              ))),
   );
   const selected =
     state.handoffs.find((h) => h.id === id && h.facilityId === facilityId) ??
@@ -175,13 +165,6 @@ export function HandoffsPage() {
         subtitle="Verifica el código, revisa las prendas y confirma su entrega física."
       />
       <div className="grid gap-4 sm:grid-cols-3">
-        <MetricCard
-          title="Esperando ingreso"
-          value={incoming}
-          subtitle="Recepciones pendientes en sede"
-          variant="default"
-          icon={<LogIn className="size-4" />}
-        />
         <MetricCard
           title="Esperando retiro"
           value={outgoing}
@@ -337,8 +320,8 @@ export function HandoffsPage() {
                 </div>
                 <p className="rounded-xl border border-slate-200/70 bg-slate-50 px-4 py-3 text-xs leading-relaxed text-slate-600">
                   {order.customerName} ·{' '}
-                  {order.fulfillment?.mode === 'STORE_STORE'
-                    ? 'Cliente ingresa y retira en sede'
+                  {order.fulfillment?.mode === 'HOME_STORE'
+                    ? 'Pick up · recogida a domicilio y retiro en sede'
                     : 'Recogida y entrega a domicilio'}{' '}
                   · {order.items.reduce((n, i) => n + i.quantity, 0)} prendas
                   declaradas

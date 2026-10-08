@@ -11,8 +11,7 @@ export function prepareHandoffDemoData(
   for (const facility of facilities.filter((f) => f.status === 'ACTIVE')) {
     const template = state.orders.find((o) => o.facilityId === facility.id);
     if (!template) continue;
-    for (const scenario of ['INGRESO', 'RETIRO', 'CHOFER'] as const) {
-      if (scenario === 'INGRESO' && !facility.acceptsCustomerDropoff) continue;
+    for (const scenario of ['RETIRO', 'CHOFER'] as const) {
       if (scenario === 'RETIRO' && !facility.allowsCustomerPickup) continue;
       const id = `SOL-DEMO-${facility.id}-${scenario}`;
       if (state.orders.some((o) => o.id === id)) continue;
@@ -68,15 +67,12 @@ export function prepareHandoffDemoData(
       };
       order.pricing.paymentStatus = 'PAID';
       if (scenario !== 'CHOFER') {
-        order.customerAddress = {
-          ...order.customerAddress,
+        order.deliveryAddress = {
+          ...order.deliveryAddress,
           street: facility.address,
           number: '',
           coordinates: { ...facility.coordinates },
         };
-        order.deliveryAddress = JSON.parse(
-          JSON.stringify(order.customerAddress),
-        );
         order.pricing.deliveryFee = 0;
         order.pricing.total = Number(
           (
@@ -93,7 +89,7 @@ export function prepareHandoffDemoData(
         order.delivery.timeSlot = '16:00 - 18:00';
         driver!.activeOrders++;
       }
-      migrateOrder(order, scenario === 'CHOFER' ? 'HOME_HOME' : 'STORE_STORE');
+      migrateOrder(order, scenario === 'CHOFER' ? 'HOME_HOME' : 'HOME_STORE');
       if (driver) {
         order.fulfillment!.inbound.driverAssignmentId = `${id}-pickup`;
         order.fulfillment!.inbound.status = 'AWAITING_HANDOFF';
@@ -102,13 +98,11 @@ export function prepareHandoffDemoData(
       service.initialize(state, order);
 
       // Explicit simulated custody receipts keep later-stage fixtures consistent.
-      const priorType: HandoffType | undefined =
+      const priorTypes: HandoffType[] =
         scenario === 'RETIRO'
-          ? 'CUSTOMER_TO_FACILITY'
-          : scenario === 'CHOFER'
-            ? 'CUSTOMER_TO_DRIVER'
-            : undefined;
-      if (priorType) {
+          ? ['CUSTOMER_TO_DRIVER', 'DRIVER_TO_FACILITY']
+          : ['CUSTOMER_TO_DRIVER'];
+      for (const priorType of priorTypes) {
         const prior = state.handoffs.find(
           (h) => h.orderId === id && h.type === priorType,
         )!;
@@ -123,7 +117,7 @@ export function prepareHandoffDemoData(
           notes: 'Recepción simulada para el escenario de demostración.',
         };
         state.handoffAudits.push({
-          id: `AUD-DEMO-${id}`,
+          id: `AUD-DEMO-${id}-${priorType}`,
           handoffId: prior.id,
           orderId: id,
           action: 'DEMO_CUSTODY_PREPARED',
@@ -138,7 +132,7 @@ export function prepareHandoffDemoData(
       order.timeline.push({
         id: `TL-DEMO-${id}`,
         status: order.status,
-        label: `Escenario de demostración: ${scenario === 'INGRESO' ? 'ingreso en sede' : scenario === 'RETIRO' ? 'listo para retiro' : 'chofer esperando recepción en planta'}`,
+        label: `Escenario de demostración: ${scenario === 'RETIRO' ? 'listo para retiro' : 'chofer esperando recepción en planta'}`,
         timestamp: now,
         userName: 'Demo local',
         userRole: 'SYSTEM',

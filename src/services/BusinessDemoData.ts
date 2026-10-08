@@ -78,7 +78,6 @@ export function prepareBusinessDemoData(
       for (const context of [
         'DRIVER_PICKUP',
         'DRIVER_DELIVERY',
-        'FACILITY_DROPOFF',
         'FACILITY_PICKUP',
       ] as SlotContext[])
         for (const start of ['09:00', '14:00']) {
@@ -103,9 +102,9 @@ export function prepareBusinessDemoData(
   for (const [id, mode, weight] of [
     ['SOL-HH-001', 'HOME_HOME', false],
     ['SOL-HS-001', 'HOME_STORE', false],
-    ['SOL-SH-001', 'STORE_HOME', false],
-    ['SOL-SS-001', 'STORE_STORE', false],
-    ['SOL-WEIGHT-001', 'STORE_STORE', true],
+    ['SOL-SH-001', 'HOME_HOME', false],
+    ['SOL-SS-001', 'HOME_STORE', false],
+    ['SOL-WEIGHT-001', 'HOME_STORE', true],
   ] as const) {
     if (s.orders.some((o) => o.id === id)) continue;
     const o: Order = JSON.parse(JSON.stringify(template));
@@ -141,13 +140,6 @@ export function prepareBusinessDemoData(
       recipientName: customer.fullName,
       recipientPhone: customer.phone,
     };
-    if (mode.startsWith('STORE'))
-      o.customerAddress = {
-        ...o.customerAddress,
-        street: f.address,
-        number: '',
-        coordinates: f.coordinates,
-      };
     if (mode.endsWith('STORE'))
       o.deliveryAddress = {
         ...o.deliveryAddress,
@@ -184,9 +176,7 @@ export function prepareBusinessDemoData(
       const leg = o.fulfillment![legName];
       const context =
         legName === 'inbound'
-          ? leg.method === 'CUSTOMER'
-            ? 'FACILITY_DROPOFF'
-            : 'DRIVER_PICKUP'
+          ? 'DRIVER_PICKUP'
           : leg.method === 'CUSTOMER'
             ? 'FACILITY_PICKUP'
             : 'DRIVER_DELIVERY';

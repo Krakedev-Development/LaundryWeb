@@ -21,8 +21,7 @@ export const INITIAL_USERS: User[] = [
     name: 'Carlos Mendoza',
     email: 'admin@laundryweb.com',
     role: 'ADMIN',
-    avatar:
-      '',
+    avatar: '',
     facilityId: 'FAC-01',
   },
   {
@@ -30,8 +29,7 @@ export const INITIAL_USERS: User[] = [
     name: 'Elena Rostova',
     email: 'supervisor@laundryweb.com',
     role: 'SUPERVISOR',
-    avatar:
-      '',
+    avatar: '',
     facilityId: 'FAC-01',
   },
 ];
@@ -108,8 +106,7 @@ export const INITIAL_DRIVERS: Driver[] = [
     name: 'Carlos Ruiz',
     phone: '+51 987 654 321',
     email: 'carlos.ruiz@laundryweb.com',
-    avatar:
-      '',
+    avatar: '',
     vehicleType: 'VAN',
     vehiclePlate: 'ABC-123',
     facilityId: 'FAC-01',
@@ -133,8 +130,7 @@ export const INITIAL_DRIVERS: Driver[] = [
     name: 'Mateo Quispe',
     phone: '+51 981 123 456',
     email: 'mateo.quispe@laundryweb.com',
-    avatar:
-      '',
+    avatar: '',
     vehicleType: 'VAN',
     vehiclePlate: 'XYZ-789',
     facilityId: 'FAC-02',
@@ -158,8 +154,7 @@ export const INITIAL_DRIVERS: Driver[] = [
     name: 'Javier Arriola',
     phone: '+51 992 445 566',
     email: 'javier.arriola@laundryweb.com',
-    avatar:
-      '',
+    avatar: '',
     vehicleType: 'MOTO',
     vehiclePlate: 'MOT-442',
     facilityId: 'FAC-03',
@@ -183,8 +178,7 @@ export const INITIAL_DRIVERS: Driver[] = [
     name: 'Andrea Morales',
     phone: '+51 976 889 900',
     email: 'andrea.morales@laundryweb.com',
-    avatar:
-      '',
+    avatar: '',
     vehicleType: 'VAN',
     vehiclePlate: 'VWT-505',
     facilityId: 'FAC-01',
@@ -208,8 +202,7 @@ export const INITIAL_DRIVERS: Driver[] = [
     name: 'Diego Valdivia',
     phone: '+51 965 334 221',
     email: 'diego.valdivia@laundryweb.com',
-    avatar:
-      '',
+    avatar: '',
     vehicleType: 'CAMIONETA',
     vehiclePlate: 'PKU-881',
     facilityId: 'FAC-02',
@@ -233,8 +226,7 @@ export const INITIAL_DRIVERS: Driver[] = [
     name: 'Lucía Santillán',
     phone: '+51 944 112 887',
     email: 'lucia.santillan@laundryweb.com',
-    avatar:
-      '',
+    avatar: '',
     vehicleType: 'VAN',
     vehiclePlate: 'ECO-204',
     facilityId: 'FAC-03',
@@ -258,8 +250,7 @@ export const INITIAL_DRIVERS: Driver[] = [
     name: 'Fernando Castro',
     phone: '+51 955 776 332',
     email: 'fernando.castro@laundryweb.com',
-    avatar:
-      '',
+    avatar: '',
     vehicleType: 'MOTO',
     vehiclePlate: 'MOT-991',
     facilityId: 'FAC-01',
@@ -283,8 +274,7 @@ export const INITIAL_DRIVERS: Driver[] = [
     name: 'Gabriel Zúñiga',
     phone: '+51 933 221 445',
     email: 'gabriel.zuniga@laundryweb.com',
-    avatar:
-      '',
+    avatar: '',
     vehicleType: 'VAN',
     vehiclePlate: 'FST-319',
     facilityId: 'FAC-02',
@@ -316,10 +306,8 @@ export const INITIAL_CUSTOMERS: Customer[] = [
     kycStatus: 'APPROVED',
     kycReviewedAt: '2026-09-15 10:20',
     kycReviewedBy: 'Carlos Mendoza',
-    kycDocumentUrl:
-      '',
-    kycSelfieUrl:
-      '',
+    kycDocumentUrl: '',
+    kycSelfieUrl: '',
     addresses: [
       {
         street: 'Calle Grimaldo del Solar',
@@ -350,10 +338,8 @@ export const INITIAL_CUSTOMERS: Customer[] = [
     kycStatus: 'APPROVED',
     kycReviewedAt: '2026-08-01 14:00',
     kycReviewedBy: 'Carlos Mendoza',
-    kycDocumentUrl:
-      '',
-    kycSelfieUrl:
-      '',
+    kycDocumentUrl: '',
+    kycSelfieUrl: '',
     addresses: [
       {
         street: 'Av. La Marina',
@@ -384,10 +370,8 @@ export const INITIAL_CUSTOMERS: Customer[] = [
     documentNumber: '71239845',
     kycStatus: 'PENDING',
     kycSubmittedAt: '2026-09-29 09:15',
-    kycDocumentUrl:
-      '',
-    kycSelfieUrl:
-      '',
+    kycDocumentUrl: '',
+    kycSelfieUrl: '',
     addresses: [
       {
         street: 'Av. Javier Prado Oeste',
@@ -419,10 +403,8 @@ export const INITIAL_CUSTOMERS: Customer[] = [
     kycStatus: 'APPROVED',
     kycReviewedAt: '2026-07-22 11:30',
     kycReviewedBy: 'Elena Rostova',
-    kycDocumentUrl:
-      '',
-    kycSelfieUrl:
-      '',
+    kycDocumentUrl: '',
+    kycSelfieUrl: '',
     addresses: [
       {
         street: 'Malecón de la Reserva',
@@ -457,10 +439,8 @@ export const INITIAL_CUSTOMERS: Customer[] = [
     kycReviewedBy: 'Carlos Mendoza',
     kycRejectionReason:
       'La foto del documento de identidad no es legible y los bordes están recortados.',
-    kycDocumentUrl:
-      '',
-    kycSelfieUrl:
-      '',
+    kycDocumentUrl: '',
+    kycSelfieUrl: '',
     addresses: [
       {
         street: 'Av. Salaverry',
@@ -490,10 +470,8 @@ export const INITIAL_CUSTOMERS: Customer[] = [
     documentNumber: '73901244',
     kycStatus: 'PENDING',
     kycSubmittedAt: '2026-09-29 14:02',
-    kycDocumentUrl:
-      '',
-    kycSelfieUrl:
-      '',
+    kycDocumentUrl: '',
+    kycSelfieUrl: '',
     addresses: [
       {
         street: 'Calle Dos de Mayo',
@@ -2182,6 +2160,32 @@ prepareWebDemoData(
 );
 
 export const INITIAL_FULFILLMENT_SCENARIOS = [
- {id:'SOL-STORE-001',mode:'STORE_STORE',facilityId:'FAC-02',customerId:'CUST-001',handoffs:[{id:'HND-SOL-STORE-001-1',type:'CUSTOMER_TO_FACILITY',code:'583214'},{id:'HND-SOL-STORE-001-2',type:'FACILITY_TO_CUSTOMER',code:'583351'}]},
- {id:'SOL-HOME-001',mode:'HOME_HOME',facilityId:'FAC-02',customerId:'CUST-001',pickupAssignmentId:'SOL-HOME-001-pickup',deliveryAssignmentId:'SOL-HOME-001-delivery',handoffs:[{id:'HND-SOL-HOME-001-1',type:'CUSTOMER_TO_DRIVER',code:'726483'},{id:'HND-SOL-HOME-001-2',type:'DRIVER_TO_FACILITY',code:'726620'},{id:'HND-SOL-HOME-001-3',type:'FACILITY_TO_DRIVER',code:'726757'},{id:'HND-SOL-HOME-001-4',type:'DRIVER_TO_CUSTOMER',code:'726894'}]},
+  {
+    id: 'SOL-STORE-001',
+    mode: 'HOME_STORE',
+    facilityId: 'FAC-02',
+    customerId: 'CUST-001',
+    handoffs: [
+      { id: 'HND-SOL-STORE-001-1', type: 'CUSTOMER_TO_DRIVER', code: '583214' },
+      {
+        id: 'HND-SOL-STORE-001-2',
+        type: 'FACILITY_TO_CUSTOMER',
+        code: '583351',
+      },
+    ],
+  },
+  {
+    id: 'SOL-HOME-001',
+    mode: 'HOME_HOME',
+    facilityId: 'FAC-02',
+    customerId: 'CUST-001',
+    pickupAssignmentId: 'SOL-HOME-001-pickup',
+    deliveryAssignmentId: 'SOL-HOME-001-delivery',
+    handoffs: [
+      { id: 'HND-SOL-HOME-001-1', type: 'CUSTOMER_TO_DRIVER', code: '726483' },
+      { id: 'HND-SOL-HOME-001-2', type: 'DRIVER_TO_FACILITY', code: '726620' },
+      { id: 'HND-SOL-HOME-001-3', type: 'FACILITY_TO_DRIVER', code: '726757' },
+      { id: 'HND-SOL-HOME-001-4', type: 'DRIVER_TO_CUSTOMER', code: '726894' },
+    ],
+  },
 ] as const;

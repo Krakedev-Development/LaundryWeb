@@ -16,7 +16,7 @@ export function BusinessSettingsPanel() {
   const [slot, setSlot] = useState<TimeSlot>({
     id: '',
     facilityId: facilities[0]?.id ?? '',
-    context: 'FACILITY_DROPOFF',
+    context: 'DRIVER_PICKUP',
     date: '',
     start: '09:00',
     end: '11:00',
@@ -167,7 +167,6 @@ export function BusinessSettingsPanel() {
               {[
                 ['DRIVER_PICKUP', 'Recogida'],
                 ['DRIVER_DELIVERY', 'Entrega'],
-                ['FACILITY_DROPOFF', 'Ingreso en sede'],
                 ['FACILITY_PICKUP', 'Retiro en sede'],
               ].map(([v, l]) => (
                 <option key={v} value={v}>

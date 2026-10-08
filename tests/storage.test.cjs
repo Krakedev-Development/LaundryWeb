@@ -136,11 +136,7 @@ test('reception demo upgrades existing storage, covers every sede and preserves 
   for (const facility of upgraded
     .getFacilities()
     .filter((f) => f.status === 'ACTIVE')) {
-    for (const type of [
-      'CUSTOMER_TO_FACILITY',
-      'FACILITY_TO_CUSTOMER',
-      'DRIVER_TO_FACILITY',
-    ]) {
+    for (const type of ['FACILITY_TO_CUSTOMER', 'DRIVER_TO_FACILITY']) {
       const handoff = upgraded
         .getHandoffs()
         .find(
@@ -162,7 +158,7 @@ test('reception demo upgrades existing storage, covers every sede and preserves 
   const intake = upgraded
     .getHandoffs()
     .find(
-      (h) => h.orderId === 'SOL-DEMO-FAC-01-INGRESO' && h.status === 'ACTIVE',
+      (h) => h.orderId === 'SOL-DEMO-FAC-01-CHOFER' && h.status === 'ACTIVE',
     );
   assert.throws(
     () =>
@@ -198,9 +194,58 @@ test('reception demo upgrades existing storage, covers every sede and preserves 
   assert.equal(new Set(codes).size, codes.length);
 });
 
-test('supervisor views scope audit and ledger to its facility without sensitive notes or reward review privileges',()=>{
-  const previous=storageService.getCurrentUser(),outside=storageService.getOrders().find(o=>o.facilityId!=='FAC-01');storageService.addAuditLog({userName:'Admin',userRole:'ADMIN',action:'Detalle fuera de sede',entity:'Order',entityId:outside.id,notes:'Nota privada'});
-  storageService.setCurrentUser({...previous,id:'SUP-TEST',role:'SUPERVISOR',facilityId:'FAC-01'});
-  const orderIds=new Set(storageService.getOperationalOrders().map(o=>o.id)),handoffIds=new Set(storageService.getHandoffs().filter(h=>orderIds.has(h.orderId)).map(h=>h.id)),customerIds=new Set(storageService.getOperationalCustomers().map(c=>c.id));
-  assert.ok(storageService.getOperationalAuditLogs().every(log=>(orderIds.has(log.entityId)||handoffIds.has(log.entityId))&&!log.notes));assert.ok(!storageService.getOperationalAuditLogs().some(log=>log.entityId===outside.id));assert.ok(storageService.getOperationalPointsLedger().every(entry=>customerIds.has(entry.customerId)));assert.deepEqual(storageService.getOperationalRedemptions(),[]);assert.throws(()=>storageService.updateRedemptionStatus('RED-01','REJECTED'),/administrador/);storageService.setCurrentUser(previous);
+test('supervisor views scope audit and ledger to its facility without sensitive notes or reward review privileges', () => {
+  const previous = storageService.getCurrentUser(),
+    outside = storageService.getOrders().find((o) => o.facilityId !== 'FAC-01');
+  storageService.addAuditLog({
+    userName: 'Admin',
+    userRole: 'ADMIN',
+    action: 'Detalle fuera de sede',
+    entity: 'Order',
+    entityId: outside.id,
+    notes: 'Nota privada',
+  });
+  storageService.setCurrentUser({
+    ...previous,
+    id: 'SUP-TEST',
+    role: 'SUPERVISOR',
+    facilityId: 'FAC-01',
+  });
+  const orderIds = new Set(
+      storageService.getOperationalOrders().map((o) => o.id),
+    ),
+    handoffIds = new Set(
+      storageService
+        .getHandoffs()
+        .filter((h) => orderIds.has(h.orderId))
+        .map((h) => h.id),
+    ),
+    customerIds = new Set(
+      storageService.getOperationalCustomers().map((c) => c.id),
+    );
+  assert.ok(
+    storageService
+      .getOperationalAuditLogs()
+      .every(
+        (log) =>
+          (orderIds.has(log.entityId) || handoffIds.has(log.entityId)) &&
+          !log.notes,
+      ),
+  );
+  assert.ok(
+    !storageService
+      .getOperationalAuditLogs()
+      .some((log) => log.entityId === outside.id),
+  );
+  assert.ok(
+    storageService
+      .getOperationalPointsLedger()
+      .every((entry) => customerIds.has(entry.customerId)),
+  );
+  assert.deepEqual(storageService.getOperationalRedemptions(), []);
+  assert.throws(
+    () => storageService.updateRedemptionStatus('RED-01', 'REJECTED'),
+    /administrador/,
+  );
+  storageService.setCurrentUser(previous);
 });

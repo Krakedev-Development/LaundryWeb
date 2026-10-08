@@ -4,12 +4,10 @@ La implementación amplía la base actual de LaundryApp y LaundryWeb. No restaur
 
 ## Una solicitud, entrada y salida independientes
 
-| Modalidad | Entrada | Salida | Transferencias físicas |
-|---|---|---|---|
-| HOME_HOME | Recogida con chofer | Entrega con chofer | 4 |
-| HOME_STORE | Recogida con chofer | Retiro del cliente en sede | 3 |
-| STORE_HOME | Ingreso del cliente en sede | Entrega con chofer | 3 |
-| STORE_STORE | Ingreso del cliente en sede | Retiro del cliente en sede | 2 |
+| Modalidad  | Entrada             | Salida                     | Transferencias físicas |
+| ---------- | ------------------- | -------------------------- | ---------------------- |
+| HOME_HOME  | Recogida con chofer | Entrega con chofer         | 4                      |
+| HOME_STORE | Recogida con chofer | Retiro del cliente en sede | 3                      |
 
 El pedido conserva su ID durante todo el ciclo. Sus tramos tienen método, dirección, sede, agenda, asignación y avances propios. Planta maneja pesaje, inspección, aprobación, lavado, control de calidad y disponibilidad. El traslado del chofer no representa otro pedido ni reemplaza su estado de negocio.
 
@@ -62,12 +60,12 @@ Se puede usar `npx expo start` sin un script especial de LAN. `--clear` limpia M
 
 Los botones del login cargan estas cuentas; contraseña de demostración `123456`:
 
-| Cuenta | Correo |
-|---|---|
+| Cuenta                         | Correo               |
+| ------------------------------ | -------------------- |
 | Cliente de los nuevos fixtures | cliente@demo.laundry |
-| Chofer de los nuevos fixtures | chofer@demo.laundry |
-| Cliente original | cliente@test.com |
-| Chofer original | chofer@test.com |
+| Chofer de los nuevos fixtures  | chofer@demo.laundry  |
+| Cliente original               | cliente@test.com     |
+| Chofer original                | chofer@test.com      |
 
 La creación y configuración de choferes se realiza exclusivamente en LaundryWeb por el Administrador y afecta a su flota local. No crea automáticamente una cuenta en la app independiente.
 
@@ -97,9 +95,9 @@ npx.cmd expo export --platform android --platform ios --platform web --output-di
 
 Para probar la exportación web de Expo con Playwright: exportar primero la app y ejecutar `npm.cmd run test:app` en LaundryWeb. La configuración inicia la vista previa local en 8083.
 
-El dominio portable es canónico en LaundryWeb. `npm.cmd run domain:sync` actualiza sus copias en LaundryApp sin modificar datos de usuarios. `node scripts/sync-app-domain.cjs --fixtures` regenera exclusivamente el archivo de datos iniciales para instalaciones nuevas. Los tests comprueban que ambas copias conservan el mismo contrato.
+Los dominios de LaundryWeb y LaundryApp son independientes. `npm.cmd run domain:check` verifica que ambos permiten las mismas dos modalidades. `domain:sync` se conserva como alias de esa comprobación y ya no sobrescribe modelos ni archivos de Expo.
 
-La validación automatizada cubre los cuatro ciclos, QR, permisos, pago, pesaje, ajustes, reservas, reprogramación, cancelación, rutas, persistencia y fallos de almacenamiento. La exportación Android/iOS no sustituye la prueba física de escaneo, permisos y mapas en un teléfono con Expo Go.
+La validación automatizada cubre los dos ciclos vigentes, QR, permisos, pago, pesaje, ajustes, reservas, reprogramación, cancelación, rutas, persistencia y fallos de almacenamiento. La exportación Android/iOS no sustituye la prueba física de escaneo, permisos y mapas en un teléfono con Expo Go.
 
 ## Resultado de validación — 7 de octubre de 2026
 
@@ -110,3 +108,7 @@ La validación automatizada cubre los cuatro ciclos, QR, permisos, pago, pesaje,
 - App y web mantienen demostraciones independientes. Las copias del dominio comparten contratos y reglas, sin sincronización de datos.
 
 Queda pendiente la comprobación física de cámara, permisos, escaneo y mapas en Expo Go. Las pruebas de exportación e interfaz no sustituyen esa comprobación en un teléfono.
+
+## Recogida obligatoria a domicilio
+
+Domicilio completo incluye recogida y entrega por chofer; pick up incluye recogida por chofer y retiro del cliente en sede. Crear, cotizar o cambiar un pedido a ingreso del cliente en sede está bloqueado, incluso si una sede conserva una capacidad antigua. Los cupos de ingreso del cliente quedan inactivos y sus códigos sin usar se revocan. Pedidos guardados aún pendientes requieren confirmar dirección y horario de recogida antes de asignar chofer. Las constancias de recepciones ya efectuadas se conservan como historial, sin generar evidencia de recogida inexistente. Recepción y retiros muestra retiro del cliente, transferencias del chofer e historial.

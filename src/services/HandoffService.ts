@@ -8,7 +8,7 @@ import {
   operationalStage,
   WorkflowOrder,
   handoffTypesFor,
-} from "./fulfillment";
+} from './fulfillment';
 
 export interface HandoffState {
   orders: WorkflowOrder[];
@@ -55,25 +55,25 @@ export interface Verification {
 const trivialCode = (code: string) =>
   /^(\d)\1{5}$/.test(code) ||
   [
-    "123456",
-    "234567",
-    "345678",
-    "456789",
-    "567890",
-    "654321",
-    "543210",
-    "987654",
-    "876543",
-    "765432",
+    '123456',
+    '234567',
+    '345678',
+    '456789',
+    '567890',
+    '654321',
+    '543210',
+    '987654',
+    '876543',
+    '765432',
   ].includes(code);
 const inbound = (type: HandoffType) =>
-  ["CUSTOMER_TO_FACILITY", "CUSTOMER_TO_DRIVER", "DRIVER_TO_FACILITY"].includes(
+  ['CUSTOMER_TO_FACILITY', 'CUSTOMER_TO_DRIVER', 'DRIVER_TO_FACILITY'].includes(
     type,
   );
 const drivers = (type: HandoffType) =>
-  ["CUSTOMER_TO_DRIVER", "DRIVER_TO_CUSTOMER"].includes(type);
+  ['CUSTOMER_TO_DRIVER', 'DRIVER_TO_CUSTOMER'].includes(type);
 const customerTransfers = (type: HandoffType) =>
-  ["FACILITY_TO_CUSTOMER", "DRIVER_TO_CUSTOMER"].includes(type);
+  ['FACILITY_TO_CUSTOMER', 'DRIVER_TO_CUSTOMER'].includes(type);
 
 /** All mutations go through one repository transaction. Verification never transfers custody. */
 export class HandoffService {
@@ -113,18 +113,26 @@ export class HandoffService {
     actor: Actor,
     override = false,
   ) {
-    if (!this.port.paid(order) && !(inbound(h.type) && this.port.intakeAllowed?.(order)))
-      throw new Error("El pago debe estar confirmado.");
+    if (h.type === 'CUSTOMER_TO_FACILITY')
+      throw Error('El ingreso del cliente en sede ya no está disponible.');
+    if (
+      !this.port.paid(order) &&
+      !(inbound(h.type) && this.port.intakeAllowed?.(order))
+    )
+      throw new Error('El pago debe estar confirmado.');
     if (order.facilityId !== h.facilityId)
-      throw new Error("La sede del pedido cambió; revisa la transferencia.");
+      throw new Error('La sede del pedido cambió; revisa la transferencia.');
     if (order.intakeHold && !order.intakeHold.resolvedAt && !inbound(h.type))
       throw new Error(
-        "Resuelve la diferencia de prendas antes de liberar el pedido.",
+        'Resuelve la diferencia de prendas antes de liberar el pedido.',
       );
-    if (!inbound(h.type) && this.port.blocked?.(order)) throw new Error('Resuelve las incidencias pendientes antes de liberar o completar el pedido.');
-    if (["DRIVER_TO_FACILITY", "FACILITY_TO_DRIVER"].includes(h.type)) {
+    if (!inbound(h.type) && this.port.blocked?.(order))
+      throw new Error(
+        'Resuelve las incidencias pendientes antes de liberar o completar el pedido.',
+      );
+    if (['DRIVER_TO_FACILITY', 'FACILITY_TO_DRIVER'].includes(h.type)) {
       const leg =
-        h.type === "DRIVER_TO_FACILITY"
+        h.type === 'DRIVER_TO_FACILITY'
           ? order.fulfillment!.inbound
           : order.fulfillment!.outbound;
       if (
@@ -133,14 +141,14 @@ export class HandoffService {
         h.driverAssignmentId !== leg.driverAssignmentId
       )
         throw new Error(
-          "La transferencia debe corresponder a la asignación vigente del chofer.",
+          'La transferencia debe corresponder a la asignación vigente del chofer.',
         );
     }
     if (
       override &&
-      (actor.role !== "ADMIN" || actor.facilityId !== h.facilityId)
+      (actor.role !== 'ADMIN' || actor.facilityId !== h.facilityId)
     )
-      throw new Error("El override requiere un administrador de esta sede.");
+      throw new Error('El override requiere un administrador de esta sede.');
     if (drivers(h.type)) {
       const leg = inbound(h.type)
         ? order.fulfillment!.inbound
@@ -148,42 +156,41 @@ export class HandoffService {
       if (
         !leg.driverId ||
         !leg.driverAssignmentId ||
-        (!override && (actor.role !== "DRIVER" || actor.id !== leg.driverId)) ||
+        (!override && (actor.role !== 'DRIVER' || actor.id !== leg.driverId)) ||
         h.driverAssignmentId !== leg.driverAssignmentId
       )
         throw new Error(
-          "Solo el chofer asignado puede confirmar esta transferencia.",
+          'Solo el chofer asignado puede confirmar esta transferencia.',
         );
     } else if (
-      !["ADMIN", "SUPERVISOR"].includes(actor.role) ||
+      !['ADMIN', 'SUPERVISOR'].includes(actor.role) ||
       actor.facilityId !== h.facilityId
     )
-      throw new Error("Selecciona un operador autorizado de esta sede.");
+      throw new Error('Selecciona un operador autorizado de esta sede.');
     const stage = operationalStage(order);
     const valid: Record<HandoffType, boolean> = {
-      CUSTOMER_TO_FACILITY:
-        order.fulfillment!.inbound.method === "CUSTOMER" &&
-        order.status === "AWAITING_INTAKE",
-      CUSTOMER_TO_DRIVER: stage === "ARRIVED_FOR_PICKUP",
-      DRIVER_TO_FACILITY: stage === "ARRIVED_AT_FACILITY",
+      CUSTOMER_TO_FACILITY: false,
+      CUSTOMER_TO_DRIVER: stage === 'ARRIVED_FOR_PICKUP',
+      DRIVER_TO_FACILITY: stage === 'ARRIVED_AT_FACILITY',
       FACILITY_TO_DRIVER:
-        order.status === "READY" &&
-        order.fulfillment!.outbound.method === "DRIVER" &&
-        order.fulfillment!.outbound.milestone === "ASSIGNED",
+        order.status === 'READY' &&
+        order.fulfillment!.outbound.method === 'DRIVER' &&
+        order.fulfillment!.outbound.milestone === 'ASSIGNED',
       DRIVER_TO_CUSTOMER:
-        stage === "ARRIVED_FOR_DELIVERY" &&
-        this.used(order.id, "FACILITY_TO_DRIVER"),
+        stage === 'ARRIVED_FOR_DELIVERY' &&
+        this.used(order.id, 'FACILITY_TO_DRIVER'),
       FACILITY_TO_CUSTOMER:
-        order.status === "READY" && order.fulfillment!.outbound.method === "CUSTOMER",
+        order.status === 'READY' &&
+        order.fulfillment!.outbound.method === 'CUSTOMER',
     };
     if (!valid[h.type])
-      throw new Error("Esta transferencia no corresponde a la etapa actual.");
+      throw new Error('Esta transferencia no corresponde a la etapa actual.');
   }
   private used(orderId: string, type: HandoffType) {
     return this.port
       .read()
       .handoffs.some(
-        (h) => h.orderId === orderId && h.type === type && h.status === "USED",
+        (h) => h.orderId === orderId && h.type === type && h.status === 'USED',
       );
   }
   initialize(
@@ -193,15 +200,38 @@ export class HandoffService {
     legacy = false,
   ) {
     migrateOrder(order);
-    const types = handoffTypesFor(order.fulfillment!.mode);
+    state.handoffs
+      .filter(
+        (h) =>
+          h.orderId === order.id &&
+          h.type === 'CUSTOMER_TO_FACILITY' &&
+          h.status !== 'USED',
+      )
+      .forEach((h) => {
+        h.status = 'REVOKED';
+      });
+    const types = handoffTypesFor(order.fulfillment!.mode).filter(
+      (type) => !(order.legacyInbound?.status === 'COMPLETED' && inbound(type)),
+    );
+    if (order.pickupNeedsScheduling) return;
     types.forEach((type, index) => {
-      const existing = state.handoffs.find((h) => h.orderId === order.id && h.type === type && !['REVOKED','EXPIRED'].includes(h.status));
-      const ids = (inbound(type) ? order.fulfillment!.inbound : order.fulfillment!.outbound).handoffIds;
-      if (existing) { if (!ids.includes(existing.id)) ids.push(existing.id); return; }
+      const existing = state.handoffs.find(
+        (h) =>
+          h.orderId === order.id &&
+          h.type === type &&
+          !['REVOKED', 'EXPIRED'].includes(h.status),
+      );
+      const ids = (
+        inbound(type) ? order.fulfillment!.inbound : order.fulfillment!.outbound
+      ).handoffIds;
+      if (existing) {
+        if (!ids.includes(existing.id)) ids.push(existing.id);
+        return;
+      }
       let code: string;
-      if (fixture && ['SOL-STORE-001','SOL-HOME-001'].includes(order.id))
+      if (fixture && ['SOL-STORE-001', 'SOL-HOME-001'].includes(order.id))
         code = String(
-          (order.id === "SOL-STORE-001" ? 583214 : 726483) + index * 137,
+          (order.id === 'SOL-STORE-001' ? 583214 : 726483) + index * 137,
         );
       else {
         let tries = 0;
@@ -210,32 +240,49 @@ export class HandoffService {
             100000 + (parseInt(this.port.random().slice(0, 10), 16) % 900000),
           );
           if (++tries > 100)
-            throw new Error("No se pudo generar un código único.");
+            throw new Error('No se pudo generar un código único.');
         } while (
           trivialCode(code) ||
           state.handoffs.some((h) => h.fallbackCode === code)
         );
       }
+      if (fixture)
+        while (
+          trivialCode(code) ||
+          state.handoffs.some((h) => h.fallbackCode === code)
+        )
+          code = String(100000 + ((Number(code) - 100000 + 137) % 900000));
       const now = new Date().toISOString();
-      const id = fixture && ['SOL-STORE-001','SOL-HOME-001'].includes(order.id)
-        ? `HND-${order.id}-${index + 1}`
-        : `HND-${this.port.random()}`;
+      const id =
+        fixture && ['SOL-STORE-001', 'SOL-HOME-001'].includes(order.id)
+          ? `HND-${order.id}-${index + 1}`
+          : `HND-${this.port.random()}`;
       const h: Handoff = {
         id,
         orderId: order.id,
         type,
         facilityId: order.facilityId,
-        qrToken: fixture && ['SOL-STORE-001','SOL-HOME-001'].includes(order.id)
-          ? `demo-${order.id}-${type}-e7b451cf6d924a08`
-          : this.port.random(),
+        qrToken:
+          fixture && ['SOL-STORE-001', 'SOL-HOME-001'].includes(order.id)
+            ? `demo-${order.id}-${type}-e7b451cf6d924a08`
+            : this.port.random(),
         fallbackCode: code,
-        generation: 1 + Math.max(0, ...state.handoffs.filter(h => h.orderId === order.id && h.type === type).map(h => h.generation)),
-        status: "PENDING",
+        generation:
+          1 +
+          Math.max(
+            0,
+            ...state.handoffs
+              .filter((h) => h.orderId === order.id && h.type === type)
+              .map((h) => h.generation),
+          ),
+        status: 'PENDING',
         attempts: 0,
         maxAttempts: 5,
         createdAt: now,
         updatedAt: now,
       };
+      if (state.handoffs.some((previous) => previous.id === h.id))
+        h.id += '-g' + h.generation;
       state.handoffs.push(h);
       (inbound(type)
         ? order.fulfillment!.inbound
@@ -244,27 +291,27 @@ export class HandoffService {
       if (legacy) {
         const f = order.fulfillment!;
         const completed =
-          (type === "CUSTOMER_TO_DRIVER" &&
-            (f.inbound.status === "COMPLETED" ||
-              ["COLLECTED", "TO_FACILITY", "ARRIVED_AT_FACILITY"].includes(
+          (type === 'CUSTOMER_TO_DRIVER' &&
+            (f.inbound.status === 'COMPLETED' ||
+              ['COLLECTED', 'TO_FACILITY', 'ARRIVED_AT_FACILITY'].includes(
                 f.inbound.milestone,
               ))) ||
-          (type === "DRIVER_TO_FACILITY" && f.inbound.status === "COMPLETED") ||
-          (type === "FACILITY_TO_DRIVER" &&
-            ["EN_ROUTE", "ARRIVED", "DELIVERED"].includes(
+          (type === 'DRIVER_TO_FACILITY' && f.inbound.status === 'COMPLETED') ||
+          (type === 'FACILITY_TO_DRIVER' &&
+            ['EN_ROUTE', 'ARRIVED', 'DELIVERED'].includes(
               f.outbound.milestone,
             )) ||
-          (type === "DRIVER_TO_CUSTOMER" && order.status === "COMPLETED");
+          (type === 'DRIVER_TO_CUSTOMER' && order.status === 'COMPLETED');
         if (completed) {
-          h.status = "USED";
+          h.status = 'USED';
           h.usedAt = now;
-          h.usedByUserId = "LEGACY-MIGRATION";
+          h.usedByUserId = 'LEGACY-MIGRATION';
           this.audit(
             state,
             h,
-            { id: "LEGACY-MIGRATION", role: "SYSTEM", name: "Migración local" },
-            "LEGACY_CUSTODY_IMPORTED",
-            "La etapa anterior acredita una transferencia previa; no fue verificada mediante QR.",
+            { id: 'LEGACY-MIGRATION', role: 'SYSTEM', name: 'Migración local' },
+            'LEGACY_CUSTODY_IMPORTED',
+            'La etapa anterior acredita una transferencia previa; no fue verificada mediante QR.',
           );
         }
       }
@@ -277,7 +324,17 @@ export class HandoffService {
     state.handoffs
       .filter(
         (h) =>
-          h.orderId === order.id && ["PENDING", "ACTIVE"].includes(h.status),
+          h.orderId === order.id &&
+          h.type === 'CUSTOMER_TO_FACILITY' &&
+          h.status !== 'USED',
+      )
+      .forEach((h) => {
+        h.status = 'REVOKED';
+      });
+    state.handoffs
+      .filter(
+        (h) =>
+          h.orderId === order.id && ['PENDING', 'ACTIVE'].includes(h.status),
       )
       .forEach((h) => {
         const leg = inbound(h.type)
@@ -285,41 +342,54 @@ export class HandoffService {
           : order.fulfillment!.outbound;
         h.driverAssignmentId = leg.driverAssignmentId;
         const active =
-          (this.port.paid(order) || (inbound(h.type) && this.port.intakeAllowed?.(order))) &&
+          (this.port.paid(order) ||
+            (inbound(h.type) && this.port.intakeAllowed?.(order))) &&
           !order.quarantineReason &&
           !(order.intakeHold && !order.intakeHold.resolvedAt) &&
-          ((h.type === "CUSTOMER_TO_FACILITY" &&
-            order.fulfillment!.inbound.method === "CUSTOMER" &&
-            order.status === "AWAITING_INTAKE") ||
-            (h.type === "CUSTOMER_TO_DRIVER" &&
-              stage === "ARRIVED_FOR_PICKUP") ||
-            (h.type === "DRIVER_TO_FACILITY" &&
-              stage === "ARRIVED_AT_FACILITY") ||
-            (h.type === "FACILITY_TO_DRIVER" &&
-              order.status === "READY" &&
-              leg.milestone === "ASSIGNED") ||
-            (h.type === "DRIVER_TO_CUSTOMER" &&
-              stage === "ARRIVED_FOR_DELIVERY") ||
-            (h.type === "FACILITY_TO_CUSTOMER" &&
-              order.status === "READY" &&
-              order.fulfillment!.outbound.method === "CUSTOMER"));
-        if (active && h.status === "PENDING") {
-          h.status = "ACTIVE";
+          ((h.type === 'CUSTOMER_TO_DRIVER' &&
+            stage === 'ARRIVED_FOR_PICKUP') ||
+            (h.type === 'DRIVER_TO_FACILITY' &&
+              stage === 'ARRIVED_AT_FACILITY') ||
+            (h.type === 'FACILITY_TO_DRIVER' &&
+              order.status === 'READY' &&
+              leg.milestone === 'ASSIGNED') ||
+            (h.type === 'DRIVER_TO_CUSTOMER' &&
+              stage === 'ARRIVED_FOR_DELIVERY') ||
+            (h.type === 'FACILITY_TO_CUSTOMER' &&
+              order.status === 'READY' &&
+              order.fulfillment!.outbound.method === 'CUSTOMER'));
+        if (active && h.status === 'PENDING') {
+          h.status = 'ACTIVE';
           h.activatedAt = new Date().toISOString();
           h.updatedAt = h.activatedAt;
-        } else if (!active && h.status === "ACTIVE") h.status = "PENDING";
+        } else if (!active && h.status === 'ACTIVE') h.status = 'PENDING';
       });
   }
   payload(h: Handoff) {
     return `laundry://handoff/${encodeURIComponent(h.id)}?t=${encodeURIComponent(h.qrToken)}`;
   }
-  activeCodesForPresenter(orderId:string,actorId:string):Handoff[] {
-    const actor=this.port.actor(actorId);const state=this.port.read();const o=state.orders.find(o=>o.id===orderId);
-    if(!o)return [];
-    return state.handoffs.filter(h=>h.orderId===orderId&&h.status==='ACTIVE'&&(
-      actor.role==='CLIENT'&&actor.id===o.customerId&&['CUSTOMER_TO_DRIVER','DRIVER_TO_CUSTOMER','CUSTOMER_TO_FACILITY','FACILITY_TO_CUSTOMER'].includes(h.type) ||
-      actor.role==='DRIVER'&&['DRIVER_TO_FACILITY','FACILITY_TO_DRIVER'].includes(h.type)&&(inbound(h.type)?o.fulfillment!.inbound:o.fulfillment!.outbound).driverId===actor.id
-    ));
+  activeCodesForPresenter(orderId: string, actorId: string): Handoff[] {
+    const actor = this.port.actor(actorId);
+    const state = this.port.read();
+    const o = state.orders.find((o) => o.id === orderId);
+    if (!o) return [];
+    return state.handoffs.filter(
+      (h) =>
+        h.orderId === orderId &&
+        h.status === 'ACTIVE' &&
+        ((actor.role === 'CLIENT' &&
+          actor.id === o.customerId &&
+          [
+            'CUSTOMER_TO_DRIVER',
+            'DRIVER_TO_CUSTOMER',
+            'CUSTOMER_TO_FACILITY',
+            'FACILITY_TO_CUSTOMER',
+          ].includes(h.type)) ||
+          (actor.role === 'DRIVER' &&
+            ['DRIVER_TO_FACILITY', 'FACILITY_TO_DRIVER'].includes(h.type) &&
+            (inbound(h.type) ? o.fulfillment!.inbound : o.fulfillment!.outbound)
+              .driverId === actor.id)),
+    );
   }
   verify(
     input: string,
@@ -352,38 +422,38 @@ export class HandoffService {
           const expected = next.handoffs.find(
             (h) => h.id === expectedHandoffId,
           );
-          if (!expected || expected.status !== "ACTIVE") return;
+          if (!expected || expected.status !== 'ACTIVE') return;
           const order = next.orders.find((o) => o.id === expected.orderId)!;
           this.allowed(order, expected, actor);
           expected.attempts++;
           if (expected.attempts >= expected.maxAttempts)
-            expected.status = "LOCKED";
+            expected.status = 'LOCKED';
           this.audit(
             next,
             expected,
             actor,
-            "INVALID_CODE",
+            'INVALID_CODE',
             `Intento ${expected.attempts}/${expected.maxAttempts}`,
           );
         });
       throw new Error(
-        "Código no encontrado o no corresponde al pedido seleccionado.",
+        'Código no encontrado o no corresponde al pedido seleccionado.',
       );
     }
-    if (h.status !== "ACTIVE")
+    if (h.status !== 'ACTIVE')
       throw new Error(
         (
           {
-            USED: "Este código ya fue utilizado.",
-            REVOKED: "Este código fue revocado.",
-            LOCKED: "Código bloqueado: solicita regeneración al administrador.",
-            EXPIRED: "Código vencido.",
-            PENDING: "El código todavía no está habilitado.",
+            USED: 'Este código ya fue utilizado.',
+            REVOKED: 'Este código fue revocado.',
+            LOCKED: 'Código bloqueado: solicita regeneración al administrador.',
+            EXPIRED: 'Código vencido.',
+            PENDING: 'El código todavía no está habilitado.',
           } as Record<string, string>
-        )[h.status] ?? "Código no disponible.",
+        )[h.status] ?? 'Código no disponible.',
       );
     if (h.expiresAt && Date.parse(h.expiresAt) <= Date.now())
-      throw new Error("Código vencido.");
+      throw new Error('Código vencido.');
     const order = state.orders.find((o) => o.id === h!.orderId)!;
     this.allowed(order, h, actor);
     const ticket = this.port.random();
@@ -393,7 +463,7 @@ export class HandoffService {
         next,
         next.handoffs.find((v) => v.id === h!.id)!,
         actor,
-        "VERIFIED",
+        'VERIFIED',
       ),
     );
     return {
@@ -402,25 +472,25 @@ export class HandoffService {
       order,
       localValidation: true,
       warning:
-        "Validación local de demostración. La cita orienta la atención; una llegada fuera del horario reservado muestra advertencia.",
+        'Validación local de demostración. La cita orienta la atención; una llegada fuera del horario reservado muestra advertencia.',
     };
   }
   confirm(actorId: string, input: Confirmation): void {
     const ticket = this.tickets.get(input.ticket);
     if (!ticket || ticket.actorId !== actorId)
-      throw new Error("Verifica el código antes de confirmar.");
+      throw new Error('Verifica el código antes de confirmar.');
     const actor = this.port.actor(actorId);
     this.port.transaction((state) => {
       const h = state.handoffs.find((h) => h.id === ticket.id);
       if (!h || h.generation !== ticket.generation)
-        throw new Error("El código cambió; verifícalo nuevamente.");
-      if (h.status === "USED" && h.usedByUserId === actorId) return;
+        throw new Error('El código cambió; verifícalo nuevamente.');
+      if (h.status === 'USED' && h.usedByUserId === actorId) return;
       if (
         ticket.override
-          ? !["ACTIVE", "LOCKED", "EXPIRED"].includes(h.status)
-          : h.status !== "ACTIVE"
+          ? !['ACTIVE', 'LOCKED', 'EXPIRED'].includes(h.status)
+          : h.status !== 'ACTIVE'
       )
-        throw new Error("El código ya no está disponible.");
+        throw new Error('El código ya no está disponible.');
       const order = state.orders.find((o) => o.id === h.orderId)!;
       this.allowed(order, h, actor, ticket.override);
       if (
@@ -428,12 +498,12 @@ export class HandoffService {
         h.expiresAt &&
         Date.parse(h.expiresAt) <= Date.now()
       )
-        throw new Error("Código vencido.");
+        throw new Error('Código vencido.');
       if (
         inbound(h.type) &&
         (!Number.isInteger(input.count) || input.count! < 1)
       )
-        throw new Error("Registra una cantidad válida de prendas recibidas.");
+        throw new Error('Registra una cantidad válida de prendas recibidas.');
       if (
         customerTransfers(h.type) &&
         (!input.recipient?.trim() ||
@@ -441,16 +511,16 @@ export class HandoffService {
           !/\p{L}/u.test(input.recipient) ||
           !input.relationship?.trim())
       )
-        throw new Error("Registra quién retira y su relación o autorización.");
+        throw new Error('Registra quién retira y su relación o autorización.');
       if (
         input.overrideReason !== undefined &&
-        (actor.role !== "ADMIN" || input.overrideReason.trim().length < 5)
+        (actor.role !== 'ADMIN' || input.overrideReason.trim().length < 5)
       )
         throw new Error(
-          "El administrador debe indicar un motivo válido de override.",
+          'El administrador debe indicar un motivo válido de override.',
         );
       const now = new Date().toISOString();
-      h.status = "USED";
+      h.status = 'USED';
       h.usedAt = now;
       h.usedByUserId = actorId;
       h.updatedAt = now;
@@ -463,21 +533,21 @@ export class HandoffService {
         notes: input.notes?.trim(),
         localValidation: true,
       };
-      if (h.type === "CUSTOMER_TO_DRIVER")
-        advanceOperational(order, "PICKED_UP");
+      if (h.type === 'CUSTOMER_TO_DRIVER')
+        advanceOperational(order, 'PICKED_UP');
       else if (
-        h.type === "CUSTOMER_TO_FACILITY" ||
-        h.type === "DRIVER_TO_FACILITY"
+        h.type === 'CUSTOMER_TO_FACILITY' ||
+        h.type === 'DRIVER_TO_FACILITY'
       )
-        advanceOperational(order, "AT_FACILITY");
-      else if (h.type === "FACILITY_TO_DRIVER") {
-        order.fulfillment!.outbound.milestone = "RELEASED";
-        order.fulfillment!.outbound.status = "IN_PROGRESS";
+        advanceOperational(order, 'AT_FACILITY');
+      else if (h.type === 'FACILITY_TO_DRIVER') {
+        order.fulfillment!.outbound.milestone = 'RELEASED';
+        order.fulfillment!.outbound.status = 'IN_PROGRESS';
         order.fulfillment!.outbound.startedAt = now;
       } else {
-        advanceOperational(order, "COMPLETED");
-        order.fulfillment!.outbound.status = "COMPLETED";
-        order.fulfillment!.outbound.milestone = "DELIVERED";
+        advanceOperational(order, 'COMPLETED');
+        order.fulfillment!.outbound.status = 'COMPLETED';
+        order.fulfillment!.outbound.milestone = 'DELIVERED';
         order.fulfillment!.outbound.completedAt = now;
       }
       if (inbound(h.type) && input.count !== declared) {
@@ -485,10 +555,10 @@ export class HandoffService {
           handoffId: h.id,
           declared,
           received: input.count!,
-          description: `Declaradas ${declared}, recibidas ${input.count}. ${input.notes ?? ""}`,
+          description: `Declaradas ${declared}, recibidas ${input.count}. ${input.notes ?? ''}`,
           createdAt: now,
         };
-        order.status = "INCIDENT";
+        order.status = 'INCIDENT';
       }
       order.updatedAt = now;
       this.audit(
@@ -496,8 +566,8 @@ export class HandoffService {
         h,
         actor,
         ticket.override || input.overrideReason
-          ? "CONFIRMED_OVERRIDE"
-          : "CONFIRMED",
+          ? 'CONFIRMED_OVERRIDE'
+          : 'CONFIRMED',
         ticket.reason ?? input.overrideReason ?? input.notes,
       );
       this.port.confirmed(state, order, h, actor);
@@ -512,13 +582,13 @@ export class HandoffService {
     const actor = this.port.actor(actorId);
     const state = this.port.read();
     const h = state.handoffs.find((h) => h.id === id);
-    if (actor.role !== "ADMIN" || reason.trim().length < 5)
+    if (actor.role !== 'ADMIN' || reason.trim().length < 5)
       throw new Error(
-        "El administrador debe indicar un motivo válido de override.",
+        'El administrador debe indicar un motivo válido de override.',
       );
-    if (!h || !["ACTIVE", "LOCKED", "EXPIRED"].includes(h.status))
+    if (!h || !['ACTIVE', 'LOCKED', 'EXPIRED'].includes(h.status))
       throw new Error(
-        "No se permite override de códigos utilizados, pendientes o revocados.",
+        'No se permite override de códigos utilizados, pendientes o revocados.',
       );
     if (
       state.handoffs.some(
@@ -528,7 +598,7 @@ export class HandoffService {
           v.generation > h.generation,
       )
     )
-      throw new Error("Existe una generación más reciente.");
+      throw new Error('Existe una generación más reciente.');
     const order = state.orders.find((o) => o.id === h.orderId)!;
     this.allowed(order, h, actor, true);
     const ticket = this.port.random();
@@ -544,7 +614,7 @@ export class HandoffService {
         next,
         next.handoffs.find((v) => v.id === id)!,
         actor,
-        "OVERRIDE_VERIFIED",
+        'OVERRIDE_VERIFIED',
         reason.trim(),
       ),
     );
@@ -554,25 +624,25 @@ export class HandoffService {
       order,
       localValidation: true,
       warning:
-        "Override administrativo local. Confirma la entrega física y registra la recepción; pago, sede, etapa y uso único siguen vigentes.",
+        'Override administrativo local. Confirma la entrega física y registra la recepción; pago, sede, etapa y uso único siguen vigentes.',
     };
   }
   regenerate(id: string, actorId: string, reason: string): Handoff {
     const actor = this.port.actor(actorId);
-    if (actor.role !== "ADMIN" || reason.trim().length < 5)
+    if (actor.role !== 'ADMIN' || reason.trim().length < 5)
       throw new Error(
-        "El administrador debe indicar el motivo de regeneración.",
+        'El administrador debe indicar el motivo de regeneración.',
       );
     let replacement!: Handoff;
     this.port.transaction((state) => {
       const old = state.handoffs.find((h) => h.id === id);
-      if (!old) throw new Error("Transferencia no encontrada.");
-      if (old.status === "USED")
-        throw new Error("Una transferencia utilizada no se puede regenerar.");
+      if (!old) throw new Error('Transferencia no encontrada.');
+      if (old.status === 'USED')
+        throw new Error('Una transferencia utilizada no se puede regenerar.');
       const order = state.orders.find((o) => o.id === old.orderId)!;
       this.allowed(order, old, actor, true);
       if (actor.facilityId !== old.facilityId)
-        throw new Error("Selecciona la sede correspondiente.");
+        throw new Error('Selecciona la sede correspondiente.');
       if (
         state.handoffs.some(
           (h) =>
@@ -581,21 +651,21 @@ export class HandoffService {
             h.generation > old.generation,
         )
       )
-        throw new Error("Existe una generación más reciente.");
-      let code = "";
+        throw new Error('Existe una generación más reciente.');
+      let code = '';
       let attempts = 0;
       do {
         code = String(
           100000 + (parseInt(this.port.random().slice(0, 10), 16) % 900000),
         );
         if (++attempts > 100)
-          throw new Error("No se pudo generar un código único.");
+          throw new Error('No se pudo generar un código único.');
       } while (
         trivialCode(code) ||
         state.handoffs.some((h) => h.fallbackCode === code)
       );
       const now = new Date().toISOString();
-      old.status = "REVOKED";
+      old.status = 'REVOKED';
       old.updatedAt = now;
       replacement = {
         ...old,
@@ -604,7 +674,7 @@ export class HandoffService {
         fallbackCode: code,
         generation: old.generation + 1,
         previousHandoffId: old.id,
-        status: "ACTIVE",
+        status: 'ACTIVE',
         attempts: 0,
         activatedAt: now,
         expiresAt: undefined,
@@ -616,12 +686,12 @@ export class HandoffService {
         ? order.fulfillment!.inbound
         : order.fulfillment!.outbound
       ).handoffIds.push(replacement.id);
-      this.audit(state, old, actor, "REGENERATED", reason.trim());
+      this.audit(state, old, actor, 'REGENERATED', reason.trim());
       this.audit(
         state,
         replacement,
         actor,
-        "CREATED_REPLACEMENT",
+        'CREATED_REPLACEMENT',
         reason.trim(),
       );
     });
@@ -629,17 +699,17 @@ export class HandoffService {
   }
   revoke(id: string, actorId: string, reason: string) {
     const actor = this.port.actor(actorId);
-    if (actor.role !== "ADMIN" || reason.trim().length < 5)
-      throw new Error("El administrador debe indicar el motivo de revocación.");
+    if (actor.role !== 'ADMIN' || reason.trim().length < 5)
+      throw new Error('El administrador debe indicar el motivo de revocación.');
     this.port.transaction((state) => {
       const h = state.handoffs.find((h) => h.id === id);
-      if (!h || h.status === "USED" || h.status === "REVOKED")
-        throw new Error("No se puede revocar esta transferencia.");
+      if (!h || h.status === 'USED' || h.status === 'REVOKED')
+        throw new Error('No se puede revocar esta transferencia.');
       if (actor.facilityId !== h.facilityId)
-        throw new Error("Sede incorrecta.");
-      h.status = "REVOKED";
+        throw new Error('Sede incorrecta.');
+      h.status = 'REVOKED';
       h.updatedAt = new Date().toISOString();
-      this.audit(state, h, actor, "REVOKED", reason.trim());
+      this.audit(state, h, actor, 'REVOKED', reason.trim());
     });
   }
   resolve(orderId: string, actorId: string, reason: string) {
@@ -647,27 +717,27 @@ export class HandoffService {
     this.port.transaction((state) => {
       const o = state.orders.find((o) => o.id === orderId);
       if (!o?.intakeHold || o.intakeHold.resolvedAt)
-        throw new Error("No hay una diferencia pendiente.");
+        throw new Error('No hay una diferencia pendiente.');
       if (
-        !["ADMIN", "SUPERVISOR"].includes(actor.role) ||
+        !['ADMIN', 'SUPERVISOR'].includes(actor.role) ||
         actor.facilityId !== o.facilityId ||
         reason.trim().length < 5
       )
-        throw new Error("Un operador de la sede debe registrar la resolución.");
+        throw new Error('Un operador de la sede debe registrar la resolución.');
       o.intakeHold.resolvedAt = new Date().toISOString();
       o.intakeHold.resolvedBy = actorId;
       o.intakeHold.resolution = reason.trim();
       advanceOperational(
         o,
-        o.fulfillment!.inbound.status === "COMPLETED"
-          ? "AT_FACILITY"
-          : "PICKED_UP",
+        o.fulfillment!.inbound.status === 'COMPLETED'
+          ? 'AT_FACILITY'
+          : 'PICKED_UP',
       );
       this.audit(
         state,
         state.handoffs.find((h) => h.id === o.intakeHold!.handoffId)!,
         actor,
-        "INCIDENT_RESOLVED",
+        'INCIDENT_RESOLVED',
         reason.trim(),
       );
       this.port.resolved?.(state, o, actor, reason.trim());

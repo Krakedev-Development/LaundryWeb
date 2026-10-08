@@ -41,7 +41,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
       dot: 'bg-blue-500',
     },
     AWAITING_INTAKE: {
-      label: 'Esperando ingreso',
+      label: 'Recogida pendiente',
       bg: 'bg-amber-50',
       text: 'text-amber-700',
       border: 'border-amber-200',

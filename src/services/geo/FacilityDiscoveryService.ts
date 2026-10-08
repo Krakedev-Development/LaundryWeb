@@ -18,7 +18,6 @@ export class FacilityDiscoveryService {
       (f) =>
         f.active !== false &&
         (!f.status || f.status === 'ACTIVE') &&
-        f.acceptsCustomerDropoff !== false &&
         f.allowsCustomerPickup !== false &&
         serviceIds.every(
           (id) =>

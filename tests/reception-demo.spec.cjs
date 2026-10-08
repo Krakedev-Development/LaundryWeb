@@ -9,7 +9,6 @@ test('default and other demo sedes contain verifiable intake, pickup and driver 
   for (const facilityId of ['FAC-01', 'FAC-02', 'FAC-03']) {
     await sede.selectOption(facilityId);
     for (const [tab, suffix, kind] of [
-      ['Esperando ingreso', 'INGRESO', 'Ingreso del cliente en sede'],
       ['Esperando retiro', 'RETIRO', 'Retiro del cliente en sede'],
       ['Transferencias chofer', 'CHOFER', 'Ingreso del chofer en planta'],
     ]) {
@@ -35,7 +34,7 @@ test('default and other demo sedes contain verifiable intake, pickup and driver 
   }
   await sede.selectOption('FAC-01');
   await page
-    .getByRole('tab', { name: 'Esperando ingreso', exact: true })
+    .getByRole('tab', { name: 'Esperando retiro', exact: true })
     .click();
   await page.screenshot({
     path: 'test-results/reception-demo-la-puntilla.png',
