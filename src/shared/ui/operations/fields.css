@@ -1,0 +1,83 @@
+@layer components {
+  .ops-ui .ops-label {
+    display: block;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: #475569;
+  }
+  .ops-ui .ops-field {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    min-height: 2.5rem;
+    margin-top: 0.375rem;
+    padding: 0.625rem 0.875rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    background: #f8fafc;
+    color: #0f172a;
+    font-family: inherit;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    transition:
+      border-color 150ms,
+      box-shadow 150ms;
+  }
+  .ops-ui .ops-field::placeholder {
+    color: #94a3b8;
+  }
+  .ops-ui .ops-field:focus {
+    outline: none;
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px #0284c70d;
+  }
+  .ops-ui select.ops-field {
+    appearance: none;
+    padding-right: 2.25rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%2394A3B8' stroke-width='1.5' viewBox='0 0 24 24'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+  }
+  .ops-ui .ops-search {
+    position: relative;
+  }
+  .ops-ui .ops-search > svg {
+    position: absolute;
+    left: 0.875rem;
+    top: 50%;
+    width: 1rem;
+    height: 1rem;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    pointer-events: none;
+  }
+  .ops-ui .ops-search .ops-field {
+    margin-top: 0;
+    padding-left: 2.5rem;
+  }
+  .ops-ui .ops-check {
+    appearance: none;
+    width: 0.9375rem;
+    height: 0.9375rem;
+    margin: 0;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.25rem;
+    background: white;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .ops-ui .ops-check:checked {
+    background-color: #0f4c81;
+    border-color: #0f4c81;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='white' stroke-width='2'%3E%3Cpath d='m4 10 4 4 8-8'/%3E%3C/svg%3E");
+  }
+  .ops-ui .ops-check-label {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #475569;
+    cursor: pointer;
+  }
+}

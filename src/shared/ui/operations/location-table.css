@@ -1,0 +1,56 @@
+@layer components {
+  .ops-ui .ops-location-scroll {
+    width: 100%;
+    overflow-x: auto;
+  }
+  .ops-ui .ops-location-scroll:focus-visible {
+    outline: 2px solid #0284c7;
+    outline-offset: -2px;
+  }
+  .ops-ui .ops-location-table {
+    width: 100%;
+    min-width: 940px;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 0.75rem;
+  }
+  .ops-ui .ops-location-table thead {
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafccc;
+    color: #64748b;
+  }
+  .ops-ui .ops-location-table th,
+  .ops-ui .ops-location-table td {
+    padding: 0.875rem 1rem;
+    vertical-align: middle;
+  }
+  .ops-ui .ops-location-table thead th {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .ops-ui .ops-location-table tbody tr {
+    border-bottom: 1px solid #f1f5f9;
+    transition: background 150ms;
+  }
+  .ops-ui .ops-location-table tbody tr:last-child {
+    border-bottom: 0;
+  }
+  .ops-ui .ops-location-table tbody tr:hover {
+    background: #f8fafcb3;
+  }
+  .ops-ui .ops-location-table tbody th {
+    min-width: 13rem;
+    max-width: 18rem;
+    font-weight: 400;
+    overflow-wrap: anywhere;
+  }
+  .ops-ui .ops-location-detail {
+    min-width: 14rem;
+    max-width: 24rem;
+    color: #64748b;
+    font-size: 0.6875rem;
+    line-height: 1.65;
+    overflow-wrap: anywhere;
+  }
+}

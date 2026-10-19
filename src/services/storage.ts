@@ -1,3 +1,4 @@
+import { validateFacilityRelocation } from '../entities/zone/model/facilityLocation.rules';
 import { LocalHandoffRepository } from './LocalHandoffRepository';
 import {
   BusinessService,
@@ -19,6 +20,9 @@ import { prepareWebDemoData } from './geo/WebDemoData';
 import { prepareHandoffDemoData } from './HandoffDemoData';
 import { eligibilityReasons } from './geo/DispatchService';
 import { serviceAreaService } from './geo/ServiceAreaService';
+import { commitFacility } from './zones/commitFacility';
+import { readZones, ZONES_KEY, notifyZones } from './zones/zoneStorage';
+import { validatePinnedFacility } from '../entities/zone/model/zone.rules';
 import {
   AuditLog,
   CatalogItem,
@@ -509,6 +513,7 @@ class StorageService {
   }
 
   public resetAll(): void {
+    localStorage.removeItem(ZONES_KEY);
     localStorage.removeItem(this.workflowKey);
     localStorage.setItem(
       STORAGE_KEYS.CURRENT_USER,
@@ -551,6 +556,7 @@ class StorageService {
       JSON.stringify(INITIAL_SETTINGS),
     );
     this.initializeWorkflow();
+    notifyZones();
     this.notify();
   }
 
@@ -1655,6 +1661,7 @@ class StorageService {
     >,
   ): Facility {
     this.validateFacility(facData);
+    if (!facData.zoneId) throw Error('Selecciona una zona y ubica el pin de la sede.');
     const facilities = this.getFacilities();
     const newId = 'FAC-0' + (facilities.length + 1);
     const newFacility: Facility = {
@@ -1665,7 +1672,8 @@ class StorageService {
       currentLoadKgDay: 0,
     };
     facilities.push(newFacility);
-    this.saveFacilities(facilities);
+    commitFacility(facilities, newFacility, STORAGE_KEYS.FACILITIES);
+    this.notify();
     return newFacility;
   }
 
@@ -1674,14 +1682,21 @@ class StorageService {
     const facilities = this.getFacilities();
     const idx = facilities.findIndex((f) => f.id === facility.id);
     if (idx !== -1) {
+      validateFacilityRelocation(
+        facilities[idx], facility, readZones(), this.getWorkflow().orders,
+      );
       facilities[idx] = facility;
-      this.saveFacilities(facilities);
+      if (facility.zoneId) {
+        commitFacility(facilities, facility, STORAGE_KEYS.FACILITIES);
+        this.notify();
+      } else this.saveFacilities(facilities);
     }
   }
 
   private validateFacility(facility: Partial<Facility>): void {
     if (this.getCurrentUser().role !== 'ADMIN')
       throw Error('Solo el Administrador puede configurar sedes.');
+    validatePinnedFacility(facility, readZones());
     const c = facility.coordinates,
       schedule = facility.operatingSchedule;
     if (

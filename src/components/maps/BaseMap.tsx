@@ -1,6 +1,12 @@
+import { mapSymbols, pointColor } from './mapPointAppearance';
+import { useZoneBounds } from './useZoneBounds';
 import React, { useEffect, useRef, useState } from 'react';
 import type mapboxgl from 'mapbox-gl';
-import { SERVICE_AREAS } from '../../services/geo/demo';
+import { useMapCoverage } from './useMapCoverage';
+import { CoordinateMap } from './CoordinateMap';
+import { useZoneLayers } from './useZoneLayers';
+import { useVertexMarkers } from './useVertexMarkers';
+import type { ZoneMapOptions } from './zoneMap.types';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { geoConfig } from '../../services/geo/geo.config';
 import {
@@ -17,20 +23,6 @@ export interface MapPoint {
   detail?: string;
   status?: string;
 }
-const symbols = {
-  facility: 'S',
-  driver: 'C',
-  pickup: 'R',
-  delivery: 'E',
-  incident: '!',
-};
-const colors = {
-  facility: '#143F73',
-  driver: '#087E8B',
-  pickup: '#668B16',
-  delivery: '#143F73',
-  incident: '#B45309',
-};
 export function BaseMap({
   points = [],
   route,
@@ -38,6 +30,11 @@ export function BaseMap({
   onPick,
   onSelect,
   height = 430,
+  zones: providedZones,
+  vertices = [],
+  onVertexMove,
+  onClosePolygon,
+  fitZones = false,
 }: {
   points?: MapPoint[];
   route?: RouteSummary | null;
@@ -45,7 +42,9 @@ export function BaseMap({
   onPick?: (p: Coordinates) => void;
   onSelect?: (id: string) => void;
   height?: number;
-}) {
+  fitZones?: boolean;
+} & ZoneMapOptions) {
+  const zones = useMapCoverage(providedZones);
   const host = useRef<HTMLDivElement>(null),
     map = useRef<mapboxgl.Map | null>(null);
   const runtime = useRef<typeof import('mapbox-gl').default | null>(null);
@@ -55,6 +54,13 @@ export function BaseMap({
   select.current = onSelect;
   const [error, setError] = useState(''),
     [ready, setReady] = useState(false);
+  useZoneLayers(map, ready, { zones, vertices });
+  useZoneBounds(map, ready, zones, fitZones);
+  useVertexMarkers(map, runtime, ready, {
+    vertices,
+    onVertexMove,
+    onClosePolygon,
+  });
   useEffect(() => {
     if (!host.current || !geoConfig.accessToken) return;
     let instance: mapboxgl.Map | undefined,
@@ -86,13 +92,7 @@ export function BaseMap({
             type: 'geojson',
             data: {
               type: 'FeatureCollection',
-              features: SERVICE_AREAS.filter((area) => area.active).map(
-                (area) => ({
-                  type: 'Feature',
-                  properties: { name: area.name },
-                  geometry: area.polygon,
-                }),
-              ),
+              features: [],
             },
           });
           instance.addLayer({
@@ -136,18 +136,10 @@ export function BaseMap({
     const markers = points.map((point) => {
       const button = document.createElement('button');
       button.type = 'button';
-      button.textContent = symbols[point.kind];
+      button.textContent = mapSymbols[point.kind];
       button.title = `${point.label}${point.detail ? ` · ${point.detail}` : ''}`;
       button.setAttribute('aria-label', button.title);
-      const background =
-        point.kind === 'driver'
-          ? ({
-              AVAILABLE: '#087E8B',
-              ON_SERVICE: '#143F73',
-              BREAK: '#B45309',
-              OFFLINE: '#64748B',
-            }[point.status ?? ''] ?? colors.driver)
-          : colors[point.kind];
+      const background = pointColor(point);
       Object.assign(button.style, {
         background,
         color: 'white',
@@ -187,7 +179,7 @@ export function BaseMap({
   }, [points, route, ready]);
   return (
     <div className="space-y-2">
-      {geoConfig.accessToken ? (
+      {geoConfig.accessToken && !error ? (
         <div
           ref={host}
           style={{ height }}
@@ -195,15 +187,18 @@ export function BaseMap({
           aria-label="Mapa de ubicaciones Laundry"
         />
       ) : (
-        <div
-          className="rounded-xl border border-slate-200 bg-slate-50 p-6"
-          role="status"
-        >
-          <p className="font-semibold">Mapa pendiente de configuración</p>
-          <p className="text-sm text-slate-600">
-            Las direcciones y la demostración local siguen disponibles.
-          </p>
-        </div>
+        <CoordinateMap
+          followCenter={center !== geoConfig.center}
+          zones={zones}
+          vertices={vertices}
+          points={points}
+          center={center}
+          height={height}
+          onPick={onPick}
+          onSelect={onSelect}
+          onVertexMove={onVertexMove}
+          onClosePolygon={onClosePolygon}
+        />
       )}
       {error && (
         <p role="alert" className="text-sm text-amber-800">

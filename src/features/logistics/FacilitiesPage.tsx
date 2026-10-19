@@ -1,4 +1,10 @@
+import '../../shared/ui/operations/operations.css';
+import { Dialog } from '../../shared/ui/Dialog';
+import { FacilityPinPreview } from './zones/FacilityPinPreview';
 import React, { useState } from 'react';
+import { ZonesPanel } from './zones/ZonesPanel';
+import { useZones } from './zones/useZones';
+import { facilityZoneId } from '../../entities/zone/model/zone.rules';
 import { useApp } from '../../context/AppContext';
 import { PageHeader } from '../../components/common/PageHeader';
 import { MetricCard } from '../../components/common/MetricCard';
@@ -10,7 +16,6 @@ import {
   Plus,
   Edit2,
   CheckCircle2,
-  X,
   Phone,
   User,
   MapPin,
@@ -20,6 +25,9 @@ export const FacilitiesPage: React.FC = () => {
   const { facilities, createFacility, updateFacility, currentUser, showToast } =
     useApp();
   const isAdmin = currentUser.role === 'ADMIN';
+  const { zones } = useZones();
+  const [placing, setPlacing] = useState(false);
+  const [zoneId, setZoneId] = useState<string>();
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingFacility, setEditingFacility] = useState<Facility | null>(null);
@@ -57,6 +65,7 @@ export const FacilitiesPage: React.FC = () => {
 
   const handleOpenCreate = () => {
     setEditingFacility(null);
+    setZoneId(undefined);
     setAllowsCustomerPickup(true);
     setDays([1, 2, 3, 4, 5, 6]);
     setOpen('08:00');
@@ -65,18 +74,19 @@ export const FacilitiesPage: React.FC = () => {
     setLng(-79.8682);
     setName('');
     setCode('HUB-NUEVO');
-    setAddress('Av. Los Fresnos 450');
-    setCity('Metropolitana');
+    setAddress('');
+    setCity('');
     setZone('Zona Norte & Centro');
     setCapacityMaxKgDay(1000);
-    setPhone('+51 1 555-0100');
-    setManagerName('Admin Responsable');
+    setPhone('');
+    setManagerName('');
     setStatus('ACTIVE');
     setIsDrawerOpen(true);
   };
 
   const handleOpenEdit = (facility: Facility) => {
     setEditingFacility(facility);
+    setZoneId(facilityZoneId(facility, zones));
     setAllowsCustomerPickup(facility.allowsCustomerPickup !== false);
     setDays(facility.operatingSchedule?.days ?? [1, 2, 3, 4, 5, 6]);
     setOpen(facility.operatingSchedule?.open ?? '08:00');
@@ -108,6 +118,7 @@ export const FacilitiesPage: React.FC = () => {
           address,
           city,
           zone,
+          zoneId,
           capacityMaxKgDay,
           phone,
           managerName,
@@ -124,6 +135,7 @@ export const FacilitiesPage: React.FC = () => {
           address,
           city,
           zone,
+          zoneId,
           capacityMaxKgDay,
           phone,
           managerName,
@@ -146,7 +158,7 @@ export const FacilitiesPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="ops-ui space-y-8">
       <PageHeader
         title="Sedes Operativas y Plantas de Lavado"
         subtitle={
@@ -157,7 +169,7 @@ export const FacilitiesPage: React.FC = () => {
         actions={
           isAdmin ? (
             <button
-              onClick={handleOpenCreate}
+              onClick={() => setPlacing(true)}
               className="px-4 py-2.5 text-xs font-bold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
             >
               <Plus className="w-4 h-4" />
@@ -197,6 +209,21 @@ export const FacilitiesPage: React.FC = () => {
         />
       </div>
 
+      <ZonesPanel
+        facilities={facilities}
+        editable={isAdmin}
+        placing={placing}
+        onPlacingChange={setPlacing}
+        onPick={(selected, point, formattedAddress) => {
+          handleOpenCreate();
+          setZoneId(selected.id);
+          setZone(selected.name);
+          setLat(point.lat);
+          setLng(point.lng);
+          setAddress(formattedAddress ?? '');
+        }}
+      />
+
       {/* Facilities Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {facilities.map((fac) => {
@@ -232,7 +259,9 @@ export const FacilitiesPage: React.FC = () => {
                   <span className="truncate">{fac.address}</span>
                 </p>
                 <p className="text-xs text-slate-600 font-medium mt-0.5">
-                  Zona: {fac.zone}
+                  Zona:{' '}
+                  {zones.find((zone) => zone.id === facilityZoneId(fac, zones))
+                    ?.name ?? fac.zone}
                 </p>
 
                 <p className="text-xs text-slate-600 mt-2">
@@ -310,242 +339,247 @@ export const FacilitiesPage: React.FC = () => {
 
       {/* Drawer Crear / Editar Sede */}
       {isAdmin && isDrawerOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-end bg-slate-900/60 backdrop-blur-2xs animate-in fade-in">
-          <div className="bg-white w-full max-w-lg h-full shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right duration-200">
-            <div className="p-5 border-b border-slate-200/80 bg-slate-50/70 flex items-center justify-between">
-              <div>
-                <h3 className="text-base font-bold text-slate-900">
-                  {editingFacility
-                    ? `Editar: ${editingFacility.name}`
-                    : 'Registrar Nueva Sede'}
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Configuración de planta y capacidad industrial diaria
-                </p>
-              </div>
-              <button
-                onClick={() => setIsDrawerOpen(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200 cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
+        <Dialog
+          title={editingFacility ? 'Editar sede' : 'Registrar Nueva Sede'}
+          onClose={() => setIsDrawerOpen(false)}
+        >
+          <form onSubmit={handleSubmit} className="space-y-4 text-xs">
+            <FacilityPinPreview
+              zones={zones}
+              zoneId={zoneId}
+              point={{ lat, lng }}
+              onMove={(point) => {
+                setLat(point.lat);
+                setLng(point.lng);
+              }}
+            />
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">
+                Nombre de la Sede *
+              </label>
+              <input
+                type="text"
+                required
+                aria-label="Nombre de la sede"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Ej: Sede Central Norte - Clean Hub"
+                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-sky-500"
+              />
             </div>
 
-            <form
-              onSubmit={handleSubmit}
-              className="p-5 space-y-4 overflow-y-auto flex-1 text-xs"
-            >
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">
-                  Nombre de la Sede *
+                  Código Identificador *
                 </label>
                 <input
                   type="text"
                   required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Ej: Sede Central Norte - Clean Hub"
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-sky-500"
+                  aria-label="Codigo de la sede"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.toUpperCase())}
+                  placeholder="HUB-01"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold focus:outline-none focus:border-sky-500"
                 />
               </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    Código Identificador *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={code}
-                    onChange={(e) => setCode(e.target.value.toUpperCase())}
-                    placeholder="HUB-01"
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold focus:outline-none focus:border-sky-500"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    Capacidad Máx (kg/día)
-                  </label>
-                  <input
-                    type="number"
-                    value={capacityMaxKgDay}
-                    onChange={(e) =>
-                      setCapacityMaxKgDay(parseInt(e.target.value) || 0)
-                    }
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono focus:outline-none focus:border-sky-500"
-                  />
-                </div>
-              </div>
-
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">
-                  Dirección completa
+                  Capacidad Máx (kg/día)
+                </label>
+                <input
+                  type="number"
+                  aria-label="Capacidad diaria de la sede"
+                  value={capacityMaxKgDay}
+                  onChange={(e) =>
+                    setCapacityMaxKgDay(parseInt(e.target.value) || 0)
+                  }
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono focus:outline-none focus:border-sky-500"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">
+                Dirección completa
+              </label>
+              <input
+                type="text"
+                required
+                aria-label="Direccion de la sede"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-sky-500"
+              />
+            </div>
+
+            <label className="block font-semibold text-slate-700">
+              Ciudad
+              <input
+                aria-label="Ciudad de la sede"
+                required
+                value={city}
+                onChange={(event) => setCity(event.target.value)}
+                className="mt-1 w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs"
+              />
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Zona de Cobertura
                 </label>
                 <input
                   type="text"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
+                  value={zone}
+                  readOnly={!!zoneId}
+                  onChange={(e) => setZone(e.target.value)}
                   className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-sky-500"
                 />
               </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    Zona de Cobertura
-                  </label>
-                  <input
-                    type="text"
-                    value={zone}
-                    onChange={(e) => setZone(e.target.value)}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-sky-500"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    Estado
-                  </label>
-                  <select
-                    value={status}
-                    onChange={(e) => setStatus(e.target.value as any)}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-sky-500"
-                  >
-                    <option value="ACTIVE">Activa / Operando</option>
-                    <option value="MAINTENANCE">En Mantenimiento</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    Jefe de Planta
-                  </label>
-                  <input
-                    type="text"
-                    value={managerName}
-                    onChange={(e) => setManagerName(e.target.value)}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-sky-500"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    Teléfono Directo
-                  </label>
-                  <input
-                    type="text"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-sky-500"
-                  />
-                </div>
-              </div>
-
-              <fieldset className="space-y-3 rounded-xl bg-slate-50 border border-slate-200 p-4">
-                <legend className="font-bold">Recepción y horarios</legend>
-                <label className="flex gap-2">
-                  <input
-                    type="checkbox"
-                    checked={allowsCustomerPickup}
-                    onChange={(e) => setAllowsCustomerPickup(e.target.checked)}
-                  />
-                  Permite retiro del cliente
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Estado
                 </label>
-                <div className="flex flex-wrap gap-3">
-                  {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map(
-                    (name, index) => (
-                      <label key={name} className="flex gap-1">
-                        <input
-                          type="checkbox"
-                          checked={days.includes(index)}
-                          onChange={(e) =>
-                            setDays(
-                              e.target.checked
-                                ? [...days, index]
-                                : days.filter((d) => d !== index),
-                            )
-                          }
-                        />
-                        {name}
-                      </label>
-                    ),
-                  )}
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <label>
-                    Apertura
-                    <input
-                      aria-label="Apertura"
-                      type="time"
-                      required
-                      value={open}
-                      onChange={(e) => setOpen(e.target.value)}
-                      className="w-full p-2 border border-slate-200 rounded-lg"
-                    />
-                  </label>
-                  <label>
-                    Cierre
-                    <input
-                      aria-label="Cierre"
-                      type="time"
-                      required
-                      value={close}
-                      onChange={(e) => setClose(e.target.value)}
-                      className="w-full p-2 border border-slate-200 rounded-lg"
-                    />
-                  </label>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <label>
-                    Latitud
-                    <input
-                      aria-label="Latitud de la sede"
-                      type="number"
-                      step="any"
-                      required
-                      value={lat}
-                      onChange={(e) => setLat(Number(e.target.value))}
-                      className="w-full p-2 border border-slate-200 rounded-lg"
-                    />
-                  </label>
-                  <label>
-                    Longitud
-                    <input
-                      aria-label="Longitud de la sede"
-                      type="number"
-                      step="any"
-                      required
-                      value={lng}
-                      onChange={(e) => setLng(Number(e.target.value))}
-                      className="w-full p-2 border border-slate-200 rounded-lg"
-                    />
-                  </label>
-                </div>
-                <p className="text-slate-500">
-                  Las franjas se configuran dentro de estos horarios. La
-                  cobertura depende de las zonas autorizadas del módulo
-                  geográfico.
-                </p>
-              </fieldset>
-              <div className="pt-4 border-t border-slate-200 flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsDrawerOpen(false)}
-                  className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
+                <select
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value as any)}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-sky-500"
                 >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2.5 bg-[#0F4C81] hover:bg-[#0A3660] text-white font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
-                >
-                  {editingFacility ? 'Guardar Cambios' : 'Registrar Sede'}
-                </button>
+                  <option value="ACTIVE">Activa / Operando</option>
+                  <option value="MAINTENANCE">En Mantenimiento</option>
+                </select>
               </div>
-            </form>
-          </div>
-        </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Jefe de Planta
+                </label>
+                <input
+                  type="text"
+                  aria-label="Responsable de la sede"
+                  value={managerName}
+                  onChange={(e) => setManagerName(e.target.value)}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-sky-500"
+                />
+              </div>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Teléfono Directo
+                </label>
+                <input
+                  type="text"
+                  aria-label="Telefono de la sede"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-sky-500"
+                />
+              </div>
+            </div>
+
+            <fieldset className="space-y-3 rounded-xl bg-slate-50 border border-slate-200 p-4">
+              <legend className="font-bold">Recepción y horarios</legend>
+              <label className="flex gap-2">
+                <input
+                  type="checkbox"
+                  checked={allowsCustomerPickup}
+                  onChange={(e) => setAllowsCustomerPickup(e.target.checked)}
+                />
+                Permite retiro del cliente
+              </label>
+              <div className="flex flex-wrap gap-3">
+                {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map(
+                  (name, index) => (
+                    <label key={name} className="flex gap-1">
+                      <input
+                        type="checkbox"
+                        checked={days.includes(index)}
+                        onChange={(e) =>
+                          setDays(
+                            e.target.checked
+                              ? [...days, index]
+                              : days.filter((d) => d !== index),
+                          )
+                        }
+                      />
+                      {name}
+                    </label>
+                  ),
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <label>
+                  Apertura
+                  <input
+                    aria-label="Apertura"
+                    type="time"
+                    required
+                    value={open}
+                    onChange={(e) => setOpen(e.target.value)}
+                    className="w-full p-2 border border-slate-200 rounded-lg"
+                  />
+                </label>
+                <label>
+                  Cierre
+                  <input
+                    aria-label="Cierre"
+                    type="time"
+                    required
+                    value={close}
+                    onChange={(e) => setClose(e.target.value)}
+                    className="w-full p-2 border border-slate-200 rounded-lg"
+                  />
+                </label>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <label>
+                  Latitud
+                  <input
+                    aria-label="Latitud de la sede"
+                    type="number"
+                    step="any"
+                    required
+                    value={lat}
+                    onChange={(e) => setLat(Number(e.target.value))}
+                    className="w-full p-2 border border-slate-200 rounded-lg"
+                  />
+                </label>
+                <label>
+                  Longitud
+                  <input
+                    aria-label="Longitud de la sede"
+                    type="number"
+                    step="any"
+                    required
+                    value={lng}
+                    onChange={(e) => setLng(Number(e.target.value))}
+                    className="w-full p-2 border border-slate-200 rounded-lg"
+                  />
+                </label>
+              </div>
+              <p className="text-slate-500">
+                Las franjas se configuran dentro de estos horarios. La cobertura
+                depende de las zonas autorizadas del módulo geográfico.
+              </p>
+            </fieldset>
+            <div className="pt-4 border-t border-slate-200 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsDrawerOpen(false)}
+                className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="px-5 py-2.5 bg-[#0F4C81] hover:bg-[#0A3660] text-white font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
+              >
+                {editingFacility ? 'Guardar Cambios' : 'Registrar Sede'}
+              </button>
+            </div>
+          </form>
+        </Dialog>
       )}
     </div>
   );

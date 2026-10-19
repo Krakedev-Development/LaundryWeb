@@ -26,7 +26,7 @@ npm run dev
 
 La aplicacion intenta usar `http://localhost:3000`. Si ese puerto esta ocupado, Vite muestra en la terminal el siguiente puerto disponible.
 
-El modo demo conserva datos locales y escenarios de Samborondón sin credenciales. Copia `.env.example` a `.env` y configura Mapbox para mapas, Geocoding v6, Directions y Matrix reales. Consulta [el alcance, configuración y recorrido completo](GEO-MVP.md). LaundryApp y LaundryWeb son demostraciones independientes.
+El modo demo conserva datos locales y escenarios de Samborondón sin credenciales. Copia `.env.example` a `.env` y configura Mapbox para mapas, Geocoding v6, Directions y Matrix reales. Consulta [el alcance, configuración y recorrido completo](GEO-MVP.md) y [el registro de zonas y varias sedes mediante el mapa](LOGISTICS-ZONES-MVP.md). LaundryApp y LaundryWeb son demostraciones independientes.
 
 ## Verificacion
 

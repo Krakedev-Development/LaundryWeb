@@ -1,0 +1,82 @@
+@layer components {
+  .ops-ui .ops-layer-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem 1.25rem;
+    border-top: 1px solid #f1f5f9;
+    background: #f8fafc80;
+  }
+  .ops-ui .ops-layer {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.625rem;
+    background: white;
+    color: #64748b;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .ops-ui .ops-layer:has(input:checked) {
+    background: #f0f6fc;
+    border-color: #dbeafe;
+    color: #0f4c81;
+  }
+  .ops-ui .ops-layer > svg {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+  .ops-ui .ops-driver-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0.75rem;
+    padding: 1.25rem;
+  }
+  .ops-ui .ops-driver-select {
+    width: 100%;
+  }
+  .ops-ui .ops-control-note {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.875rem 1.25rem;
+    border-top: 1px solid #f1f5f9;
+    background: #f8fafc80;
+    font-size: 0.6875rem;
+    color: #64748b;
+  }
+  .ops-ui .ops-zone-select:focus-visible {
+    outline: 2px solid #0284c7;
+    outline-offset: 2px;
+  }
+  .ops-ui .ops-map-legend {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.875rem 1.25rem;
+    border-top: 1px solid #f1f5f9;
+    background: #f8fafc80;
+    font-size: 0.625rem;
+    color: #64748b;
+  }
+  @media (min-width: 640px) {
+    .ops-ui .ops-driver-select {
+      width: 15rem;
+    }
+  }
+  @media (min-width: 1280px) {
+    .ops-ui .ops-zones-layout {
+      grid-template-columns: 19rem minmax(0, 1fr);
+    }
+    .ops-ui .ops-zone-sidebar {
+      border-bottom: 0;
+      border-right: 1px solid #e2e8f0;
+    }
+  }
+}

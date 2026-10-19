@@ -262,6 +262,7 @@ export interface Driver {
 }
 
 export interface Facility {
+  zoneId?: string;
   operatingSchedule?: { days: number[]; open: string; close: string };
   acceptsCustomerDropoff?: boolean;
   allowsCustomerPickup?: boolean;

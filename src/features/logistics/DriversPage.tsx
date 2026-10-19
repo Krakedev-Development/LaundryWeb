@@ -1,3 +1,4 @@
+import { useZones } from './zones/useZones';
 import { IconPlaceholder } from '../../components/common/IconPlaceholder';
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
@@ -29,6 +30,7 @@ export const DriversPage: React.FC = () => {
     showToast,
   } = useApp();
   const isAdmin = currentUser.role === 'ADMIN';
+  const { zones } = useZones();
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingDriver, setEditingDriver] = useState<Driver | null>(null);
@@ -89,11 +91,9 @@ export const DriversPage: React.FC = () => {
     const facility = facilities.find((f) => f.id === facilityId);
     const facilityName = facility?.name || 'Sede Central Norte';
     const zoneName =
-      zoneId === 'ZONA-NORTE'
-        ? 'Zona Norte & Centro'
-        : zoneId === 'ZONA-SUR'
-          ? 'Zona Sur & Bahía'
-          : 'Zona Financiera & Residencial';
+      zones.find((zone) => zone.id === zoneId)?.name ??
+      editingDriver?.zoneName ??
+      '';
 
     try {
       if (editingDriver) {
@@ -108,6 +108,12 @@ export const DriversPage: React.FC = () => {
           facilityName,
           zoneId,
           zoneName,
+          authorizedZoneIds: [
+            ...new Set([
+              ...(editingDriver.authorizedZoneIds ?? [editingDriver.zoneId]),
+              zoneId,
+            ]),
+          ],
           maxOrders,
           status,
         });
@@ -265,7 +271,8 @@ export const DriversPage: React.FC = () => {
                     </td>
 
                     <td className="py-3.5 px-4 whitespace-nowrap text-slate-600">
-                      {driver.zoneName}
+                      {zones.find((zone) => zone.id === driver.zoneId)?.name ??
+                        driver.zoneName}
                     </td>
 
                     <td className="py-3.5 px-4 text-center whitespace-nowrap">
@@ -461,9 +468,13 @@ export const DriversPage: React.FC = () => {
                     onChange={(e) => setZoneId(e.target.value)}
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-sky-500"
                   >
-                    <option value="ZONA-NORTE">Zona Norte & Centro</option>
-                    <option value="ZONA-SUR">Zona Sur & Bahía</option>
-                    <option value="ZONA-FINANCIERA">Zona Financiera</option>
+                    {zones
+                      .filter((zone) => zone.active || zone.id === zoneId)
+                      .map((zone) => (
+                        <option key={zone.id} value={zone.id}>
+                          {zone.name}
+                        </option>
+                      ))}
                   </select>
                 </div>
               </div>
