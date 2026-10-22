@@ -1,5 +1,6 @@
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
 import { SERVICE_AREAS } from './demo';
+import { readCoverageAreas } from '../zones/zoneStorage';
 import {
   toLngLat,
   validCoordinates,
@@ -8,7 +9,15 @@ import {
 } from './geo.types';
 
 export class ServiceAreaService {
-  constructor(public areas: ServiceArea[] = SERVICE_AREAS) {}
+  constructor(
+    private source: ServiceArea[] | (() => ServiceArea[]) = SERVICE_AREAS,
+  ) {}
+  get areas() {
+    return typeof this.source === 'function' ? this.source() : this.source;
+  }
+  set areas(areas: ServiceArea[]) {
+    this.source = areas;
+  }
   findArea(coordinates: Coordinates) {
     if (!validCoordinates(coordinates)) return undefined;
     // Boundary belongs to the first active matching area, making overlaps deterministic.
@@ -32,4 +41,4 @@ export class ServiceAreaService {
     return area;
   }
 }
-export const serviceAreaService = new ServiceAreaService();
+export const serviceAreaService = new ServiceAreaService(readCoverageAreas);

@@ -1,3 +1,4 @@
+import { IconPlaceholder } from '../../components/common/IconPlaceholder';
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
@@ -18,7 +19,8 @@ import {
 } from 'lucide-react';
 
 export const IncidentsPage: React.FC = () => {
-  const { incidents, updateIncidentStatus, addIncidentNote, currentUser } = useApp();
+  const { incidents, updateIncidentStatus, addIncidentNote, currentUser } =
+    useApp();
   const navigate = useNavigate();
 
   // Selected tab
@@ -26,7 +28,9 @@ export const IncidentsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   // Selected incident for detail drawer
-  const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null);
+  const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(
+    null,
+  );
 
   // New note input state
   const [newNoteText, setNewNoteText] = useState('');
@@ -37,9 +41,15 @@ export const IncidentsPage: React.FC = () => {
 
   // KPI counts
   const abiertasCount = incidents.filter((i) => i.status === 'OPEN').length;
-  const investigacionCount = incidents.filter((i) => i.status === 'IN_PROGRESS').length;
-  const pendientesCierreCount = incidents.filter((i) => i.status === 'PENDING_CLOSURE').length;
-  const resueltasCount = incidents.filter((i) => i.status === 'RESOLVED').length;
+  const investigacionCount = incidents.filter(
+    (i) => i.status === 'IN_PROGRESS',
+  ).length;
+  const pendientesCierreCount = incidents.filter(
+    (i) => i.status === 'PENDING_CLOSURE',
+  ).length;
+  const resueltasCount = incidents.filter(
+    (i) => i.status === 'RESOLVED',
+  ).length;
 
   const filteredIncidents = useMemo(() => {
     return incidents.filter((inc) => {
@@ -73,15 +83,36 @@ export const IncidentsPage: React.FC = () => {
   };
 
   const getSeverityBadge = (sev: IncidentSeverity) => {
-    const config: Record<IncidentSeverity, { bg: string; text: string; border: string }> = {
-      CRITICA: { bg: 'bg-red-100', text: 'text-red-900', border: 'border-red-300' },
-      ALTA: { bg: 'bg-amber-100', text: 'text-amber-900', border: 'border-amber-300' },
-      MEDIA: { bg: 'bg-yellow-50', text: 'text-yellow-800', border: 'border-yellow-200' },
-      BAJA: { bg: 'bg-blue-50', text: 'text-blue-800', border: 'border-blue-200' },
+    const config: Record<
+      IncidentSeverity,
+      { bg: string; text: string; border: string }
+    > = {
+      CRITICA: {
+        bg: 'bg-red-100',
+        text: 'text-red-900',
+        border: 'border-red-300',
+      },
+      ALTA: {
+        bg: 'bg-amber-100',
+        text: 'text-amber-900',
+        border: 'border-amber-300',
+      },
+      MEDIA: {
+        bg: 'bg-yellow-50',
+        text: 'text-yellow-800',
+        border: 'border-yellow-200',
+      },
+      BAJA: {
+        bg: 'bg-blue-50',
+        text: 'text-blue-800',
+        border: 'border-blue-200',
+      },
     };
     const c = config[sev] || config.MEDIA;
     return (
-      <span className={`inline-flex items-center gap-1 font-bold text-[10px] px-2 py-0.5 rounded border ${c.bg} ${c.text} ${c.border}`}>
+      <span
+        className={`inline-flex items-center gap-1 font-bold text-[10px] px-2 py-0.5 rounded border ${c.bg} ${c.text} ${c.border}`}
+      >
         {sev}
       </span>
     );
@@ -90,13 +121,24 @@ export const IncidentsPage: React.FC = () => {
   const getStatusBadge = (st: IncidentStatus) => {
     const config: Record<IncidentStatus, { label: string; bg: string }> = {
       OPEN: { label: 'Abierta', bg: 'bg-red-50 text-red-700 border-red-200' },
-      IN_PROGRESS: { label: 'En investigación', bg: 'bg-amber-50 text-amber-800 border-amber-200' },
-      PENDING_CLOSURE: { label: 'Pendiente cierre', bg: 'bg-sky-50 text-sky-800 border-sky-200' },
-      RESOLVED: { label: 'Resuelta', bg: 'bg-emerald-50 text-emerald-800 border-emerald-200' },
+      IN_PROGRESS: {
+        label: 'En investigación',
+        bg: 'bg-amber-50 text-amber-800 border-amber-200',
+      },
+      PENDING_CLOSURE: {
+        label: 'Pendiente cierre',
+        bg: 'bg-sky-50 text-sky-800 border-sky-200',
+      },
+      RESOLVED: {
+        label: 'Resuelta',
+        bg: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+      },
     };
     const c = config[st] || config.OPEN;
     return (
-      <span className={`inline-block font-semibold text-xs px-2 py-0.5 rounded border ${c.bg}`}>
+      <span
+        className={`inline-block font-semibold text-xs px-2 py-0.5 rounded border ${c.bg}`}
+      >
         {c.label}
       </span>
     );
@@ -114,7 +156,8 @@ export const IncidentsPage: React.FC = () => {
         <div className="flex items-center gap-3">
           <ShieldAlert className="w-5 h-5 text-rose-600 shrink-0" />
           <p className="text-xs font-bold text-rose-950">
-            Regla de Integridad Operativa: Las solicitudes con incidencias abiertas o en investigación NO pueden finalizarse en el sistema.
+            Regla de Integridad Operativa: Las solicitudes con incidencias
+            abiertas o en investigación NO pueden finalizarse en el sistema.
           </p>
         </div>
       </div>
@@ -159,8 +202,16 @@ export const IncidentsPage: React.FC = () => {
             {[
               { id: 'ALL', label: 'Todas', count: incidents.length },
               { id: 'OPEN', label: 'Abiertas', count: abiertasCount },
-              { id: 'IN_PROGRESS', label: 'En investigación', count: investigacionCount },
-              { id: 'PENDING_CLOSURE', label: 'Pendientes de cierre', count: pendientesCierreCount },
+              {
+                id: 'IN_PROGRESS',
+                label: 'En investigación',
+                count: investigacionCount,
+              },
+              {
+                id: 'PENDING_CLOSURE',
+                label: 'Pendientes de cierre',
+                count: pendientesCierreCount,
+              },
               { id: 'RESOLVED', label: 'Resueltas', count: resueltasCount },
             ].map((tab) => (
               <button
@@ -173,7 +224,9 @@ export const IncidentsPage: React.FC = () => {
                 }`}
               >
                 <span>{tab.label}</span>
-                <span className="text-[11px] font-mono opacity-75">({tab.count})</span>
+                <span className="text-[11px] font-mono opacity-75">
+                  ({tab.count})
+                </span>
               </button>
             ))}
           </div>
@@ -288,29 +341,44 @@ export const IncidentsPage: React.FC = () => {
               <div className="p-4 bg-[#F7F9FC] rounded-xl border border-slate-200 space-y-2">
                 <div className="flex justify-between">
                   <span className="text-slate-500">Cliente afectado:</span>
-                  <span className="font-bold text-slate-900">{selectedIncident.customerName}</span>
+                  <span className="font-bold text-slate-900">
+                    {selectedIncident.customerName}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">Tipo de caso:</span>
-                  <span className="font-semibold text-slate-800">{selectedIncident.type}</span>
+                  <span className="font-semibold text-slate-800">
+                    {selectedIncident.type}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">Responsable asignado:</span>
-                  <span className="font-semibold text-[#143F73]">{selectedIncident.assignedTo}</span>
+                  <span className="font-semibold text-[#143F73]">
+                    {selectedIncident.assignedTo}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">Reportado por:</span>
-                  <span className="text-slate-700">{selectedIncident.reportedBy} ({selectedIncident.reportedRole})</span>
+                  <span className="text-slate-700">
+                    {selectedIncident.reportedBy} (
+                    {selectedIncident.reportedRole})
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Fecha y hora de registro:</span>
-                  <span className="font-mono text-slate-700">{selectedIncident.createdAt}</span>
+                  <span className="text-slate-500">
+                    Fecha y hora de registro:
+                  </span>
+                  <span className="font-mono text-slate-700">
+                    {selectedIncident.createdAt}
+                  </span>
                 </div>
               </div>
 
               {/* Description */}
               <div>
-                <h4 className="font-bold text-slate-900 mb-1">Descripción del Incidente:</h4>
+                <h4 className="font-bold text-slate-900 mb-1">
+                  Descripción del Incidente:
+                </h4>
                 <p className="p-3 bg-white border border-slate-200 rounded-xl text-slate-700 leading-relaxed">
                   {selectedIncident.description}
                 </p>
@@ -320,16 +388,28 @@ export const IncidentsPage: React.FC = () => {
               <div>
                 <h4 className="font-bold text-slate-900 mb-1.5 flex items-center gap-1.5">
                   <Camera className="w-4 h-4 text-slate-500" />
-                  Evidencias Fotográficas Adjuntas ({selectedIncident.evidences.length})
+                  Evidencias Fotográficas Adjuntas (
+                  {selectedIncident.evidences.length})
                 </h4>
                 {selectedIncident.evidences.length === 0 ? (
-                  <p className="text-slate-400 italic">No se adjuntaron fotografías al registrar el caso.</p>
+                  <p className="text-slate-400 italic">
+                    No se adjuntaron fotografías al registrar el caso.
+                  </p>
                 ) : (
                   <div className="grid grid-cols-2 gap-3">
                     {selectedIncident.evidences.map((ev) => (
-                      <div key={ev.id} className="rounded-xl border border-slate-200 overflow-hidden bg-slate-50">
-                        <img src={ev.url} alt={ev.caption} className="w-full h-32 object-cover" />
-                        <p className="p-2 text-[11px] text-slate-600">{ev.caption}</p>
+                      <div
+                        key={ev.id}
+                        className="rounded-xl border border-slate-200 overflow-hidden bg-slate-50"
+                      >
+                        <IconPlaceholder
+                          kind="evidence"
+                          label={ev.caption}
+                          className="h-32 w-full"
+                        />
+                        <p className="p-2 text-[11px] text-slate-600">
+                          {ev.caption}
+                        </p>
                       </div>
                     ))}
                   </div>
@@ -343,7 +423,9 @@ export const IncidentsPage: React.FC = () => {
                     <CheckCircle2 className="w-4 h-4" />
                     Caso Resuelto el {selectedIncident.resolvedAt}
                   </div>
-                  <p className="text-xs text-emerald-800">{selectedIncident.resolutionNotes}</p>
+                  <p className="text-xs text-emerald-800">
+                    {selectedIncident.resolutionNotes}
+                  </p>
                 </div>
               )}
 
@@ -351,14 +433,20 @@ export const IncidentsPage: React.FC = () => {
               <div>
                 <h4 className="font-bold text-slate-900 mb-2 flex items-center gap-1.5">
                   <MessageSquare className="w-4 h-4 text-slate-500" />
-                  Bitácora de Notas Internas ({selectedIncident.internalNotes.length})
+                  Bitácora de Notas Internas (
+                  {selectedIncident.internalNotes.length})
                 </h4>
 
                 <div className="space-y-2 mb-3">
                   {selectedIncident.internalNotes.map((note) => (
-                    <div key={note.id} className="p-2.5 bg-slate-50 rounded-lg border border-slate-200">
+                    <div
+                      key={note.id}
+                      className="p-2.5 bg-slate-50 rounded-lg border border-slate-200"
+                    >
                       <div className="flex justify-between text-[11px] text-slate-500 mb-0.5">
-                        <span className="font-bold text-slate-800">{note.author}</span>
+                        <span className="font-bold text-slate-800">
+                          {note.author}
+                        </span>
                         <span className="font-mono">{note.createdAt}</span>
                       </div>
                       <p className="text-slate-700">{note.text}</p>
@@ -386,8 +474,13 @@ export const IncidentsPage: React.FC = () => {
 
               {/* Resolve Form */}
               {isResolving && (
-                <form onSubmit={handleResolveSubmit} className="p-4 bg-emerald-50 rounded-xl border border-emerald-200 space-y-3">
-                  <h4 className="font-bold text-emerald-900">Confirmar Resolución del Caso</h4>
+                <form
+                  onSubmit={handleResolveSubmit}
+                  className="p-4 bg-emerald-50 rounded-xl border border-emerald-200 space-y-3"
+                >
+                  <h4 className="font-bold text-emerald-900">
+                    Confirmar Resolución del Caso
+                  </h4>
                   <textarea
                     value={resolutionNotes}
                     onChange={(e) => setResolutionNotes(e.target.value)}
@@ -418,7 +511,9 @@ export const IncidentsPage: React.FC = () => {
             {/* Footer Actions */}
             <div className="p-4 border-t border-slate-200/80 bg-slate-50/70 flex items-center justify-between">
               <button
-                onClick={() => navigate(`/operations/orders/${selectedIncident.orderId}`)}
+                onClick={() =>
+                  navigate(`/operations/orders/${selectedIncident.orderId}`)
+                }
                 className="text-xs font-semibold text-sky-700 hover:underline"
               >
                 Abrir Solicitud {selectedIncident.orderId} →

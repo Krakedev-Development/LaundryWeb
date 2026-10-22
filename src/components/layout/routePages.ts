@@ -7,7 +7,7 @@ const pageLoaders: Record<string, () => Promise<{ default: ComponentType }>> = {
       default: module.DashboardPage,
     })),
   '/operations/orders': () =>
-    import('../../features/orders/OrdersListPage').then((module) => ({
+    import('../../pages/orders/OrdersListPage').then((module) => ({
       default: module.OrdersListPage,
     })),
   '/operations/orders/:id': () =>

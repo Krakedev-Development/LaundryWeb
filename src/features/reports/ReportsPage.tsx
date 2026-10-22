@@ -1,4 +1,5 @@
 import { operationalStage } from '../../services/fulfillment';
+import {BusinessReportPanel} from './BusinessReportPanel';
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { PageHeader } from '../../components/common/PageHeader';
@@ -34,15 +35,16 @@ export const ReportsPage: React.FC = () => {
   // Export handlers
   const handleExportCSV = () => {
     // Generate clean CSV content
-    const headers = ['ID Solicitud', 'Cliente', 'Servicio', 'Monto Total', 'Estado', 'SLA', 'Fecha Creación'];
+    const headers = ['ID Solicitud', 'Cliente', 'Servicio', 'Monto Total', 'Estado', 'SLA', 'Fecha Creación', 'Modalidad', 'Modelo Precio', 'Peso', 'Unidad', 'Pago', 'Pendiente', 'Sede', 'Próxima Acción'];
     const rows = orders.map((o) => [
       o.id,
       `"${o.customerName}"`,
       `"${o.serviceType}"`,
-      o.pricing.total.toFixed(2),
+      o.pricing.amountKnown===false?'Pendiente de pesaje':o.pricing.total.toFixed(2),
       operationalStage(o),
       o.slaStatus,
       o.createdAt,
+      o.fulfillment?.mode??'HOME_HOME',o.pricing.pricingModel??'FIXED',o.pricing.measuredWeight??'',o.pricing.weightUnit??'',o.pricing.paymentStatus,o.pricing.amountDue??'Pendiente',o.facilityName,o.nextAction??'',
     ]);
 
     const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
@@ -124,6 +126,7 @@ export const ReportsPage: React.FC = () => {
       </div>
 
       {/* Primary KPI Grid per spec #43 */}
+      <BusinessReportPanel facilityId={selectedFacility}/>
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <MetricCard
           title="Total Solicitudes"

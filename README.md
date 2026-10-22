@@ -26,7 +26,7 @@ npm run dev
 
 La aplicacion intenta usar `http://localhost:3000`. Si ese puerto esta ocupado, Vite muestra en la terminal el siguiente puerto disponible.
 
-El modo demo conserva datos locales y escenarios de Samborondón sin credenciales. Copia `.env.example` a `.env` y configura Mapbox para mapas, Geocoding v6, Directions y Matrix reales. Consulta [el alcance, configuración y recorrido completo](GEO-MVP.md). LaundryApp y LaundryWeb son demostraciones independientes.
+El modo demo conserva datos locales y escenarios de Samborondón sin credenciales. Copia `.env.example` a `.env` y configura Mapbox para mapas, Geocoding v6, Directions y Matrix reales. Consulta [el alcance, configuración y recorrido completo](GEO-MVP.md) y [el registro de zonas y varias sedes mediante el mapa](LOGISTICS-ZONES-MVP.md). LaundryApp y LaundryWeb son demostraciones independientes.
 
 ## Verificacion
 
@@ -43,3 +43,7 @@ Para eliminar el build generado:
 ```bash
 npm run clean
 ```
+
+## Modalidades vigentes
+
+Solo se ofrecen **domicilio completo** (recogida y entrega a domicilio) y **pick up** (recogida a domicilio y retiro del cliente en sede). La entrega inicial del cliente en el local no está disponible. Los pedidos guardados con ingreso pendiente requieren confirmar una recogida a domicilio; se conservan pagos y constancias anteriores.

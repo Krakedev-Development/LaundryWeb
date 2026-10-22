@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { BusinessSettingsPanel } from './BusinessSettingsPanel';
 import { useApp } from '../../context/AppContext';
 import { PageHeader } from '../../components/common/PageHeader';
 import { SystemSettings } from '../../types';
@@ -15,6 +16,7 @@ import {
 
 export const SettingsPage: React.FC = () => {
   const { settings, updateSettings, resetAll, currentUser, facilities } = useApp();
+  const [formData, setFormData] = useState<SystemSettings>({ ...settings });
 
   // Role Guard per spec #4 & #44
   if (currentUser.role !== 'ADMIN') {
@@ -29,7 +31,6 @@ export const SettingsPage: React.FC = () => {
     );
   }
 
-  const [formData, setFormData] = useState<SystemSettings>({ ...settings });
 
   const handleChange = (field: keyof SystemSettings, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -57,6 +58,7 @@ export const SettingsPage: React.FC = () => {
       />
 
       <form onSubmit={handleSave} className="space-y-8">
+        <BusinessSettingsPanel/>
         {/* Section 1: Logística y Despacho per spec #44 */}
         <div className="bg-white rounded-2xl border border-slate-200/80 p-6 sm:p-7 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-5">
           <div className="flex items-center gap-2 pb-3 border-b border-slate-100">

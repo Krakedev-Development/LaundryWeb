@@ -38,9 +38,9 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex bg-[#F8FAFC] items-center justify-center p-4 sm:p-8">
+    <div className="min-h-screen w-full flex bg-[#0A3660] items-center justify-center p-4 sm:p-8">
       {/* Light Clean Card Container */}
-      <div className="w-full max-w-4xl bg-white rounded-3xl border border-slate-200/90 shadow-lg overflow-hidden flex flex-col md:flex-row">
+      <div className="w-full max-w-4xl bg-white rounded-3xl border border-slate-200/90 shadow-[0_28px_70px_rgba(0,15,35,0.45),0_8px_24px_rgba(0,15,35,0.25)] overflow-hidden flex flex-col md:flex-row">
         {/* Left Side: Brand & Mission in Light Mode (45%) */}
         <div className="md:w-[45%] bg-[#F0F4F8] p-8 sm:p-10 flex flex-col justify-between border-b md:border-b-0 md:border-r border-slate-200/80">
           <div>
@@ -73,7 +73,7 @@ export const LoginPage: React.FC = () => {
               />
               <div>
                 <p className="text-xs font-bold text-slate-900">
-                  Ropa limpia, un mundo más limpio
+                  Tu ropa siempre limpia, fresca y natural.
                 </p>
                 <p className="text-[11px] text-slate-500">
                   Operaciones eficientes para un mejor mañana.

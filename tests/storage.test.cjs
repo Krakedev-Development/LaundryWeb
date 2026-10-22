@@ -107,3 +107,145 @@ test('local Web lifecycle rechecks assignments, prevents double assignment and r
     1,
   );
 });
+
+test('reception demo upgrades existing storage, covers every sede and preserves consumed codes on reload', () => {
+  const legacy = storageService.getWorkflow();
+  const previousOrder = structuredClone(
+    legacy.orders.find((o) => o.id === 'SOL-DEMO-001'),
+  );
+  // Recreate the previous version, which had no per-sede reception fixtures.
+  const added = legacy.orders.filter((o) => o.id.startsWith('SOL-DEMO-FAC-'));
+  for (const order of added) {
+    const driver = legacy.drivers.find(
+      (d) => d.id === order.fulfillment.inbound.driverId,
+    );
+    if (driver) driver.activeOrders--;
+  }
+  legacy.orders = legacy.orders.filter(
+    (o) => !o.id.startsWith('SOL-DEMO-FAC-'),
+  );
+  legacy.handoffs = legacy.handoffs.filter(
+    (h) => !h.orderId.startsWith('SOL-DEMO-FAC-'),
+  );
+  legacy.handoffAudits = legacy.handoffAudits.filter(
+    (a) => !a.orderId.startsWith('SOL-DEMO-FAC-'),
+  );
+  values.set('lw_workflow_v2', JSON.stringify(legacy));
+  const upgraded = new storageService.constructor();
+  assert.deepEqual(upgraded.getOrderById(previousOrder.id), previousOrder);
+  for (const facility of upgraded
+    .getFacilities()
+    .filter((f) => f.status === 'ACTIVE')) {
+    for (const type of ['FACILITY_TO_CUSTOMER', 'DRIVER_TO_FACILITY']) {
+      const handoff = upgraded
+        .getHandoffs()
+        .find(
+          (h) =>
+            h.orderId.startsWith('SOL-DEMO-FAC-') &&
+            h.facilityId === facility.id &&
+            h.type === type &&
+            h.status === 'ACTIVE',
+        );
+      assert.ok(handoff, `${facility.id}: ${type}`);
+      const verification = upgraded.handoffService.verify(
+        handoff.fallbackCode,
+        `DEMO-ADMIN-${facility.id}`,
+        handoff.id,
+      );
+      assert.equal(verification.handoff.id, handoff.id);
+    }
+  }
+  const intake = upgraded
+    .getHandoffs()
+    .find(
+      (h) => h.orderId === 'SOL-DEMO-FAC-01-CHOFER' && h.status === 'ACTIVE',
+    );
+  assert.throws(
+    () =>
+      upgraded.handoffService.verify(
+        intake.fallbackCode,
+        'DEMO-ADMIN-FAC-02',
+        intake.id,
+      ),
+    /sede/,
+  );
+  const operator = 'DEMO-ADMIN-FAC-01';
+  const verification = upgraded.handoffService.verify(
+    intake.fallbackCode,
+    operator,
+    intake.id,
+  );
+  const order = upgraded.getOrderById(intake.orderId);
+  upgraded.handoffService.confirm(operator, {
+    ticket: verification.ticket,
+    count: order.items.reduce((n, i) => n + i.quantity, 0),
+  });
+  const snapshot = upgraded.getWorkflow();
+  const reloaded = new storageService.constructor();
+  assert.equal(reloaded.getOrderById(order.id).status, 'AT_FACILITY');
+  assert.equal(
+    reloaded.getHandoffs().find((h) => h.id === intake.id).status,
+    'USED',
+  );
+  assert.equal(reloaded.getWorkflow().orders.length, snapshot.orders.length);
+  assert.equal(reloaded.getHandoffs().length, snapshot.handoffs.length);
+  assert.deepEqual(reloaded.getDrivers(), snapshot.drivers);
+  const codes = reloaded.getHandoffs().map((h) => h.fallbackCode);
+  assert.equal(new Set(codes).size, codes.length);
+});
+
+test('supervisor views scope audit and ledger to its facility without sensitive notes or reward review privileges', () => {
+  const previous = storageService.getCurrentUser(),
+    outside = storageService.getOrders().find((o) => o.facilityId !== 'FAC-01');
+  storageService.addAuditLog({
+    userName: 'Admin',
+    userRole: 'ADMIN',
+    action: 'Detalle fuera de sede',
+    entity: 'Order',
+    entityId: outside.id,
+    notes: 'Nota privada',
+  });
+  storageService.setCurrentUser({
+    ...previous,
+    id: 'SUP-TEST',
+    role: 'SUPERVISOR',
+    facilityId: 'FAC-01',
+  });
+  const orderIds = new Set(
+      storageService.getOperationalOrders().map((o) => o.id),
+    ),
+    handoffIds = new Set(
+      storageService
+        .getHandoffs()
+        .filter((h) => orderIds.has(h.orderId))
+        .map((h) => h.id),
+    ),
+    customerIds = new Set(
+      storageService.getOperationalCustomers().map((c) => c.id),
+    );
+  assert.ok(
+    storageService
+      .getOperationalAuditLogs()
+      .every(
+        (log) =>
+          (orderIds.has(log.entityId) || handoffIds.has(log.entityId)) &&
+          !log.notes,
+      ),
+  );
+  assert.ok(
+    !storageService
+      .getOperationalAuditLogs()
+      .some((log) => log.entityId === outside.id),
+  );
+  assert.ok(
+    storageService
+      .getOperationalPointsLedger()
+      .every((entry) => customerIds.has(entry.customerId)),
+  );
+  assert.deepEqual(storageService.getOperationalRedemptions(), []);
+  assert.throws(
+    () => storageService.updateRedemptionStatus('RED-01', 'REJECTED'),
+    /administrador/,
+  );
+  storageService.setCurrentUser(previous);
+});

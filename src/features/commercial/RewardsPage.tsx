@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { storageService } from '../../services/storage';
 import { useApp } from '../../context/AppContext';
 import { PageHeader } from '../../components/common/PageHeader';
 import { MetricCard } from '../../components/common/MetricCard';
@@ -15,22 +16,20 @@ import {
 } from 'lucide-react';
 
 export const RewardsPage: React.FC = () => {
-  const { rewards, redemptions, pointsLedger, createReward, updateRedemptionStatus, currentUser } = useApp();
+  const {
+    rewards,
+    redemptions,
+    pointsLedger,
+    createReward,
+    updateRedemptionStatus,
+    currentUser,
+    customers,
+    showToast,
+  } = useApp();
 
-  // Role Guard
-  if (currentUser.role !== 'ADMIN') {
-    return (
-      <div className="p-12 text-center bg-white rounded-2xl border border-red-200 shadow-2xs max-w-lg mx-auto my-12">
-        <div className="w-12 h-12 rounded-full bg-red-100 text-red-700 flex items-center justify-center mx-auto mb-4">
-          <Lock className="w-6 h-6" />
-        </div>
-        <h2 className="text-lg font-bold text-slate-900">Acceso No Autorizado</h2>
-        <p className="text-xs text-slate-500 mt-1">El módulo de Recompensas y Canjes está reservado para el rol Administrador.</p>
-      </div>
-    );
-  }
-
-  const [activeTab, setActiveTab] = useState<'REWARDS' | 'RULES' | 'REDEMPTIONS' | 'LEDGER'>('REWARDS');
+  const [activeTab, setActiveTab] = useState<
+    'REWARDS' | 'RULES' | 'REDEMPTIONS' | 'LEDGER'
+  >('REWARDS');
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   // Form State for new reward
@@ -41,11 +40,39 @@ export const RewardsPage: React.FC = () => {
   const [minSpend, setMinSpend] = useState(50);
   const [validityDays, setValidityDays] = useState(60);
 
+  const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
+  const [demoCustomer, setDemoCustomer] = useState('');
+  const [demoReward, setDemoReward] = useState('');
+  // Role Guard
+  if (currentUser.role !== 'ADMIN') {
+    return (
+      <div className="p-12 text-center bg-white rounded-2xl border border-red-200 shadow-2xs max-w-lg mx-auto my-12">
+        <div className="w-12 h-12 rounded-full bg-red-100 text-red-700 flex items-center justify-center mx-auto mb-4">
+          <Lock className="w-6 h-6" />
+        </div>
+        <h2 className="text-lg font-bold text-slate-900">
+          Acceso No Autorizado
+        </h2>
+        <p className="text-xs text-slate-500 mt-1">
+          El módulo de Recompensas y Canjes está reservado para el rol
+          Administrador.
+        </p>
+      </div>
+    );
+  }
+
   // KPIs
   const totalRewards = rewards.length;
-  const pendingRedemptions = redemptions.filter((r) => r.status === 'PENDING').length;
-  const approvedRedemptions = redemptions.filter((r) => r.status === 'APPROVED' || r.status === 'DELIVERED').length;
-  const totalPointsSpent = redemptions.reduce((acc, r) => acc + r.pointsSpent, 0);
+  const pendingRedemptions = redemptions.filter(
+    (r) => r.status === 'PENDING',
+  ).length;
+  const approvedRedemptions = redemptions.filter(
+    (r) => r.status === 'APPROVED' || r.status === 'DELIVERED',
+  ).length;
+  const totalPointsSpent = redemptions.reduce(
+    (acc, r) => acc + r.pointsSpent,
+    0,
+  );
 
   const handleCreateRewardSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -122,10 +149,23 @@ export const RewardsPage: React.FC = () => {
       {/* Tabs per spec #38 */}
       <div className="flex items-center gap-2 border-b border-slate-200">
         {[
-          { id: 'REWARDS', label: 'Catálogo de Recompensas', count: rewards.length },
+          {
+            id: 'REWARDS',
+            label: 'Catálogo de Recompensas',
+            count: rewards.length,
+          },
           { id: 'RULES', label: 'Reglas de Acumulación' },
-          { id: 'REDEMPTIONS', label: 'Solicitudes de Canje', count: redemptions.length, highlight: pendingRedemptions > 0 },
-          { id: 'LEDGER', label: 'Ledger General de Puntos (Regla #39)', count: pointsLedger.length },
+          {
+            id: 'REDEMPTIONS',
+            label: 'Solicitudes de Canje',
+            count: redemptions.length,
+            highlight: pendingRedemptions > 0,
+          },
+          {
+            id: 'LEDGER',
+            label: 'Ledger General de Puntos (Regla #39)',
+            count: pointsLedger.length,
+          },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -175,22 +215,32 @@ export const RewardsPage: React.FC = () => {
                     {rew.status}
                   </span>
                 </div>
-                <h3 className="font-bold text-base text-slate-900">{rew.name}</h3>
-                <p className="text-xs text-slate-500 mt-1 leading-relaxed">{rew.description}</p>
+                <h3 className="font-bold text-base text-slate-900">
+                  {rew.name}
+                </h3>
+                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                  {rew.description}
+                </p>
               </div>
 
               <div className="mt-5 pt-3 border-t border-slate-100 text-xs text-slate-600 space-y-1.5">
                 <div className="flex justify-between">
                   <span>Compras mínimas requeridas:</span>
-                  <strong className="text-slate-800">{rew.minPurchases} órdenes</strong>
+                  <strong className="text-slate-800">
+                    {rew.minPurchases} órdenes
+                  </strong>
                 </div>
                 <div className="flex justify-between">
                   <span>Gasto acumulado previo:</span>
-                  <strong className="text-slate-800 font-mono">${rew.minSpend}</strong>
+                  <strong className="text-slate-800 font-mono">
+                    ${rew.minSpend}
+                  </strong>
                 </div>
                 <div className="flex justify-between">
                   <span>Vigencia para canje:</span>
-                  <strong className="text-slate-800">{rew.validityDays} días</strong>
+                  <strong className="text-slate-800">
+                    {rew.validityDays} días
+                  </strong>
                 </div>
               </div>
             </div>
@@ -205,24 +255,46 @@ export const RewardsPage: React.FC = () => {
             Reglas de Acumulación y Equivalencias de Puntos Clean & Fresh
           </h3>
           <p className="text-xs text-slate-600 max-w-2xl leading-relaxed">
-            Los puntos se acreditan automáticamente en el Ledger tras la finalización conforme de cada orden.
+            Los puntos se acreditan automáticamente en el Ledger tras la
+            finalización conforme de cada orden.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pt-2">
             <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200/80">
-              <span className="text-xs font-bold text-sky-800 block mb-1">Ratio Estándar</span>
-              <p className="text-xl font-bold font-mono text-slate-900">$1 = 10 Puntos</p>
-              <p className="text-xs text-slate-500 mt-2 leading-relaxed">Aplica en todas las órdenes de lavado y tintorería para clientes registrados.</p>
+              <span className="text-xs font-bold text-sky-800 block mb-1">
+                Ratio Estándar
+              </span>
+              <p className="text-xl font-bold font-mono text-slate-900">
+                $1 = 10 Puntos
+              </p>
+              <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+                Aplica en todas las órdenes de lavado y tintorería para clientes
+                registrados.
+              </p>
             </div>
             <div className="p-5 rounded-2xl bg-emerald-50/60 border border-emerald-200/80">
-              <span className="text-xs font-bold text-emerald-800 block mb-1">Membresía Eco Wash</span>
-              <p className="text-xl font-bold font-mono text-emerald-900">$1 = 15 Puntos</p>
-              <p className="text-xs text-emerald-700 mt-2 leading-relaxed">Multiplicador x1.5 para suscripciones sostenibles con detergente biodegradables.</p>
+              <span className="text-xs font-bold text-emerald-800 block mb-1">
+                Membresía Eco Wash
+              </span>
+              <p className="text-xl font-bold font-mono text-emerald-900">
+                $1 = 15 Puntos
+              </p>
+              <p className="text-xs text-emerald-700 mt-2 leading-relaxed">
+                Multiplicador x1.5 para suscripciones sostenibles con detergente
+                biodegradables.
+              </p>
             </div>
             <div className="p-5 rounded-2xl bg-indigo-50/60 border border-indigo-200/80">
-              <span className="text-xs font-bold text-indigo-800 block mb-1">Cuentas Corporativas</span>
-              <p className="text-xl font-bold font-mono text-indigo-900">$1 = 20 Puntos</p>
-              <p className="text-xs text-indigo-700 mt-2 leading-relaxed">Multiplicador x2 para hoteles, clínicas y restaurantes con volumen garantizado.</p>
+              <span className="text-xs font-bold text-indigo-800 block mb-1">
+                Cuentas Corporativas
+              </span>
+              <p className="text-xl font-bold font-mono text-indigo-900">
+                $1 = 20 Puntos
+              </p>
+              <p className="text-xs text-indigo-700 mt-2 leading-relaxed">
+                Multiplicador x2 para hoteles, clínicas y restaurantes con
+                volumen garantizado.
+              </p>
             </div>
           </div>
         </div>
@@ -231,6 +303,65 @@ export const RewardsPage: React.FC = () => {
       {/* Tab 3: Solicitudes de Canje */}
       {activeTab === 'REDEMPTIONS' && (
         <div className="bg-white rounded-2xl border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.03)] overflow-hidden">
+          <div className="border-b border-slate-200 bg-slate-50 p-4 space-y-3">
+            <p className="text-xs text-slate-600">
+              MVP: simular una solicitud local del cliente para revisar el
+              canje. Los puntos quedan reservados hasta la aprobación. No
+              sincroniza con la app.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <select
+                aria-label="Cliente del canje demo"
+                value={demoCustomer}
+                onChange={(e) => setDemoCustomer(e.target.value)}
+                className="rounded-lg border border-slate-200 bg-white p-2 text-xs"
+              >
+                <option value="">Seleccionar cliente</option>
+                {customers.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.fullName}
+                  </option>
+                ))}
+              </select>
+              <select
+                aria-label="Recompensa del canje demo"
+                value={demoReward}
+                onChange={(e) => setDemoReward(e.target.value)}
+                className="rounded-lg border border-slate-200 bg-white p-2 text-xs"
+              >
+                <option value="">Seleccionar recompensa</option>
+                {rewards
+                  .filter((r) => r.status === 'ACTIVE')
+                  .map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name}
+                    </option>
+                  ))}
+              </select>
+              <button
+                disabled={!demoCustomer || !demoReward}
+                onClick={() => {
+                  try {
+                    storageService.requestDemoReward(demoCustomer, demoReward);
+                    showToast({
+                      type: 'success',
+                      title: 'Solicitud demo creada; puntos reservados',
+                    });
+                  } catch (error) {
+                    showToast({
+                      type: 'error',
+                      title: 'No se pudo solicitar el canje',
+                      message:
+                        error instanceof Error ? error.message : String(error),
+                    });
+                  }
+                }}
+                className="rounded-lg bg-[#0F4C81] px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
+              >
+                Simular solicitud · MVP
+              </button>
+            </div>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-xs text-left">
               <thead className="bg-slate-50/80 text-slate-600 font-semibold border-b border-slate-200/80">
@@ -245,7 +376,10 @@ export const RewardsPage: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {redemptions.map((red) => (
-                  <tr key={red.id} className="hover:bg-slate-50/70 transition-colors">
+                  <tr
+                    key={red.id}
+                    className="hover:bg-slate-50/70 transition-colors"
+                  >
                     <td className="py-3.5 px-4 font-bold text-slate-900">
                       {red.customerName}
                     </td>
@@ -264,26 +398,57 @@ export const RewardsPage: React.FC = () => {
                           red.status === 'DELIVERED'
                             ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                             : red.status === 'APPROVED'
-                            ? 'bg-sky-50 text-sky-800 border-sky-200'
-                            : red.status === 'PENDING'
-                            ? 'bg-amber-50 text-amber-800 border-amber-200'
-                            : 'bg-rose-50 text-rose-800 border-rose-200'
+                              ? 'bg-sky-50 text-sky-800 border-sky-200'
+                              : red.status === 'PENDING'
+                                ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                : 'bg-rose-50 text-rose-800 border-rose-200'
                         }`}
                       >
                         {red.status}
                       </span>
                     </td>
                     <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                      {['PENDING', 'APPROVED'].includes(red.status) && (
+                        <input
+                          aria-label={'Motivo del canje ' + red.id}
+                          placeholder="Motivo de revisión o entrega"
+                          value={reviewNotes[red.id] ?? ''}
+                          onChange={(e) =>
+                            setReviewNotes({
+                              ...reviewNotes,
+                              [red.id]: e.target.value,
+                            })
+                          }
+                          className="mb-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-xs"
+                        />
+                      )}
+                      {red.notes && (
+                        <p className="mb-2 whitespace-normal text-xs text-slate-500">
+                          {red.notes}
+                        </p>
+                      )}
                       {red.status === 'PENDING' && (
                         <div className="flex items-center justify-end gap-2">
                           <button
-                            onClick={() => updateRedemptionStatus(red.id, 'APPROVED', 'Canje aprobado por administrador')}
+                            onClick={() =>
+                              updateRedemptionStatus(
+                                red.id,
+                                'APPROVED',
+                                reviewNotes[red.id],
+                              )
+                            }
                             className="px-3 py-1.5 text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg shadow-xs cursor-pointer"
                           >
                             Aprobar
                           </button>
                           <button
-                            onClick={() => updateRedemptionStatus(red.id, 'REJECTED', 'No cumple con las compras mínimas')}
+                            onClick={() =>
+                              updateRedemptionStatus(
+                                red.id,
+                                'REJECTED',
+                                reviewNotes[red.id],
+                              )
+                            }
                             className="px-3 py-1.5 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-lg border border-rose-200 cursor-pointer"
                           >
                             Rechazar
@@ -292,7 +457,13 @@ export const RewardsPage: React.FC = () => {
                       )}
                       {red.status === 'APPROVED' && (
                         <button
-                          onClick={() => updateRedemptionStatus(red.id, 'DELIVERED', 'Beneficio entregado en destino')}
+                          onClick={() =>
+                            updateRedemptionStatus(
+                              red.id,
+                              'DELIVERED',
+                              reviewNotes[red.id],
+                            )
+                          }
                           className="px-3 py-1.5 text-xs font-bold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-lg shadow-xs cursor-pointer"
                         >
                           Marcar Entregado
@@ -316,7 +487,8 @@ export const RewardsPage: React.FC = () => {
                 Libro Mayor de Puntos Inmutable (Audit Ledger - Regla #39)
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Cada saldo de cliente se deriva de transacciones firmadas con fecha, motivo y usuario auditor.
+                Cada saldo de cliente se deriva de transacciones firmadas con
+                fecha, motivo y usuario auditor.
               </p>
             </div>
             <span className="text-xs font-mono font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-lg">
@@ -338,7 +510,10 @@ export const RewardsPage: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {pointsLedger.map((entry) => (
-                  <tr key={entry.id} className="hover:bg-slate-50/70 transition-colors">
+                  <tr
+                    key={entry.id}
+                    className="hover:bg-slate-50/70 transition-colors"
+                  >
                     <td className="py-3.5 px-4 font-mono text-slate-600 whitespace-nowrap">
                       {entry.date}
                     </td>
@@ -351,8 +526,8 @@ export const RewardsPage: React.FC = () => {
                           entry.type === 'PURCHASE'
                             ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                             : entry.type === 'REDEMPTION'
-                            ? 'bg-amber-50 text-amber-800 border-amber-200'
-                            : 'bg-purple-50 text-purple-800 border-purple-200'
+                              ? 'bg-amber-50 text-amber-800 border-amber-200'
+                              : 'bg-purple-50 text-purple-800 border-purple-200'
                         }`}
                       >
                         {entry.type}
@@ -362,7 +537,13 @@ export const RewardsPage: React.FC = () => {
                       {entry.reason}
                     </td>
                     <td className="py-3.5 px-4 text-right font-mono font-bold text-sm whitespace-nowrap tabular-nums">
-                      <span className={entry.points > 0 ? 'text-emerald-700' : 'text-rose-600'}>
+                      <span
+                        className={
+                          entry.points > 0
+                            ? 'text-emerald-700'
+                            : 'text-rose-600'
+                        }
+                      >
                         {entry.points > 0 ? `+${entry.points}` : entry.points}
                       </span>
                     </td>
@@ -383,8 +564,12 @@ export const RewardsPage: React.FC = () => {
           <div className="bg-white w-full max-w-lg h-full shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right duration-200">
             <div className="p-5 border-b border-[#E5EAF0] bg-[#F7F9FC] flex items-center justify-between">
               <div>
-                <h3 className="text-base font-bold text-slate-900">Nueva Recompensa</h3>
-                <p className="text-xs text-slate-500">Agrega premios canjeables al catálogo de fidelización</p>
+                <h3 className="text-base font-bold text-slate-900">
+                  Nueva Recompensa
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Agrega premios canjeables al catálogo de fidelización
+                </p>
               </div>
               <button
                 onClick={() => setIsDrawerOpen(false)}
@@ -394,9 +579,14 @@ export const RewardsPage: React.FC = () => {
               </button>
             </div>
 
-            <form onSubmit={handleCreateRewardSubmit} className="p-5 space-y-4 overflow-y-auto flex-1 text-xs">
+            <form
+              onSubmit={handleCreateRewardSubmit}
+              className="p-5 space-y-4 overflow-y-auto flex-1 text-xs"
+            >
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Nombre del premio *</label>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Nombre del premio *
+                </label>
                 <input
                   type="text"
                   required
@@ -408,7 +598,9 @@ export const RewardsPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Descripción y alcances</label>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Descripción y alcances
+                </label>
                 <textarea
                   rows={2}
                   value={description}
@@ -420,21 +612,31 @@ export const RewardsPage: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Costo en Puntos *</label>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Costo en Puntos *
+                  </label>
                   <input
                     type="number"
                     required
+                    aria-label="Costo en puntos"
                     value={pointsCost}
-                    onChange={(e) => setPointsCost(parseInt(e.target.value) || 0)}
+                    onChange={(e) =>
+                      setPointsCost(parseInt(e.target.value) || 0)
+                    }
                     className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs font-mono"
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Compras previas mínimas</label>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Compras previas mínimas
+                  </label>
                   <input
                     type="number"
+                    aria-label="Compras previas mínimas"
                     value={minPurchases}
-                    onChange={(e) => setMinPurchases(parseInt(e.target.value) || 0)}
+                    onChange={(e) =>
+                      setMinPurchases(parseInt(e.target.value) || 0)
+                    }
                     className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs font-mono"
                   />
                 </div>
@@ -442,20 +644,30 @@ export const RewardsPage: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Gasto previo acumulado ($)</label>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Gasto previo acumulado ($)
+                  </label>
                   <input
                     type="number"
+                    aria-label="Gasto previo acumulado"
                     value={minSpend}
-                    onChange={(e) => setMinSpend(parseFloat(e.target.value) || 0)}
+                    onChange={(e) =>
+                      setMinSpend(parseFloat(e.target.value) || 0)
+                    }
                     className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs font-mono"
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Vigencia (Días)</label>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Vigencia (Días)
+                  </label>
                   <input
                     type="number"
+                    aria-label="Vigencia en días"
                     value={validityDays}
-                    onChange={(e) => setValidityDays(parseInt(e.target.value) || 30)}
+                    onChange={(e) =>
+                      setValidityDays(parseInt(e.target.value) || 30)
+                    }
                     className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs font-mono"
                   />
                 </div>

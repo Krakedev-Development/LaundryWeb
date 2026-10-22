@@ -87,13 +87,20 @@ async function action(page, id, name) {
   });
   await page.getByRole('button', { name, exact: true }).click();
 }
-test('STORE_STORE verifies intake, processes, retires with authorized recipient and persists', async ({
+test('HOME_STORE verifies home pickup, processes, retires with authorized recipient and persists', async ({
   page,
 }) => {
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   const id = 'SOL-STORE-001';
-  await receipt(page, id, 'CUSTOMER_TO_FACILITY');
+  await page.goto('/operations/orders/' + id);
+  await assign(page, 'recogida');
+  await action(page, id, 'Iniciar recogida');
+  await action(page, id, 'Marcar llegada');
+  await receipt(page, id, 'CUSTOMER_TO_DRIVER', true);
+  await action(page, id, 'Ir a planta');
+  await action(page, id, 'Marcar llegada a planta');
+  await receipt(page, id, 'DRIVER_TO_FACILITY');
   for (const name of [
     'Iniciar procesamiento',
     'Control de calidad',
@@ -117,7 +124,7 @@ test('STORE_STORE verifies intake, processes, retires with authorized recipient 
         .length,
     };
   }, id);
-  expect(saved).toEqual({ status: 'COMPLETED', used: 2 });
+  expect(saved).toEqual({ status: 'COMPLETED', used: 3 });
   expect(errors).toEqual([]);
   await page.screenshot({
     path: 'test-results/web-store-completed.png',

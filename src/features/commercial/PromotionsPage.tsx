@@ -17,23 +17,11 @@ import {
 export const PromotionsPage: React.FC = () => {
   const { promotions, createPromotion, catalog, currentUser } = useApp();
 
-  // Role Guard
-  if (currentUser.role !== 'ADMIN') {
-    return (
-      <div className="p-12 text-center bg-white rounded-2xl border border-red-200 shadow-2xs max-w-lg mx-auto my-12">
-        <div className="w-12 h-12 rounded-full bg-red-100 text-red-700 flex items-center justify-center mx-auto mb-4">
-          <Lock className="w-6 h-6" />
-        </div>
-        <h2 className="text-lg font-bold text-slate-900">Acceso No Autorizado</h2>
-        <p className="text-xs text-slate-500 mt-1">El módulo de Promociones está reservado para el rol Administrador.</p>
-      </div>
-    );
-  }
-
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   // Form State
   const [name, setName] = useState('');
+  const [imageUrl, setImageUrl] = useState<string>();
   const [code, setCode] = useState('');
   const [description, setDescription] = useState('');
   const [discountType, setDiscountType] = useState<DiscountType>('PERCENTAGE');
@@ -42,17 +30,22 @@ export const PromotionsPage: React.FC = () => {
   const [usageLimit, setUsageLimit] = useState<number>(200);
   const [startDate, setStartDate] = useState('2026-10-01');
   const [endDate, setEndDate] = useState('2026-12-31');
-  const [selectedServices, setSelectedServices] = useState<string[]>(['Todos los servicios']);
+  const [selectedServices, setSelectedServices] = useState<string[]>([
+    'Todos los servicios',
+  ]);
   const [formError, setFormError] = useState('');
 
   // KPIs
   const totalCount = promotions.length;
   const activeCount = promotions.filter((p) => p.status === 'ACTIVE').length;
-  const scheduledCount = promotions.filter((p) => p.status === 'SCHEDULED').length;
+  const scheduledCount = promotions.filter(
+    (p) => p.status === 'SCHEDULED',
+  ).length;
   const expiredCount = promotions.filter((p) => p.status === 'EXPIRED').length;
 
   const handleOpenCreate = () => {
     setName('');
+    setImageUrl(undefined);
     setCode('');
     setDescription('');
     setDiscountType('PERCENTAGE');
@@ -73,7 +66,9 @@ export const PromotionsPage: React.FC = () => {
     // Business Rules per spec #37:
     // No permitir: fecha final < fecha inicio, porcentaje > 100%, valor <= 0, sin servicios
     if (new Date(endDate) < new Date(startDate)) {
-      setFormError('La fecha de vencimiento no puede ser anterior a la fecha de inicio.');
+      setFormError(
+        'La fecha de vencimiento no puede ser anterior a la fecha de inicio.',
+      );
       return;
     }
     if (discountType === 'PERCENTAGE' && discountValue > 100) {
@@ -85,11 +80,14 @@ export const PromotionsPage: React.FC = () => {
       return;
     }
     if (selectedServices.length === 0) {
-      setFormError('Debe seleccionar al menos un servicio o categoría aplicable.');
+      setFormError(
+        'Debe seleccionar al menos un servicio o categoría aplicable.',
+      );
       return;
     }
 
     const success = createPromotion({
+      imageUrl,
       name,
       code: code.toUpperCase().trim(),
       description,
@@ -107,6 +105,23 @@ export const PromotionsPage: React.FC = () => {
       setIsDrawerOpen(false);
     }
   };
+
+  // Role Guard
+  if (currentUser.role !== 'ADMIN') {
+    return (
+      <div className="p-12 text-center bg-white rounded-2xl border border-red-200 shadow-2xs max-w-lg mx-auto my-12">
+        <div className="w-12 h-12 rounded-full bg-red-100 text-red-700 flex items-center justify-center mx-auto mb-4">
+          <Lock className="w-6 h-6" />
+        </div>
+        <h2 className="text-lg font-bold text-slate-900">
+          Acceso No Autorizado
+        </h2>
+        <p className="text-xs text-slate-500 mt-1">
+          El módulo de Promociones está reservado para el rol Administrador.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -171,10 +186,24 @@ export const PromotionsPage: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {promotions.map((promo) => (
-                <tr key={promo.id} className="hover:bg-slate-50/70 transition-colors">
+                <tr
+                  key={promo.id}
+                  className="hover:bg-slate-50/70 transition-colors"
+                >
                   <td className="py-3.5 px-4">
-                    <span className="font-bold text-slate-900 block">{promo.name}</span>
-                    <span className="text-[11px] text-slate-500 line-clamp-1">{promo.description}</span>
+                    <span className="font-bold text-slate-900 block">
+                      {promo.name}
+                    </span>
+                    <span className="text-[11px] text-slate-500 line-clamp-1">
+                      {promo.description}
+                    </span>
+                    {promo.imageUrl && (
+                      <img
+                        src={promo.imageUrl}
+                        alt={`Arte de ${promo.name}`}
+                        className="mt-2 max-h-20 rounded-lg object-contain"
+                      />
+                    )}
                   </td>
                   <td className="py-3.5 px-4 whitespace-nowrap">
                     <span className="font-mono font-bold text-xs bg-sky-50 text-sky-800 px-2.5 py-1 rounded-md border border-sky-200">
@@ -182,7 +211,9 @@ export const PromotionsPage: React.FC = () => {
                     </span>
                   </td>
                   <td className="py-3.5 px-4 font-mono font-bold text-emerald-700 whitespace-nowrap tabular-nums">
-                    {promo.discountType === 'PERCENTAGE' ? `${promo.discountValue}%` : `$${promo.discountValue.toFixed(2)}`}
+                    {promo.discountType === 'PERCENTAGE'
+                      ? `${promo.discountValue}%`
+                      : `$${promo.discountValue.toFixed(2)}`}
                     <span className="block text-[10px] text-slate-400 font-normal">
                       Mín. ${promo.minOrderAmount}
                     </span>
@@ -194,8 +225,13 @@ export const PromotionsPage: React.FC = () => {
                     {promo.startDate} al {promo.endDate}
                   </td>
                   <td className="py-3.5 px-4 text-center font-mono whitespace-nowrap tabular-nums">
-                    <span className="font-bold text-slate-800">{promo.usageCount}</span>
-                    <span className="text-slate-400"> / {promo.usageLimit}</span>
+                    <span className="font-bold text-slate-800">
+                      {promo.usageCount}
+                    </span>
+                    <span className="text-slate-400">
+                      {' '}
+                      / {promo.usageLimit}
+                    </span>
                   </td>
                   <td className="py-3.5 px-4 text-right whitespace-nowrap">
                     <span
@@ -203,8 +239,8 @@ export const PromotionsPage: React.FC = () => {
                         promo.status === 'ACTIVE'
                           ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                           : promo.status === 'SCHEDULED'
-                          ? 'bg-sky-50 text-sky-800 border-sky-200'
-                          : 'bg-slate-100 text-slate-600 border-slate-200'
+                            ? 'bg-sky-50 text-sky-800 border-sky-200'
+                            : 'bg-slate-100 text-slate-600 border-slate-200'
                       }`}
                     >
                       {promo.status}
@@ -223,8 +259,12 @@ export const PromotionsPage: React.FC = () => {
           <div className="bg-white w-full max-w-lg h-full shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right duration-200">
             <div className="p-5 border-b border-[#E5EAF0] bg-[#F7F9FC] flex items-center justify-between">
               <div>
-                <h3 className="text-base font-bold text-slate-900">Nueva Promoción Comercial</h3>
-                <p className="text-xs text-slate-500">Crea cupones con reglas estrictas de negocio</p>
+                <h3 className="text-base font-bold text-slate-900">
+                  Nueva Promoción Comercial
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Crea cupones con reglas estrictas de negocio
+                </p>
               </div>
               <button
                 onClick={() => setIsDrawerOpen(false)}
@@ -234,7 +274,47 @@ export const PromotionsPage: React.FC = () => {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto flex-1 text-xs">
+            <form
+              onSubmit={handleSubmit}
+              className="p-5 space-y-4 overflow-y-auto flex-1 text-xs"
+            >
+              <label className="block font-semibold">
+                Arte de promoción (opcional)
+                <input
+                  className="block mt-2"
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    if (file.size > 700000) {
+                      setFormError(
+                        'La imagen local debe pesar menos de 700 KB.',
+                      );
+                      return;
+                    }
+                    const reader = new FileReader();
+                    reader.onload = () => setImageUrl(String(reader.result));
+                    reader.readAsDataURL(file);
+                  }}
+                />
+              </label>
+              {imageUrl && (
+                <div>
+                  <img
+                    src={imageUrl}
+                    alt="Vista previa del arte adjuntado"
+                    className="max-h-40 rounded-xl object-contain"
+                  />
+                  <button
+                    type="button"
+                    className="text-rose-700 mt-2"
+                    onClick={() => setImageUrl(undefined)}
+                  >
+                    Quitar imagen
+                  </button>
+                </div>
+              )}
               {formError && (
                 <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 font-semibold flex items-start gap-2">
                   <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
@@ -243,7 +323,9 @@ export const PromotionsPage: React.FC = () => {
               )}
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Nombre de la campaña *</label>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Nombre de la campaña *
+                </label>
                 <input
                   type="text"
                   required
@@ -255,7 +337,9 @@ export const PromotionsPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Código del cupón (Mayúsculas) *</label>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Código del cupón (Mayúsculas) *
+                </label>
                 <input
                   type="text"
                   required
@@ -267,7 +351,9 @@ export const PromotionsPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Descripción</label>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Descripción
+                </label>
                 <textarea
                   rows={2}
                   value={description}
@@ -279,10 +365,14 @@ export const PromotionsPage: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Tipo de descuento</label>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Tipo de descuento
+                  </label>
                   <select
                     value={discountType}
-                    onChange={(e) => setDiscountType(e.target.value as DiscountType)}
+                    onChange={(e) =>
+                      setDiscountType(e.target.value as DiscountType)
+                    }
                     className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs"
                   >
                     <option value="PERCENTAGE">Porcentaje (%)</option>
@@ -298,7 +388,9 @@ export const PromotionsPage: React.FC = () => {
                     step="0.5"
                     required
                     value={discountValue}
-                    onChange={(e) => setDiscountValue(parseFloat(e.target.value) || 0)}
+                    onChange={(e) =>
+                      setDiscountValue(parseFloat(e.target.value) || 0)
+                    }
                     className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs font-mono"
                   />
                 </div>
@@ -306,20 +398,28 @@ export const PromotionsPage: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Monto Mínimo de Orden ($)</label>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Monto Mínimo de Orden ($)
+                  </label>
                   <input
                     type="number"
                     value={minOrderAmount}
-                    onChange={(e) => setMinOrderAmount(parseFloat(e.target.value) || 0)}
+                    onChange={(e) =>
+                      setMinOrderAmount(parseFloat(e.target.value) || 0)
+                    }
                     className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs font-mono"
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Límite Total de Usos</label>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Límite Total de Usos
+                  </label>
                   <input
                     type="number"
                     value={usageLimit}
-                    onChange={(e) => setUsageLimit(parseInt(e.target.value) || 1)}
+                    onChange={(e) =>
+                      setUsageLimit(parseInt(e.target.value) || 1)
+                    }
                     className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs font-mono"
                   />
                 </div>
@@ -327,7 +427,9 @@ export const PromotionsPage: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Fecha de Inicio *</label>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Fecha de Inicio *
+                  </label>
                   <input
                     type="date"
                     required
@@ -337,7 +439,9 @@ export const PromotionsPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Fecha de Fin *</label>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Fecha de Fin *
+                  </label>
                   <input
                     type="date"
                     required

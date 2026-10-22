@@ -4,13 +4,10 @@ import {
   Search,
   Bell,
   Menu,
-  ChevronDown,
-  RefreshCw,
-  LogOut,
+  Settings,
   AlertTriangle,
   Clock,
   ShieldCheck,
-  Check,
   Command,
   type LucideIcon,
 } from 'lucide-react';
@@ -36,29 +33,11 @@ export function TopBar({
   mobileSidebarOpen,
   onOpenSearch,
 }: TopBarProps) {
-  const {
-    currentUser,
-    switchRole,
-    resetAll,
-    logout,
-    orders,
-    incidents,
-    customers,
-  } = useApp();
+  const { currentUser, resetAll, orders, incidents, customers } = useApp();
   const [showNotifications, setShowNotifications] = useState(false);
-  const [showUserMenu, setShowUserMenu] = useState(false);
   const menus = useRef<HTMLDivElement>(null);
   const notificationButton = useRef<HTMLButtonElement>(null);
-  const profileButton = useRef<HTMLButtonElement>(null);
   const navigate = useNavigate();
-  const initials = currentUser.name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((word) => word[0])
-    .join('')
-    .toUpperCase();
-  const role = currentUser.role === 'ADMIN' ? 'Administrador' : 'Supervisor';
   const date = new Intl.DateTimeFormat('es-EC', {
     weekday: 'long',
     day: 'numeric',
@@ -66,19 +45,16 @@ export function TopBar({
   }).format(new Date());
 
   useEffect(() => {
-    if (!showNotifications && !showUserMenu) return;
+    if (!showNotifications) return;
     const onPointer = (event: PointerEvent) => {
       if (!menus.current?.contains(event.target as Node)) {
         setShowNotifications(false);
-        setShowUserMenu(false);
       }
     };
     const onEscape = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
       if (showNotifications) notificationButton.current?.focus();
-      else profileButton.current?.focus();
       setShowNotifications(false);
-      setShowUserMenu(false);
     };
     document.addEventListener('pointerdown', onPointer);
     document.addEventListener('keydown', onEscape);
@@ -86,7 +62,7 @@ export function TopBar({
       document.removeEventListener('pointerdown', onPointer);
       document.removeEventListener('keydown', onEscape);
     };
-  }, [showNotifications, showUserMenu]);
+  }, [showNotifications]);
 
   const notices: OperationalNotice[] = [
     ...orders
@@ -146,7 +122,6 @@ export function TopBar({
           type="button"
           onClick={() => {
             setShowNotifications(false);
-            setShowUserMenu(false);
             onOpenSearch();
           }}
           aria-label="Abrir búsqueda global"
@@ -181,7 +156,6 @@ export function TopBar({
             aria-controls="operational-notifications"
             onClick={() => {
               setShowNotifications((previous) => !previous);
-              setShowUserMenu(false);
             }}
             className="sidebar-focus relative flex size-10 items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100"
           >
@@ -241,95 +215,19 @@ export function TopBar({
             </section>
           )}
         </div>
-        <div className="relative">
-          <button
-            ref={profileButton}
-            type="button"
-            aria-label="Perfil y opciones de sesión"
-            title={`${currentUser.name} · ${role}`}
-            aria-expanded={showUserMenu}
-            aria-controls="session-options"
-            onClick={() => {
-              setShowUserMenu((previous) => !previous);
-              setShowNotifications(false);
-            }}
-            className="sidebar-focus flex items-center gap-1.5 rounded-xl p-1 hover:bg-slate-100"
-          >
-            <span className="flex size-8 items-center justify-center rounded-full bg-[#143F73]/10 text-[11px] font-semibold text-[#143F73]">
-              {initials}
-            </span>
-            <ChevronDown
-              className={`hidden size-3.5 text-slate-400 transition-transform sm:block ${showUserMenu ? 'rotate-180' : ''}`}
-              aria-hidden="true"
-            />
-          </button>
-          {showUserMenu && (
-            <section
-              id="session-options"
-              aria-label="Opciones de sesión"
-              className="absolute right-0 mt-3 w-64 rounded-2xl border border-slate-200 bg-white py-2 shadow-xl"
-            >
-              <div className="border-b border-slate-100 px-4 py-3">
-                <p className="text-xs font-semibold text-[#143F73]">
-                  {currentUser.name}
-                </p>
-                <p className="mt-1 truncate text-[11px] text-slate-500">
-                  {currentUser.email}
-                </p>
-                <span className="mt-2 inline-flex rounded-md bg-[#143F73]/[0.07] px-2 py-0.5 text-[10px] font-medium text-[#143F73]">
-                  {role}
-                </span>
-              </div>
-              <div className="border-b border-slate-100 px-3 py-3">
-                <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                  Rol operativo · demo
-                </p>
-                <div className="grid grid-cols-2 gap-1.5">
-                  {(['ADMIN', 'SUPERVISOR'] as const).map((value) => (
-                    <button
-                      type="button"
-                      key={value}
-                      aria-pressed={currentUser.role === value}
-                      onClick={() => {
-                        switchRole(value);
-                        setShowUserMenu(false);
-                      }}
-                      className={`sidebar-focus flex items-center justify-between rounded-lg px-2.5 py-2 text-xs font-medium ${currentUser.role === value ? 'bg-[#143F73] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-                    >
-                      {value === 'ADMIN' ? 'Admin' : 'Supervisor'}
-                      {currentUser.role === value && (
-                        <Check className="size-3.5" aria-hidden="true" />
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  resetAll();
-                  setShowUserMenu(false);
-                }}
-                className="sidebar-focus flex w-full items-center gap-2 px-4 py-2.5 text-left text-xs text-slate-600 hover:bg-slate-50"
-              >
-                <RefreshCw className="size-3.5" aria-hidden="true" />
-                Restablecer datos demo
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  logout();
-                  setShowUserMenu(false);
-                  navigate('/login');
-                }}
-                className="sidebar-focus flex w-full items-center gap-2 border-t border-slate-100 px-4 py-2.5 text-left text-xs text-rose-700 hover:bg-rose-50"
-              >
-                <LogOut className="size-3.5" aria-hidden="true" />
-                Cerrar sesión
-              </button>
-            </section>
-          )}
-        </div>
+        {/* MVP only: remove this demo reset control before full development. */}
+        <button
+          type="button"
+          aria-label="Restablecer datos demo"
+          title="Restablecer datos demo"
+          onClick={() => {
+            setShowNotifications(false);
+            resetAll();
+          }}
+          className="sidebar-focus flex size-10 items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100"
+        >
+          <Settings className="size-[18px]" aria-hidden="true" />
+        </button>
       </div>
     </header>
   );

@@ -47,6 +47,9 @@ export const PlantKanbanPage: React.FC = () => {
     statusList: OrderStatus[];
     isQuarantine?: boolean;
   }[] = [
+    { id:'WEIGHING',title:'Pesaje',subtitle:'Peso real y unidad de tarifa',statusList:['WEIGHING'] },
+    { id:'INSPECTION',title:'Inspección',subtitle:'Restricciones y estado de prendas',statusList:['INSPECTION'] },
+    { id:'CUSTOMER_APPROVAL_PENDING',title:'Precio y aprobación',subtitle:'Ajustes o pago pendientes',statusList:['PRICING_PENDING','CUSTOMER_APPROVAL_PENDING'] },
     {
       id: 'AT_FACILITY',
       title: 'Recibidas en Planta',
@@ -73,7 +76,7 @@ export const PlantKanbanPage: React.FC = () => {
     },
     {
       id: 'QUARANTINE',
-      title: 'Cuarentena Técnica',
+      title: 'Inscidencia Técnica',
       subtitle: 'Retención por mancha o daño',
       statusList: ['QUARANTINE'],
       isQuarantine: true,
@@ -84,7 +87,7 @@ export const PlantKanbanPage: React.FC = () => {
   const recibidasCount = orders.filter((o) => operationalStage(o) === 'AT_FACILITY').length;
   const enProcesoCount = orders.filter((o) => operationalStage(o) === 'IN_PROCESS').length;
   const listasCount = orders.filter((o) => operationalStage(o) === 'READY_FOR_DELIVERY').length;
-  const cuarentenaCount = orders.filter((o) => operationalStage(o) === 'QUARANTINE').length;
+  const quarantineCount = orders.filter((o) => operationalStage(o) === 'QUARANTINE').length;
 
   return (
     <div className="space-y-8">
@@ -116,10 +119,10 @@ export const PlantKanbanPage: React.FC = () => {
           icon={<CheckCircle2 className="w-5 h-5 text-emerald-600" />}
         />
         <MetricCard
-          title="En Cuarentena"
-          value={cuarentenaCount}
+          title="En Inscidencia"
+          value={quarantineCount}
           subtitle="Retenidas para revisión"
-          variant={cuarentenaCount > 0 ? 'urgent' : 'default'}
+          variant={quarantineCount > 0 ? 'urgent' : 'default'}
           icon={<AlertTriangle className="w-5 h-5 text-rose-600" />}
         />
       </div>
@@ -157,7 +160,7 @@ export const PlantKanbanPage: React.FC = () => {
       </div>
 
       {/* Kanban Board Container with relaxed layout */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-5 items-start">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 items-start">
         {columns.map((col) => {
           const colOrders = plantOrders.filter((o) => col.statusList.includes(operationalStage(o)));
           return (
@@ -257,9 +260,9 @@ export const PlantKanbanPage: React.FC = () => {
                           <button
                             onClick={() => setQuarantineTargetOrder(ord)}
                             className="px-2.5 py-1 text-[11px] font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-lg transition-colors cursor-pointer"
-                            title="Enviar a cuarentena"
+                            title="Enviar a inscidencia"
                           >
-                            Cuarentena
+                            Inscidencia
                           </button>
                         )}
 
@@ -295,7 +298,7 @@ export const PlantKanbanPage: React.FC = () => {
 
                         {operationalStage(ord) === 'QUARANTINE' && (
                           <button
-                            onClick={() => releaseFromQuarantine(ord.id, 'QUALITY_CONTROL', 'Liberado de cuarentena tras re-procesamiento')}
+                            onClick={() => releaseFromQuarantine(ord.id, 'QUALITY_CONTROL', 'Liberado de inscidencia tras re-procesamiento')}
                             className="w-full py-1.5 text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg flex items-center justify-center gap-1 transition-colors cursor-pointer"
                           >
                             <ShieldCheck className="w-3 h-3" />
@@ -321,7 +324,7 @@ export const PlantKanbanPage: React.FC = () => {
                 <AlertTriangle className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-slate-900">Enviar a Cuarentena</h3>
+                <h3 className="text-base font-bold text-slate-900">Enviar a Inscidencia</h3>
                 <p className="text-xs text-slate-500">Orden {quarantineTargetOrder.id} ({quarantineTargetOrder.customerName})</p>
               </div>
             </div>
@@ -359,7 +362,7 @@ export const PlantKanbanPage: React.FC = () => {
                 }}
                 className="px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl cursor-pointer"
               >
-                Confirmar Cuarentena
+                Confirmar Inscidencia
               </button>
             </div>
           </div>

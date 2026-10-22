@@ -1,3 +1,5 @@
+import { useZones } from './zones/useZones';
+import { IconPlaceholder } from '../../components/common/IconPlaceholder';
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { PageHeader } from '../../components/common/PageHeader';
@@ -19,9 +21,16 @@ import {
 } from 'lucide-react';
 
 export const DriversPage: React.FC = () => {
-  const { drivers, facilities, createDriver, updateDriver, currentUser } =
-    useApp();
+  const {
+    drivers,
+    facilities,
+    createDriver,
+    updateDriver,
+    currentUser,
+    showToast,
+  } = useApp();
   const isAdmin = currentUser.role === 'ADMIN';
+  const { zones } = useZones();
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingDriver, setEditingDriver] = useState<Driver | null>(null);
@@ -82,52 +91,64 @@ export const DriversPage: React.FC = () => {
     const facility = facilities.find((f) => f.id === facilityId);
     const facilityName = facility?.name || 'Sede Central Norte';
     const zoneName =
-      zoneId === 'ZONA-NORTE'
-        ? 'Zona Norte & Centro'
-        : zoneId === 'ZONA-SUR'
-          ? 'Zona Sur & Bahía'
-          : 'Zona Financiera & Residencial';
+      zones.find((zone) => zone.id === zoneId)?.name ??
+      editingDriver?.zoneName ??
+      '';
 
-    if (editingDriver) {
-      updateDriver({
-        ...editingDriver,
-        name,
-        phone,
-        email,
-        vehicleType,
-        vehiclePlate: vehiclePlate.toUpperCase(),
-        facilityId,
-        facilityName,
-        zoneId,
-        zoneName,
-        maxOrders,
-        status,
-      });
-    } else {
-      createDriver({
-        name,
-        phone,
-        email,
-        avatar:
-          'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
-        vehicleType,
-        vehiclePlate: vehiclePlate.toUpperCase(),
-        facilityId,
-        facilityName,
-        zoneId,
-        zoneName,
-        status,
-        maxOrders,
-        location: {
-          lat: -12.0464,
-          lng: -77.0428,
-          address: 'Base Sede',
-          lastUpdated: 'Reciente',
-        },
+    try {
+      if (editingDriver) {
+        updateDriver({
+          ...editingDriver,
+          name,
+          phone,
+          email,
+          vehicleType,
+          vehiclePlate: vehiclePlate.toUpperCase(),
+          facilityId,
+          facilityName,
+          zoneId,
+          zoneName,
+          authorizedZoneIds: [
+            ...new Set([
+              ...(editingDriver.authorizedZoneIds ?? [editingDriver.zoneId]),
+              zoneId,
+            ]),
+          ],
+          maxOrders,
+          status,
+        });
+      } else {
+        createDriver({
+          name,
+          phone,
+          email,
+          avatar: '',
+          vehicleType,
+          vehiclePlate: vehiclePlate.toUpperCase(),
+          facilityId,
+          facilityName,
+          zoneId,
+          zoneName,
+          status,
+          maxOrders,
+          location: {
+            lat: facility?.coordinates.lat ?? 0,
+            lng: facility?.coordinates.lng ?? 0,
+            address: facility?.address ?? '',
+            lastUpdated: new Date().toISOString(),
+            simulated: true,
+          },
+        });
+      }
+
+      setIsDrawerOpen(false);
+    } catch (error) {
+      showToast({
+        type: 'error',
+        title: 'No se pudo guardar el chofer',
+        message: error instanceof Error ? error.message : String(error),
       });
     }
-
-    setIsDrawerOpen(false);
   };
 
   return (
@@ -211,10 +232,10 @@ export const DriversPage: React.FC = () => {
                   >
                     <td className="py-3.5 px-4 whitespace-nowrap">
                       <div className="flex items-center gap-2.5">
-                        <img
-                          src={driver.avatar}
-                          alt={driver.name}
-                          className="w-9 h-9 rounded-full object-cover border border-slate-200"
+                        <IconPlaceholder
+                          kind="user"
+                          label={driver.name}
+                          className="size-9 rounded-full"
                         />
                         <div>
                           <span className="font-bold text-slate-900 block">
@@ -250,7 +271,8 @@ export const DriversPage: React.FC = () => {
                     </td>
 
                     <td className="py-3.5 px-4 whitespace-nowrap text-slate-600">
-                      {driver.zoneName}
+                      {zones.find((zone) => zone.id === driver.zoneId)?.name ??
+                        driver.zoneName}
                     </td>
 
                     <td className="py-3.5 px-4 text-center whitespace-nowrap">
@@ -446,9 +468,13 @@ export const DriversPage: React.FC = () => {
                     onChange={(e) => setZoneId(e.target.value)}
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-sky-500"
                   >
-                    <option value="ZONA-NORTE">Zona Norte & Centro</option>
-                    <option value="ZONA-SUR">Zona Sur & Bahía</option>
-                    <option value="ZONA-FINANCIERA">Zona Financiera</option>
+                    {zones
+                      .filter((zone) => zone.active || zone.id === zoneId)
+                      .map((zone) => (
+                        <option key={zone.id} value={zone.id}>
+                          {zone.name}
+                        </option>
+                      ))}
                   </select>
                 </div>
               </div>

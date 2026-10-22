@@ -1,3 +1,4 @@
+import { IconPlaceholder } from '../../components/common/IconPlaceholder';
 import { operationalStage } from '../../services/fulfillment';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -22,33 +23,67 @@ import {
 import { OrderStatus } from '../../types';
 
 export const DashboardPage: React.FC = () => {
-  const { orders, incidents, drivers, customers, facilities, currentUser, auditLogs } = useApp();
+  const {
+    orders,
+    incidents,
+    drivers,
+    customers,
+    facilities,
+    currentUser,
+    auditLogs,
+  } = useApp();
   const navigate = useNavigate();
 
   const isAdmin = currentUser.role === 'ADMIN';
 
   // Key Metrics
   const totalOrdersToday = orders.length;
-  const unassignedOrders = orders.filter((o) => operationalStage(o) === 'PICKUP_PENDING');
-  const inDeliveryOrders = orders.filter((o) => operationalStage(o) === 'OUT_FOR_DELIVERY' || operationalStage(o) === 'DELIVERY_ASSIGNED');
+  const unassignedOrders = orders.filter(
+    (o) => operationalStage(o) === 'PICKUP_PENDING',
+  );
+  const inDeliveryOrders = orders.filter(
+    (o) =>
+      operationalStage(o) === 'OUT_FOR_DELIVERY' ||
+      operationalStage(o) === 'DELIVERY_ASSIGNED',
+  );
   const onTimeCount = orders.filter((o) => o.slaStatus === 'ON_TIME').length;
   const slaCompliance = Math.round((onTimeCount / (orders.length || 1)) * 100);
-  const openIncidents = incidents.filter((i) => i.status === 'OPEN' || i.status === 'IN_PROGRESS');
-  const quarantineOrders = orders.filter((o) => operationalStage(o) === 'QUARANTINE');
-  const atRiskOrders = orders.filter((o) => o.slaStatus === 'AT_RISK' || o.slaStatus === 'OVERDUE');
+  const openIncidents = incidents.filter(
+    (i) => i.status === 'OPEN' || i.status === 'IN_PROGRESS',
+  );
+  const quarantineOrders = orders.filter(
+    (o) => operationalStage(o) === 'QUARANTINE',
+  );
+  const atRiskOrders = orders.filter(
+    (o) => o.slaStatus === 'AT_RISK' || o.slaStatus === 'OVERDUE',
+  );
   const pendingKyc = customers.filter((c) => c.kycStatus === 'PENDING');
 
   // Grouped operational stages for clear visual hierarchy
   const phasePickup = orders.filter((o) =>
-    ['CREATED', 'PICKUP_PENDING', 'PICKUP_ASSIGNED', 'HEADING_TO_PICKUP', 'PICKED_UP'].includes(operationalStage(o))
+    [
+      'CREATED',
+      'PICKUP_PENDING',
+      'PICKUP_ASSIGNED',
+      'HEADING_TO_PICKUP',
+      'PICKED_UP',
+    ].includes(operationalStage(o)),
   ).length;
 
   const phasePlant = orders.filter((o) =>
-    ['AT_FACILITY', 'IN_PROCESS', 'QUALITY_CONTROL', 'QUARANTINE'].includes(operationalStage(o))
+    ['AT_FACILITY', 'IN_PROCESS', 'QUALITY_CONTROL', 'QUARANTINE'].includes(
+      operationalStage(o),
+    ),
   ).length;
 
   const phaseDelivery = orders.filter((o) =>
-    ['READY_FOR_DELIVERY', 'DELIVERY_SCHEDULED', 'DELIVERY_ASSIGNED', 'OUT_FOR_DELIVERY', 'DELIVERED'].includes(operationalStage(o))
+    [
+      'READY_FOR_DELIVERY',
+      'DELIVERY_SCHEDULED',
+      'DELIVERY_ASSIGNED',
+      'OUT_FOR_DELIVERY',
+      'DELIVERED',
+    ].includes(operationalStage(o)),
   ).length;
 
   return (
@@ -172,7 +207,9 @@ export const DashboardPage: React.FC = () => {
                   2. Planta de Lavado
                 </h3>
                 <p className="text-[11px] text-slate-500 mt-1 leading-snug">
-                  {quarantineOrders.length > 0 ? `${quarantineOrders.length} en cuarentena` : 'Proceso regular'}
+                  {quarantineOrders.length > 0
+                    ? `${quarantineOrders.length} en inscidencia`
+                    : 'Proceso regular'}
                 </p>
               </div>
 
@@ -205,25 +242,46 @@ export const DashboardPage: React.FC = () => {
               </h4>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                 <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
-                  <span className="text-slate-400 block text-[11px]">Sin asignar</span>
-                  <span className="text-sm font-bold text-amber-700 font-mono tabular-nums">{unassignedOrders.length}</span>
-                </div>
-                <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
-                  <span className="text-slate-400 block text-[11px]">En lavado</span>
-                  <span className="text-sm font-bold text-slate-800 font-mono tabular-nums">
-                    {orders.filter((o) => operationalStage(o) === 'IN_PROCESS').length}
+                  <span className="text-slate-400 block text-[11px]">
+                    Sin asignar
+                  </span>
+                  <span className="text-sm font-bold text-amber-700 font-mono tabular-nums">
+                    {unassignedOrders.length}
                   </span>
                 </div>
                 <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
-                  <span className="text-slate-400 block text-[11px]">Control Calidad</span>
+                  <span className="text-slate-400 block text-[11px]">
+                    En lavado
+                  </span>
                   <span className="text-sm font-bold text-slate-800 font-mono tabular-nums">
-                    {orders.filter((o) => operationalStage(o) === 'QUALITY_CONTROL').length}
+                    {
+                      orders.filter((o) => operationalStage(o) === 'IN_PROCESS')
+                        .length
+                    }
                   </span>
                 </div>
                 <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
-                  <span className="text-slate-400 block text-[11px]">Listas p/ entrega</span>
+                  <span className="text-slate-400 block text-[11px]">
+                    Control Calidad
+                  </span>
+                  <span className="text-sm font-bold text-slate-800 font-mono tabular-nums">
+                    {
+                      orders.filter(
+                        (o) => operationalStage(o) === 'QUALITY_CONTROL',
+                      ).length
+                    }
+                  </span>
+                </div>
+                <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
+                  <span className="text-slate-400 block text-[11px]">
+                    Listas p/ entrega
+                  </span>
                   <span className="text-sm font-bold text-emerald-700 font-mono tabular-nums">
-                    {orders.filter((o) => operationalStage(o) === 'READY_FOR_DELIVERY').length}
+                    {
+                      orders.filter(
+                        (o) => operationalStage(o) === 'READY_FOR_DELIVERY',
+                      ).length
+                    }
                   </span>
                 </div>
               </div>
@@ -235,7 +293,9 @@ export const DashboardPage: React.FC = () => {
             <div className="flex items-center justify-between pb-4 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <Building2 className="w-4 h-4 text-sky-700" />
-                <h3 className="text-sm font-bold text-slate-900">Capacidad en Sedes de Lavado</h3>
+                <h3 className="text-sm font-bold text-slate-900">
+                  Capacidad en Sedes de Lavado
+                </h3>
               </div>
               <button
                 onClick={() => navigate('/logistics/facilities')}
@@ -247,19 +307,31 @@ export const DashboardPage: React.FC = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
               {facilities.map((fac) => {
-                const loadPct = Math.round((fac.currentLoadKgDay / fac.capacityMaxKgDay) * 100);
+                const loadPct = Math.round(
+                  (fac.currentLoadKgDay / fac.capacityMaxKgDay) * 100,
+                );
                 return (
-                  <div key={fac.id} className="p-4 rounded-xl border border-slate-200/70 bg-slate-50/50">
+                  <div
+                    key={fac.id}
+                    className="p-4 rounded-xl border border-slate-200/70 bg-slate-50/50"
+                  >
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-bold text-slate-900">{fac.name}</span>
+                      <span className="font-bold text-slate-900">
+                        {fac.name}
+                      </span>
                       <span className="text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60">
-                        {fac.status === 'ACTIVE' ? 'Operativa' : 'Mantenimiento'}
+                        {fac.status === 'ACTIVE'
+                          ? 'Operativa'
+                          : 'Mantenimiento'}
                       </span>
                     </div>
                     <p className="text-xs text-slate-500 mt-1">{fac.zone}</p>
                     <div className="mt-3 flex items-center justify-between text-xs text-slate-600 font-mono">
                       <span>Carga diaria:</span>
-                      <span className="font-bold text-slate-800">{fac.currentLoadKgDay} / {fac.capacityMaxKgDay} kg ({loadPct}%)</span>
+                      <span className="font-bold text-slate-800">
+                        {fac.currentLoadKgDay} / {fac.capacityMaxKgDay} kg (
+                        {loadPct}%)
+                      </span>
                     </div>
                     <div className="w-full h-1.5 bg-slate-200 rounded-full mt-2 overflow-hidden">
                       <div
@@ -292,7 +364,11 @@ export const DashboardPage: React.FC = () => {
                 </div>
               </div>
               <span className="text-xs font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-full font-mono tabular-nums">
-                {unassignedOrders.length + atRiskOrders.length + quarantineOrders.length + openIncidents.length + (isAdmin ? pendingKyc.length : 0)}
+                {unassignedOrders.length +
+                  atRiskOrders.length +
+                  quarantineOrders.length +
+                  openIncidents.length +
+                  (isAdmin ? pendingKyc.length : 0)}
               </span>
             </div>
 
@@ -308,10 +384,12 @@ export const DashboardPage: React.FC = () => {
                     <span className="w-2 h-2 rounded-full bg-amber-500 mt-1.5 shrink-0" />
                     <div>
                       <p className="text-xs font-bold text-slate-900 group-hover:text-sky-700 transition-colors">
-                        {unassignedOrders.length} orden(es) sin chofer de recogida
+                        {unassignedOrders.length} orden(es) sin chofer de
+                        recogida
                       </p>
                       <p className="text-[11px] text-slate-500 mt-0.5">
-                        Primera: {unassignedOrders[0].id} · {unassignedOrders[0].customerName}
+                        Primera: {unassignedOrders[0].id} ·{' '}
+                        {unassignedOrders[0].customerName}
                       </p>
                     </div>
                   </div>
@@ -334,7 +412,8 @@ export const DashboardPage: React.FC = () => {
                         {atRiskOrders.length} orden(es) en riesgo de SLA
                       </p>
                       <p className="text-[11px] text-slate-500 mt-0.5">
-                        Límite próximo: {atRiskOrders[0].id} ({atRiskOrders[0].slaDeadline})
+                        Límite próximo: {atRiskOrders[0].id} (
+                        {atRiskOrders[0].slaDeadline})
                       </p>
                     </div>
                   </div>
@@ -354,10 +433,12 @@ export const DashboardPage: React.FC = () => {
                     <span className="w-2 h-2 rounded-full bg-red-600 mt-1.5 shrink-0" />
                     <div>
                       <p className="text-xs font-bold text-slate-900 group-hover:text-red-700 transition-colors">
-                        {quarantineOrders.length} lote(s) en cuarentena
+                        {quarantineOrders.length} lote(s) en inscidencia
                       </p>
                       <p className="text-[11px] text-slate-500 mt-0.5">
-                        {quarantineOrders[0].id}: {quarantineOrders[0].quarantineReason || 'Inspección de fibra'}
+                        {quarantineOrders[0].id}:{' '}
+                        {quarantineOrders[0].quarantineReason ||
+                          'Inspección de fibra'}
                       </p>
                     </div>
                   </div>
@@ -418,7 +499,9 @@ export const DashboardPage: React.FC = () => {
           {/* Quick Access to Drivers Status */}
           <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="text-sm font-bold text-slate-900">Estado de Flota Activa</h3>
+              <h3 className="text-sm font-bold text-slate-900">
+                Estado de Flota Activa
+              </h3>
               <button
                 onClick={() => navigate('/logistics/drivers')}
                 className="text-xs font-semibold text-sky-700 hover:text-sky-800 hover:underline"
@@ -428,15 +511,28 @@ export const DashboardPage: React.FC = () => {
             </div>
             <div className="space-y-3 mt-3">
               {drivers.slice(0, 3).map((driver) => (
-                <div key={driver.id} className="flex items-center justify-between text-xs py-1">
+                <div
+                  key={driver.id}
+                  className="flex items-center justify-between text-xs py-1"
+                >
                   <div className="flex items-center gap-2.5">
-                    <img src={driver.avatar} alt={driver.name} className="w-7 h-7 rounded-full object-cover border border-slate-200" />
+                    <IconPlaceholder
+                      kind="user"
+                      label={driver.name}
+                      className="size-7 rounded-full"
+                    />
                     <div>
-                      <p className="font-semibold text-slate-800">{driver.name}</p>
-                      <p className="text-[11px] text-slate-400 font-mono">{driver.vehiclePlate} · {driver.facilityName}</p>
+                      <p className="font-semibold text-slate-800">
+                        {driver.name}
+                      </p>
+                      <p className="text-[11px] text-slate-400 font-mono">
+                        {driver.vehiclePlate} · {driver.facilityName}
+                      </p>
                     </div>
                   </div>
-                  <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${driver.status === 'AVAILABLE' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60' : 'bg-amber-50 text-amber-800 border border-amber-200/60'}`}>
+                  <span
+                    className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${driver.status === 'AVAILABLE' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60' : 'bg-amber-50 text-amber-800 border border-amber-200/60'}`}
+                  >
                     {driver.status === 'AVAILABLE' ? 'Disponible' : 'En ruta'}
                   </span>
                 </div>
@@ -454,10 +550,13 @@ export const DashboardPage: React.FC = () => {
               Bitácora Operacional Reciente
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              Registro trazable de cambios de estado, asignaciones y eventos de auditoría
+              Registro trazable de cambios de estado, asignaciones y eventos de
+              auditoría
             </p>
           </div>
-          <span className="text-xs text-slate-400 font-mono">Trazabilidad activa</span>
+          <span className="text-xs text-slate-400 font-mono">
+            Trazabilidad activa
+          </span>
         </div>
 
         <div className="overflow-x-auto mt-4">
@@ -474,7 +573,10 @@ export const DashboardPage: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {auditLogs.slice(0, 5).map((log) => (
-                <tr key={log.id} className="hover:bg-slate-50/70 transition-colors">
+                <tr
+                  key={log.id}
+                  className="hover:bg-slate-50/70 transition-colors"
+                >
                   <td className="py-3.5 px-4 font-mono text-slate-500 whitespace-nowrap">
                     {log.timestamp}
                   </td>
@@ -492,7 +594,9 @@ export const DashboardPage: React.FC = () => {
                   </td>
                   <td className="py-3.5 px-4 text-slate-700 whitespace-nowrap">
                     <span className="font-semibold">{log.userName}</span>{' '}
-                    <span className="text-[11px] text-slate-400">({log.userRole})</span>
+                    <span className="text-[11px] text-slate-400">
+                      ({log.userRole})
+                    </span>
                   </td>
                 </tr>
               ))}

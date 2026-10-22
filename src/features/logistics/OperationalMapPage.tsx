@@ -1,3 +1,9 @@
+import '../../shared/ui/operations/operations.css';
+import { MapLayersToolbar } from './zones/MapLayersToolbar';
+import { MapLocations } from './zones/MapLocations';
+import { MapPinned } from 'lucide-react';
+import { DriverMapLegend } from './zones/DriverMapLegend';
+import { driverStates } from '../../components/maps/mapPointAppearance';
 import { operationalStage } from '../../services/fulfillment';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -5,7 +11,9 @@ import { useApp } from '../../context/AppContext';
 import { PageHeader } from '../../components/common/PageHeader';
 import { BaseMap, type MapPoint } from '../../components/maps/BaseMap';
 import { isLocationStale } from '../../services/geo/DispatchService';
-import { SERVICE_AREAS } from '../../services/geo/demo';
+import { useZones } from './zones/useZones';
+import { facilityZoneId } from '../../entities/zone/model/zone.rules';
+import { DriverMapControls } from './zones/DriverMapControls';
 export function OperationalMapPage() {
   const { facilities, drivers, orders, incidents } = useApp();
   const navigate = useNavigate();
@@ -17,14 +25,19 @@ export function OperationalMapPage() {
     incident: true,
   });
   const [zone, setZone] = useState('');
+  const { zones, error } = useZones();
+  const [showZones, setShowZones] = useState(true);
+  const [selectedDriver, setSelectedDriver] = useState('');
+  const [following, setFollowing] = useState(false);
+  const filteredDrivers = drivers.filter(
+    (driver) => !zone || driver.zoneId === zone,
+  );
+  const followed =
+    following && filteredDrivers.find((driver) => driver.id === selectedDriver);
   const points: MapPoint[] = [];
   if (layers.facility)
     facilities
-      .filter(
-        (f) =>
-          !zone ||
-          SERVICE_AREAS.find((a) => a.facilityId === f.id)?.id === zone,
-      )
+      .filter((f) => !zone || facilityZoneId(f, zones) === zone)
       .forEach((f) =>
         points.push({
           id: f.id,
@@ -50,7 +63,7 @@ export function OperationalMapPage() {
           status: d.status,
           stale: isLocationStale(d.location.lastUpdated),
           detail:
-            d.status +
+            (driverStates[d.status]?.label ?? d.status) +
             ' · Última ubicación hace ' +
             (Number.isFinite(age) ? age : '?') +
             ' min',
@@ -112,65 +125,78 @@ export function OperationalMapPage() {
     else navigate('/operations/incidents/' + id);
   };
   return (
-    <div className="space-y-5">
+    <div className="ops-ui space-y-6">
       <PageHeader
         title="Mapa Operativo Logístico"
         subtitle="Escenario local de Samborondón. Movimiento de choferes simulado."
       />
-      <div className="flex flex-wrap gap-4 bg-white p-4 rounded-xl border">
-        {(Object.keys(layers) as (keyof typeof layers)[]).map((key) => (
-          <label key={key}>
-            <input
-              type="checkbox"
-              checked={layers[key]}
-              onChange={(e) =>
-                setLayers({ ...layers, [key]: e.target.checked })
-              }
-            />{' '}
-            {
-              {
-                facility: 'Sedes',
-                driver: 'Choferes',
-                pickup: 'Recogidas',
-                delivery: 'Entregas',
-                incident: 'Incidencias',
-              }[key]
+      <MapLayersToolbar
+        layers={layers}
+        onLayersChange={setLayers}
+        zones={zones}
+        zone={zone}
+        onZoneChange={(value) => {
+          setZone(value);
+          setSelectedDriver('');
+          setFollowing(false);
+        }}
+        showZones={showZones}
+        onShowZonesChange={setShowZones}
+      />
+      {error && (
+        <p role="alert" className="text-sm text-red-700">
+          {error}
+        </p>
+      )}
+      <DriverMapControls
+        drivers={filteredDrivers}
+        selected={selectedDriver}
+        onSelect={(id) => {
+          setSelectedDriver(id);
+          setFollowing(false);
+        }}
+        following={following}
+        onFollow={() => setFollowing((value) => !value)}
+      />
+      <section className="ops-panel" aria-label="Mapa y estados operativos">
+        <div className="ops-panel-header">
+          <div className="ops-panel-title">
+            <span className="ops-icon">
+              <MapPinned />
+            </span>
+            <div>
+              <h2 className="ops-heading">Distribución operativa</h2>
+              <p className="ops-caption">
+                Sedes, choferes y servicios en el mapa.
+              </p>
+            </div>
+          </div>
+          <span className="ops-badge ops-badge-selected">
+            {zone
+              ? zones.find((area) => area.id === zone)?.name
+              : 'Todas las zonas'}
+          </span>
+        </div>
+        <div className="ops-map-content">
+          <BaseMap
+            fitZones
+            points={points}
+            zones={
+              showZones ? zones.filter((area) => !zone || area.id === zone) : []
             }
-          </label>
-        ))}
-        <select
-          aria-label="Zona"
-          value={zone}
-          onChange={(e) => setZone(e.target.value)}
-        >
-          <option value="">Todas las zonas</option>
-          {SERVICE_AREAS.map((area) => (
-            <option key={area.id} value={area.id}>
-              {area.name}
-            </option>
-          ))}
-        </select>
-      </div>
-      <BaseMap points={points} onSelect={open} height={520} />
-      <section
-        className="grid md:grid-cols-2 xl:grid-cols-3 gap-3"
-        aria-label="Ubicaciones operativas"
-      >
-        {points.map((p) => (
-          <button
-            key={p.kind + p.id}
-            className="text-left rounded-xl border bg-white p-4"
-            onClick={() => open(p.id)}
-          >
-            <strong>{p.label}</strong>
-            <p className="text-sm text-slate-600">{p.detail}</p>
-            {p.stale && (
-              <p className="text-xs text-amber-800">Ubicación desactualizada</p>
-            )}
-          </button>
-        ))}
+            center={followed ? followed.location : undefined}
+            onSelect={(id) => {
+              if (drivers.some((driver) => driver.id === id)) {
+                setSelectedDriver(id);
+                setFollowing(true);
+              } else open(id);
+            }}
+            height={520}
+          />
+        </div>
+        <DriverMapLegend />
       </section>
-      {!points.length && <p>No hay ubicaciones para estos filtros.</p>}
+      <MapLocations points={points} onOpen={open} />
     </div>
   );
 }

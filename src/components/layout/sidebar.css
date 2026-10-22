@@ -1,6 +1,10 @@
+.sidebar-brand {
+  overflow: hidden;
+}
+
 .sidebar-nav-scroll {
   scrollbar-width: thin;
-  scrollbar-color: #cbd5e1 transparent;
+  scrollbar-color: #ffffff66 transparent;
   overscroll-behavior: contain;
 }
 
@@ -11,11 +15,11 @@
   background: transparent;
 }
 .sidebar-nav-scroll::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #ffffff66;
   border-radius: 999px;
 }
 .sidebar-nav-scroll::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #ffffff99;
 }
 
 .sidebar-focus:focus-visible {

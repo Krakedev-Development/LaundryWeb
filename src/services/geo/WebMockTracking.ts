@@ -1,3 +1,4 @@
+import { demoTrackingControls } from './DemoTrackingControls';
 import { operationalStage } from '../fulfillment';
 import {
   MockTrackingProvider,
@@ -65,6 +66,11 @@ export class WebMockTracking {
               id,
               route ?? demoTrackingRoute(driver.location, destination),
             );
+            demoTrackingControls.register(id, {
+              pause: () => this.provider.pause(id),
+              resume: () => this.provider.resume(id),
+              restart: () => this.provider.restart(id),
+            });
             const publisher = new MockDriverLocationPublisher((location) =>
               publish(
                 id,
@@ -95,6 +101,7 @@ export class WebMockTracking {
     const state = this.active.get(id);
     state?.controller.abort();
     state?.unsubscribe?.();
+    demoTrackingControls.unregister(id);
     this.provider.stop(id);
     this.active.delete(id);
   }

@@ -37,7 +37,7 @@ export function OrderRouteMap({ order }: { order: Order }) {
     [error, setError] = useState(''),
     [loading, setLoading] = useState(false);
   useEffect(() => {
-    if (order.fulfillment?.mode === "STORE_STORE" || !origin || !target) return;
+    if (!origin || !target) return;
     const controller = new AbortController();
     setLoading(true);
     setError('');
@@ -86,7 +86,6 @@ export function OrderRouteMap({ order }: { order: Order }) {
       label: driver.name,
       coordinates: driver.location,
     });
-  if(order.fulfillment?.mode === "STORE_STORE" && facility) return <section className="rounded-2xl border border-slate-200 bg-white p-5"><h2 className="font-semibold mb-3">Sede de ingreso y retiro</h2><BaseMap center={facility.coordinates} points={[{id:facility.id,kind:"facility",label:facility.name,coordinates:facility.coordinates}]} height={300}/></section>;
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-5 space-y-3">
       <h2 className="font-semibold">Ubicaciones y ruta de la etapa actual</h2>

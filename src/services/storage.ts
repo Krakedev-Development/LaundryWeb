@@ -1,4 +1,12 @@
+import { validateFacilityRelocation } from '../entities/zone/model/facilityLocation.rules';
 import { LocalHandoffRepository } from './LocalHandoffRepository';
+import {
+  BusinessService,
+  ensureBusinessState,
+  recordBusinessCustody,
+  type BusinessState,
+} from './BusinessService';
+import { prepareBusinessDemoData } from './BusinessDemoData';
 import {
   operationalStage,
   migrateOrder,
@@ -9,8 +17,12 @@ import {
 } from './fulfillment';
 import { HandoffService, HandoffState } from './HandoffService';
 import { prepareWebDemoData } from './geo/WebDemoData';
+import { prepareHandoffDemoData } from './HandoffDemoData';
 import { eligibilityReasons } from './geo/DispatchService';
 import { serviceAreaService } from './geo/ServiceAreaService';
+import { commitFacility } from './zones/commitFacility';
+import { readZones, ZONES_KEY, notifyZones } from './zones/zoneStorage';
+import { validatePinnedFacility } from '../entities/zone/model/zone.rules';
 import {
   AuditLog,
   CatalogItem,
@@ -63,6 +75,7 @@ const STORAGE_KEYS = {
 };
 
 type Listener = () => void;
+type WebBusinessState = BusinessState & { redemptions?: RewardRedemption[] };
 
 class StorageService {
   private listeners: Set<Listener> = new Set();
@@ -91,7 +104,12 @@ class StorageService {
           facilityId: current.facilityId,
         };
       const staff = /^DEMO-(ADMIN|SUPERVISOR)-(FAC-\d+)$/.exec(id);
-      if (staff && this.getFacilities().some((f) => f.id === staff[2]))
+      if (
+        staff &&
+        this.getFacilities().some((f) => f.id === staff[2]) &&
+        (current.role === 'ADMIN' ||
+          (staff[1] === 'SUPERVISOR' && current.facilityId === staff[2]))
+      )
         return {
           id,
           name: 'Operador demo de sede',
@@ -99,10 +117,17 @@ class StorageService {
           facilityId: staff[2],
         };
       const driver = this.getDrivers().find((d) => d.id === id);
-      if (driver) return { id, name: driver.name, role: 'DRIVER' };
+      if (
+        driver &&
+        (current.role === 'ADMIN' ||
+          (current.role === 'SUPERVISOR' &&
+            current.facilityId === driver.facilityId))
+      )
+        return { id, name: driver.name, role: 'DRIVER' };
       throw new Error('Operador no autorizado.');
     },
     paid: (o) => (o as Order).pricing.paymentStatus === 'PAID',
+    intakeAllowed: (o) => (o as Order).pricing.pricingModel === 'PER_WEIGHT',
     blocked: (o) =>
       this.getIncidents().some(
         (i) => i.orderId === o.id && i.status !== 'RESOLVED',
@@ -112,6 +137,7 @@ class StorageService {
     confirmed: (state, raw, h, actor) => {
       const d = state as ReturnType<StorageService['getWorkflow']>;
       const o = raw as Order;
+      recordBusinessCustody(ensureBusinessState(d), o, h);
       if (h.type === 'CUSTOMER_TO_DRIVER') o.pickup.completedAt = h.usedAt;
       if (['DRIVER_TO_CUSTOMER', 'FACILITY_TO_CUSTOMER'].includes(h.type)) {
         o.delivery.completedAt = h.usedAt;
@@ -151,7 +177,7 @@ class StorageService {
           evidences: [],
           assignedTo: actor.name,
           reportedBy: actor.name,
-          reportedRole: actor.role === 'SUPERVISOR' ? 'SUPERVISOR' : 'ADMIN',
+          reportedRole: actor.role,
           createdAt: h.usedAt!,
           internalNotes: [],
         });
@@ -188,24 +214,39 @@ class StorageService {
       }
     },
   });
-  public getWorkflow(): {
-    orders: Order[];
-    drivers: Driver[];
-    incidents: Incident[];
-    pointsLedger: PointsLedgerEntry[];
-    customers: Customer[];
-    handoffs: Handoff[];
-    handoffAudits: HandoffAudit[];
-  } {
+  public businessService = new BusinessService({
+    read: () => this.getWorkflow(),
+    transaction: (work) => {
+      const state = this.getWorkflow();
+      const result = work(state);
+      localStorage.setItem(this.workflowKey, JSON.stringify(state));
+      this.notify();
+      return result;
+    },
+    actor: () => this.getCurrentUser(),
+    facilities: () => this.getFacilities(),
+    catalog: () => this.getCatalog(),
+    promotions: () => this.getPromotions(),
+    zoneFor: (address, facilityId) => {
+      const area = serviceAreaService.findArea(address.coordinates);
+      return area?.facilityId === facilityId ? area.id : undefined;
+    },
+    covers: (address, facilityId) =>
+      serviceAreaService.findArea(address.coordinates)?.facilityId ===
+      facilityId,
+    handoffs: this.handoffService,
+  });
+  public getWorkflow(): WebBusinessState {
     const raw = localStorage.getItem(this.workflowKey);
     if (raw) {
       const state = JSON.parse(raw);
       state.customers ??= JSON.parse(
         localStorage.getItem(STORAGE_KEYS.CUSTOMERS) ?? '[]',
       );
-      return state;
+      state.redemptions ??= this.getRedemptions();
+      return ensureBusinessState(state) as WebBusinessState;
     }
-    return {
+    return ensureBusinessState({
       orders: this.getOrders(),
       drivers: this.getDrivers(),
       incidents: this.getIncidents(),
@@ -213,12 +254,47 @@ class StorageService {
       customers: this.getCustomers(),
       handoffs: [],
       handoffAudits: [],
-    };
+    });
+  }
+  public demoBusinessActor(actor: Actor) {
+    if (this.getCurrentUser().role !== 'ADMIN')
+      throw new Error(
+        'La simulación de cliente o chofer está reservada al Administrador del MVP.',
+      );
+    if (
+      (actor.role === 'CLIENT' &&
+        !this.getWorkflow().customers.some((c) => c.id === actor.id)) ||
+      (actor.role === 'DRIVER' &&
+        !this.getDrivers().some((d) => d.id === actor.id))
+    )
+      throw new Error('Cuenta demo no encontrada.');
+    return new BusinessService({
+      read: () => this.getWorkflow(),
+      transaction: (work) => {
+        const state = this.getWorkflow();
+        const result = work(state);
+        localStorage.setItem(this.workflowKey, JSON.stringify(state));
+        this.notify();
+        return result;
+      },
+      actor: () => actor,
+      facilities: () => this.getFacilities(),
+      catalog: () => this.getCatalog(),
+      promotions: () => this.getPromotions(),
+      zoneFor: (address, facility) => {
+        const area = serviceAreaService.findArea(address.coordinates);
+        return area?.facilityId === facility ? area.id : undefined;
+      },
+      covers: (address, facility) =>
+        serviceAreaService.findArea(address.coordinates)?.facilityId ===
+        facility,
+      handoffs: this.handoffService,
+    });
   }
   private initializeWorkflow() {
     const fac = this.getFacilities();
     fac.forEach((f) => {
-      f.acceptsCustomerDropoff ??= true;
+      f.acceptsCustomerDropoff = false;
       f.allowsCustomerPickup ??= true;
       f.openingHours ??= 'Lunes a sábado, 08:00–18:00';
       f.serviceAreaIds ??= serviceAreaService.areas
@@ -228,7 +304,7 @@ class StorageService {
     localStorage.setItem(STORAGE_KEYS.FACILITIES, JSON.stringify(fac));
     const state = this.getWorkflow();
     for (const [id, mode] of [
-      ['SOL-STORE-001', 'STORE_STORE'],
+      ['SOL-STORE-001', 'HOME_STORE'],
       ['SOL-HOME-001', 'HOME_HOME'],
     ] as const) {
       if (state.orders.some((o) => o.id === id)) continue;
@@ -257,19 +333,18 @@ class StorageService {
       o.pricing.paymentStatus = 'PAID';
       o.pickup.driverId = undefined;
       o.delivery.driverId = undefined;
-      if (mode === 'STORE_STORE') {
+      if (mode === 'HOME_STORE') {
         const f = this.getFacilities().find((f) => f.id === o.facilityId)!;
-        o.customerAddress = {
+        o.deliveryAddress = {
           ...o.customerAddress,
           street: f.address,
           number: '',
           coordinates: f.coordinates,
         };
-        o.deliveryAddress = { ...o.customerAddress };
         o.delivery.timeSlot = 'Retiro al estar listo';
       }
       migrateOrder(o, mode);
-      if (mode === 'STORE_STORE') {
+      if (mode === 'HOME_STORE') {
         o.pricing.deliveryFee = 0;
         o.pricing.total = Number(
           (
@@ -295,6 +370,11 @@ class StorageService {
         legacy,
       );
     });
+    prepareHandoffDemoData(state, fac, this.handoffService);
+    const catalog = this.getCatalog();
+    prepareBusinessDemoData(state, fac, this.handoffService, catalog);
+    localStorage.setItem(STORAGE_KEYS.FACILITIES, JSON.stringify(fac));
+    localStorage.setItem(STORAGE_KEYS.CATALOG, JSON.stringify(catalog));
     localStorage.setItem(this.workflowKey, JSON.stringify(state));
   }
   public getHandoffs() {
@@ -433,6 +513,7 @@ class StorageService {
   }
 
   public resetAll(): void {
+    localStorage.removeItem(ZONES_KEY);
     localStorage.removeItem(this.workflowKey);
     localStorage.setItem(
       STORAGE_KEYS.CURRENT_USER,
@@ -475,6 +556,7 @@ class StorageService {
       JSON.stringify(INITIAL_SETTINGS),
     );
     this.initializeWorkflow();
+    notifyZones();
     this.notify();
   }
 
@@ -494,9 +576,15 @@ class StorageService {
     }
   }
   public refreshDemoLocations() {
+    const user = this.getCurrentUser();
     const drivers = this.getDrivers();
     drivers.forEach((d) => {
-      if (d.location.simulated && d.status !== 'OFFLINE')
+      if (
+        (user.role === 'ADMIN' ||
+          (user.role === 'SUPERVISOR' && user.facilityId === d.facilityId)) &&
+        d.location.simulated &&
+        d.status !== 'OFFLINE'
+      )
         d.location.lastUpdated = new Date().toISOString();
     });
     this.saveDrivers(drivers);
@@ -597,6 +685,26 @@ class StorageService {
     if (!driver) return { success: false, error: 'Chofer no encontrado' };
 
     const order = orders[orderIndex];
+    if (type === 'pickup' && order.pickupNeedsScheduling)
+      return {
+        success: false,
+        error: 'Confirma primero dirección y horario de recogida a domicilio.',
+      };
+    if (order.businessVersion === 3) {
+      try {
+        this.businessService.assign(
+          orderId,
+          driverId,
+          type === 'pickup' ? 'inbound' : 'outbound',
+        );
+        return { success: true };
+      } catch (error) {
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'No se pudo asignar.',
+        };
+      }
+    }
     if (
       this.getCurrentUser().role === 'SUPERVISOR' &&
       this.getCurrentUser().facilityId !== order.facilityId
@@ -605,7 +713,10 @@ class StorageService {
         success: false,
         error: 'Esta solicitud corresponde a otra sede.',
       };
-    if (order.fulfillment?.mode === 'STORE_STORE')
+    if (
+      order.fulfillment?.[type === 'pickup' ? 'inbound' : 'outbound'].method ===
+      'CUSTOMER'
+    )
       return { success: false, error: 'El pedido en sede no requiere chofer.' };
     const allowed =
       type === 'pickup'
@@ -632,7 +743,8 @@ class StorageService {
         facilityId: driver.facilityId,
         zoneId: driver.zoneId,
         activeOrders: driver.activeOrders,
-        maxOrders: driver.maxOrders,
+        maxOrders:
+          this.getWorkflow().businessPolicy.driverLimit ?? driver.maxOrders,
         rating: driver.rating,
         authorizedZoneIds: driver.authorizedZoneIds,
       },
@@ -642,6 +754,9 @@ class StorageService {
         facilityId: order.facilityId,
         zoneId: area.id,
       },
+      Date.now(),
+      120,
+      this.getWorkflow().businessPolicy.enforceDriverLimit,
     );
     if (reasons.length) return { success: false, error: reasons.join('. ') };
     const currentUser = this.getCurrentUser();
@@ -720,7 +835,7 @@ class StorageService {
     }
 
     // Update driver active orders count
-    driver.activeOrders = Math.min(driver.maxOrders, driver.activeOrders + 1);
+    driver.activeOrders += 1;
     this.saveDrivers(drivers);
     this.saveOrders(orders);
     return { success: true };
@@ -739,6 +854,28 @@ class StorageService {
       return { success: false, error: 'Orden no encontrada' };
 
     const order = orders[orderIndex];
+
+    if (
+      order.businessVersion === 3 &&
+      ['IN_PROCESS', 'QUALITY_CONTROL', 'READY', 'READY_FOR_DELIVERY'].includes(
+        newStatus,
+      )
+    ) {
+      try {
+        this.businessService.process(
+          orderId,
+          newStatus === 'READY_FOR_DELIVERY'
+            ? 'READY'
+            : (newStatus as 'IN_PROCESS' | 'QUALITY_CONTROL' | 'READY'),
+        );
+        return { success: true };
+      } catch (error) {
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'No se pudo avanzar.',
+        };
+      }
+    }
 
     if (
       ['PICKED_UP', 'AT_FACILITY', 'DELIVERED', 'CLOSED', 'COMPLETED'].includes(
@@ -813,7 +950,7 @@ class StorageService {
       return {
         success: false,
         error:
-          'La orden se encuentra en CUARENTENA. Debe ser liberada técnicamente antes de pasar a Lista para entrega.',
+          'La orden se encuentra en INSCIDENCIA. Debe ser liberada técnicamente antes de pasar a Lista para entrega.',
       };
     }
 
@@ -890,10 +1027,14 @@ class StorageService {
     order.updatedAt = new Date().toISOString();
 
     const labelMap: Record<OrderStatus, string> = {
+      WEIGHING: 'Pesaje pendiente',
+      INSPECTION: 'Inspección',
+      PRICING_PENDING: 'Precio y pago pendientes',
+      CUSTOMER_APPROVAL_PENDING: 'Aprobación del cliente pendiente',
       DRAFT: 'Borrador',
       PAYMENT_PENDING: 'Pago pendiente',
       CONFIRMED: 'Confirmado',
-      AWAITING_INTAKE: 'Esperando ingreso',
+      AWAITING_INTAKE: 'Esperando recogida a domicilio',
       READY: 'Listo para retiro',
       COMPLETED: 'Completado',
       ARRIVED_AT_FACILITY: 'Esperando recepción en planta',
@@ -916,7 +1057,7 @@ class StorageService {
       CLOSED: 'Solicitud finalizada y cerrada',
       INCIDENT: 'Incidencia operacional activa',
       CANCELLED: 'Solicitud cancelada',
-      QUARANTINE: 'Lote enviado a CUARENTENA para revisión',
+      QUARANTINE: 'Lote enviado a INSCIDENCIA para revisión',
     };
 
     order.timeline.push({
@@ -970,7 +1111,7 @@ class StorageService {
     return this.updateOrderStatus(
       orderId,
       'QUARANTINE',
-      `Cuarentena: ${reason}. ${notes || ''}`,
+      `Inscidencia: ${reason}. ${notes || ''}`,
     );
   }
 
@@ -989,7 +1130,7 @@ class StorageService {
     return this.updateOrderStatus(
       orderId,
       targetStatus,
-      `Liberado de cuarentena: ${resolutionNotes || 'Tratamiento aprobado'}`,
+      `Liberado de inscidencia: ${resolutionNotes || 'Tratamiento aprobado'}`,
     );
   }
 
@@ -1208,6 +1349,74 @@ class StorageService {
   public getCustomerById(id: string): Customer | undefined {
     return this.getCustomers().find((c) => c.id === id);
   }
+  public getOperationalOrders() {
+    const u = this.getCurrentUser();
+    return this.getOrders().filter(
+      (o) => u.role === 'ADMIN' || o.facilityId === u.facilityId,
+    );
+  }
+  public getOperationalDrivers() {
+    const u = this.getCurrentUser();
+    return this.getDrivers().filter(
+      (d) => u.role === 'ADMIN' || d.facilityId === u.facilityId,
+    );
+  }
+  public getOperationalFacilities() {
+    const u = this.getCurrentUser();
+    return this.getFacilities().filter(
+      (f) => u.role === 'ADMIN' || f.id === u.facilityId,
+    );
+  }
+  public getOperationalIncidents() {
+    const ids = new Set(this.getOperationalOrders().map((o) => o.id));
+    return this.getIncidents().filter((i) => ids.has(i.orderId));
+  }
+  public getOperationalCustomers(): Customer[] {
+    if (this.getCurrentUser().role === 'ADMIN') return this.getCustomers();
+    return this.getCustomers()
+      .filter((c) =>
+        this.getOperationalOrders().some((o) => o.customerId === c.id),
+      )
+      .map((c) => ({
+        ...c,
+        documentNumber: '',
+        kycDocumentUrl: undefined,
+        kycSelfieUrl: undefined,
+        kycRejectionReason: undefined,
+        kycReviewedBy: undefined,
+        notes: undefined,
+      }));
+  }
+
+  public getOperationalPointsLedger(): PointsLedgerEntry[] {
+    if (this.getCurrentUser().role === 'ADMIN') return this.getPointsLedger();
+    const ids = new Set(this.getOperationalCustomers().map((c) => c.id));
+    return this.getPointsLedger().filter((entry) => ids.has(entry.customerId));
+  }
+  public getOperationalRedemptions(): RewardRedemption[] {
+    return this.getCurrentUser().role === 'ADMIN' ? this.getRedemptions() : [];
+  }
+  public getOperationalAuditLogs(): AuditLog[] {
+    if (this.getCurrentUser().role === 'ADMIN') return this.getAuditLogs();
+    const orders = new Set(this.getOperationalOrders().map((o) => o.id));
+    const handoffs = new Set(
+      this.getHandoffs()
+        .filter((h) => orders.has(h.orderId))
+        .map((h) => h.id),
+    );
+    return this.getAuditLogs()
+      .filter(
+        (log) =>
+          (log.entity === 'Order' && orders.has(log.entityId)) ||
+          (log.entity === 'Handoff' && handoffs.has(log.entityId)),
+      )
+      .map((log) => ({
+        ...log,
+        notes: undefined,
+        previousValue: undefined,
+        newValue: undefined,
+      }));
+  }
 
   public saveCustomers(customers: Customer[]): void {
     const state = this.getWorkflow();
@@ -1367,10 +1576,40 @@ class StorageService {
       'id' | 'activeOrders' | 'rating' | 'completedTripsToday'
     >,
   ): Driver {
+    if (this.getCurrentUser().role !== 'ADMIN')
+      throw new Error('Solo el administrador puede crear choferes.');
     const drivers = this.getDrivers();
-    const newId = 'DRV-' + (109 + drivers.length);
+    const facility = this.getFacilities().find(
+      (f) => f.id === driverData.facilityId && f.status === 'ACTIVE',
+    );
+    if (!facility) throw Error('Selecciona una sede activa.');
+    if (
+      !driverData.name.trim() ||
+      !driverData.phone.trim() ||
+      !driverData.vehiclePlate.trim() ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(driverData.email.trim())
+    )
+      throw Error('Completa nombre, teléfono, correo válido y placa.');
+    if (
+      drivers.some(
+        (d) => d.email.toLowerCase() === driverData.email.trim().toLowerCase(),
+      )
+    )
+      throw Error('Ya existe un chofer con este correo.');
+    if (!Number.isFinite(driverData.maxOrders) || driverData.maxOrders < 1)
+      throw Error('La capacidad debe ser mayor a cero.');
+    const newId = 'DRV-' + crypto.randomUUID();
     const newDriver: Driver = {
       ...driverData,
+      name: driverData.name.trim(),
+      email: driverData.email.trim().toLowerCase(),
+      facilityName: facility.name,
+      location: {
+        ...facility.coordinates,
+        address: facility.address,
+        lastUpdated: new Date().toISOString(),
+        simulated: true,
+      },
       id: newId,
       activeOrders: 0,
       rating: 5.0,
@@ -1394,6 +1633,8 @@ class StorageService {
   }
 
   public updateDriver(driver: Driver): void {
+    if (this.getCurrentUser().role !== 'ADMIN')
+      throw Error('Solo el Administrador configura choferes.');
     const drivers = this.getDrivers();
     const idx = drivers.findIndex((d) => d.id === driver.id);
     if (idx !== -1) {
@@ -1419,6 +1660,8 @@ class StorageService {
       'id' | 'activeOrders' | 'assignedDriversCount' | 'currentLoadKgDay'
     >,
   ): Facility {
+    this.validateFacility(facData);
+    if (!facData.zoneId) throw Error('Selecciona una zona y ubica el pin de la sede.');
     const facilities = this.getFacilities();
     const newId = 'FAC-0' + (facilities.length + 1);
     const newFacility: Facility = {
@@ -1429,19 +1672,54 @@ class StorageService {
       currentLoadKgDay: 0,
     };
     facilities.push(newFacility);
-    this.saveFacilities(facilities);
+    commitFacility(facilities, newFacility, STORAGE_KEYS.FACILITIES);
+    this.notify();
     return newFacility;
   }
 
   public updateFacility(facility: Facility): void {
+    this.validateFacility(facility);
     const facilities = this.getFacilities();
     const idx = facilities.findIndex((f) => f.id === facility.id);
     if (idx !== -1) {
+      validateFacilityRelocation(
+        facilities[idx], facility, readZones(), this.getWorkflow().orders,
+      );
       facilities[idx] = facility;
-      this.saveFacilities(facilities);
+      if (facility.zoneId) {
+        commitFacility(facilities, facility, STORAGE_KEYS.FACILITIES);
+        this.notify();
+      } else this.saveFacilities(facilities);
     }
   }
 
+  private validateFacility(facility: Partial<Facility>): void {
+    if (this.getCurrentUser().role !== 'ADMIN')
+      throw Error('Solo el Administrador puede configurar sedes.');
+    validatePinnedFacility(facility, readZones());
+    const c = facility.coordinates,
+      schedule = facility.operatingSchedule;
+    if (
+      !facility.name?.trim() ||
+      !facility.code?.trim() ||
+      !c ||
+      !Number.isFinite(c.lat) ||
+      !Number.isFinite(c.lng) ||
+      Math.abs(c.lat) > 90 ||
+      Math.abs(c.lng) > 180 ||
+      !(facility.capacityMaxKgDay! > 0)
+    )
+      throw Error('Revisa nombre, código, coordenadas y capacidad.');
+    if (
+      schedule &&
+      (!schedule.days.length ||
+        schedule.days.some((d) => !Number.isInteger(d) || d < 0 || d > 6) ||
+        !/^([01]\d|2[0-3]):[0-5]\d$/.test(schedule.open) ||
+        !/^([01]\d|2[0-3]):[0-5]\d$/.test(schedule.close) ||
+        schedule.open >= schedule.close)
+    )
+      throw Error('Revisa los días y horarios de operación.');
+  }
   // --- CATALOG ---
   public getCatalog(): CatalogItem[] {
     const raw = localStorage.getItem(STORAGE_KEYS.CATALOG);
@@ -1454,6 +1732,7 @@ class StorageService {
   }
 
   public createCatalogItem(itemData: Omit<CatalogItem, 'id'>): CatalogItem {
+    this.validateCatalogItem(itemData);
     const catalog = this.getCatalog();
     const newId = 'CAT-' + (catalog.length + 1).toString().padStart(2, '0');
     const newItem: CatalogItem = { ...itemData, id: newId };
@@ -1463,6 +1742,7 @@ class StorageService {
   }
 
   public updateCatalogItem(item: CatalogItem): void {
+    this.validateCatalogItem(item);
     const catalog = this.getCatalog();
     const idx = catalog.findIndex((i) => i.id === item.id);
     if (idx !== -1) {
@@ -1472,6 +1752,22 @@ class StorageService {
   }
 
   // --- PROMOTIONS ---
+  private validateCatalogItem(item: Omit<CatalogItem, 'id'>) {
+    if (this.getCurrentUser().role !== 'ADMIN')
+      throw new Error('Solo el administrador modifica el catálogo.');
+    if (
+      !item.name.trim() ||
+      !Number.isFinite(item.price) ||
+      item.price < 0 ||
+      (item.pricingModel === 'PER_WEIGHT' &&
+        (!item.weightUnit || !(item.pricePerWeightUnit! > 0))) ||
+      item.estimatedHours < 0 ||
+      item.maxHours < item.minHours
+    )
+      throw new Error(
+        'Revisa nombre, tarifa, unidad y tiempo de procesamiento.',
+      );
+  }
   public getPromotions(): Promotion[] {
     const raw = localStorage.getItem(STORAGE_KEYS.PROMOTIONS);
     return raw ? JSON.parse(raw) : [];
@@ -1487,6 +1783,28 @@ class StorageService {
     error?: string;
     promo?: Promotion;
   } {
+    if (this.getCurrentUser().role !== 'ADMIN')
+      return {
+        success: false,
+        error: 'Solo el Administrador configura promociones.',
+      };
+    if (
+      !promoData.name.trim() ||
+      !promoData.code.trim() ||
+      !Number.isFinite(promoData.discountValue) ||
+      promoData.minOrderAmount < 0 ||
+      !Number.isInteger(promoData.usageLimit) ||
+      promoData.usageLimit < 1 ||
+      !Number.isFinite(Date.parse(promoData.startDate)) ||
+      !Number.isFinite(Date.parse(promoData.endDate)) ||
+      this.getPromotions().some(
+        (p) => p.code.toUpperCase() === promoData.code.toUpperCase(),
+      )
+    )
+      return {
+        success: false,
+        error: 'Revisa los datos y utiliza un código de promoción único.',
+      };
     if (new Date(promoData.endDate) < new Date(promoData.startDate)) {
       return {
         success: false,
@@ -1542,6 +1860,8 @@ class StorageService {
   }
 
   public createReward(data: Omit<Reward, 'id'>): Reward {
+    if (this.getCurrentUser().role !== 'ADMIN')
+      throw Error('Solo el Administrador configura recompensas.');
     const rewards = this.getRewards();
     const newId = 'REW-0' + (rewards.length + 1);
     const newReward: Reward = { ...data, id: newId };
@@ -1551,8 +1871,72 @@ class StorageService {
   }
 
   public getRedemptions(): RewardRedemption[] {
-    const raw = localStorage.getItem(STORAGE_KEYS.REDEMPTIONS);
-    return raw ? JSON.parse(raw) : [];
+    const workflow = localStorage.getItem(this.workflowKey);
+    const saved = workflow ? JSON.parse(workflow).redemptions : undefined;
+    if (Array.isArray(saved)) return saved;
+    return JSON.parse(localStorage.getItem(STORAGE_KEYS.REDEMPTIONS) ?? '[]');
+  }
+
+  public requestDemoReward(
+    customerId: string,
+    rewardId: string,
+  ): RewardRedemption {
+    if (this.getCurrentUser().role !== 'ADMIN')
+      throw Error(
+        'Solo el Administrador puede simular una solicitud de canje en este MVP web.',
+      );
+    const state = this.getWorkflow();
+    state.redemptions ??= this.getRedemptions();
+    const customer = state.customers.find((c) => c.id === customerId);
+    const reward = this.getRewards().find(
+      (r) => r.id === rewardId && r.status === 'ACTIVE',
+    );
+    if (!customer || !reward)
+      throw Error('Selecciona un cliente y una recompensa activa.');
+    const reserved = state.redemptions
+      .filter(
+        (r) =>
+          r.customerId === customerId &&
+          r.status === 'PENDING' &&
+          r.pointsReserved,
+      )
+      .reduce((sum, r) => sum + r.pointsSpent, 0);
+    const purchases = state.orders.filter(
+      (o) => o.customerId === customerId && o.status === 'COMPLETED',
+    );
+    const spend = purchases.reduce((sum, o) => sum + o.pricing.total, 0);
+    if (
+      customer.points - reserved < reward.pointsCost ||
+      customer.completedOrders < reward.minPurchases ||
+      spend < reward.minSpend
+    )
+      throw Error(
+        'El cliente no cumple los requisitos del canje o tiene puntos reservados.',
+      );
+    const redemption: RewardRedemption = {
+      id: 'RED-' + crypto.randomUUID(),
+      customerId,
+      customerName: customer.fullName,
+      rewardId,
+      rewardName: reward.name,
+      pointsSpent: reward.pointsCost,
+      date: new Date().toISOString(),
+      status: 'PENDING',
+      pointsReserved: true,
+    };
+    state.redemptions.push(redemption);
+    state.businessAudits.push({
+      id: crypto.randomUUID(),
+      actorId: customerId,
+      actorRole: 'CLIENT',
+      action: 'DEMO_REWARD_REQUESTED',
+      reason:
+        'Solicitud local simulada por Administrador; no sincroniza con LaundryApp.',
+      at: redemption.date,
+    });
+    localStorage.setItem(this.workflowKey, JSON.stringify(state));
+    this.notify();
+    return redemption;
   }
 
   public updateRedemptionStatus(
@@ -1560,16 +1944,55 @@ class StorageService {
     status: RewardRedemption['status'],
     notes?: string,
   ): { success: boolean } {
-    const redemptions = this.getRedemptions();
-    const red = redemptions.find((r) => r.id === redemptionId);
+    const user = this.getCurrentUser();
+    if (user.role !== 'ADMIN')
+      throw Error('Solo el administrador revisa canjes.');
+    if (!notes?.trim())
+      throw Error('Escribe el motivo de la revisión o entrega.');
+    const state = this.getWorkflow();
+    state.redemptions ??= this.getRedemptions();
+    const red = state.redemptions.find((r) => r.id === redemptionId);
     if (!red) return { success: false };
-
-    const currentUser = this.getCurrentUser();
+    if (red.status === status) return { success: true };
+    if (!(
+      (red.status === 'PENDING' &&
+        (status === 'APPROVED' || status === 'REJECTED')) ||
+      (red.status === 'APPROVED' && status === 'DELIVERED')
+    ))
+      throw Error(
+        'Transición de canje no permitida; la entrega requiere aprobación.',
+      );
+    const at = new Date().toISOString();
+    if (red.pointsReserved && status === 'APPROVED') {
+      const customer = state.customers.find((c) => c.id === red.customerId);
+      if (!customer || customer.points < red.pointsSpent)
+        throw Error('Saldo de puntos insuficiente para aprobar.');
+      customer.points -= red.pointsSpent;
+      state.pointsLedger.push({
+        id: red.id,
+        customerId: red.customerId,
+        points: -red.pointsSpent,
+        type: 'REDEMPTION',
+        reason: notes.trim(),
+        date: at,
+        adminUser: user.name,
+      });
+    }
+    red.pointsReserved = false;
     red.status = status;
-    red.reviewedBy = currentUser.name;
-    if (notes) red.notes = notes;
-
-    localStorage.setItem(STORAGE_KEYS.REDEMPTIONS, JSON.stringify(redemptions));
+    red.reviewedBy = user.name;
+    red.reviewedAt = at;
+    red.notes = notes.trim();
+    state.businessAudits.push({
+      id: crypto.randomUUID(),
+      actorId: user.id,
+      actorRole: user.role,
+      action: 'REWARD_' + status,
+      reason: red.id + ': ' + notes.trim(),
+      at,
+    });
+    // Review, balance, ledger and audit share one durable write. Legacy debits remain untouched.
+    localStorage.setItem(this.workflowKey, JSON.stringify(state));
     this.notify();
     return { success: true };
   }
@@ -1581,6 +2004,8 @@ class StorageService {
   }
 
   public updateSettings(settings: SystemSettings): void {
+    if (this.getCurrentUser().role !== 'ADMIN')
+      throw new Error('Solo el administrador configura el sistema.');
     localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
     this.notify();
   }
@@ -1588,11 +2013,37 @@ class StorageService {
   // --- AUDIT LOGS ---
   public getAuditLogs(): AuditLog[] {
     const raw = localStorage.getItem(STORAGE_KEYS.AUDIT_LOGS);
-    return raw ? JSON.parse(raw) : [];
+    const saved: AuditLog[] = raw ? JSON.parse(raw) : [];
+    const state = this.getWorkflow();
+    return [
+      ...state.businessAudits.map((a) => ({
+        id: a.id,
+        timestamp: a.at,
+        userName: a.actorId,
+        userRole: a.actorRole as Actor['role'],
+        action: a.action,
+        entity: 'Order',
+        entityId: a.orderId ?? 'POLICY',
+        notes: a.reason,
+      })),
+      ...state.handoffAudits.map((a) => ({
+        id: a.id,
+        timestamp: a.at,
+        userName: a.actorId,
+        userRole: a.actorRole,
+        action: a.action,
+        entity: 'Handoff',
+        entityId: a.handoffId,
+        notes: a.reason,
+      })),
+      ...saved,
+    ];
   }
 
   public addAuditLog(entry: Omit<AuditLog, 'id' | 'timestamp'>): void {
-    const logs = this.getAuditLogs();
+    const logs: AuditLog[] = JSON.parse(
+      localStorage.getItem(STORAGE_KEYS.AUDIT_LOGS) ?? '[]',
+    );
     const newLog: AuditLog = {
       ...entry,
       id: 'AUD-' + Date.now(),

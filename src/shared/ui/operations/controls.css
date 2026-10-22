@@ -1,0 +1,70 @@
+@layer components {
+  .ops-ui .ops-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.5rem;
+    padding: 0.625rem 0.875rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    background: white;
+    color: #475569;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.25;
+    cursor: pointer;
+    transition:
+      background 150ms,
+      border-color 150ms,
+      box-shadow 150ms;
+  }
+  .ops-ui .ops-button svg {
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
+  }
+  .ops-ui .ops-button:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+  }
+  .ops-ui .ops-button-primary {
+    background: #0f4c81;
+    border-color: #0f4c81;
+    color: white;
+    box-shadow: 0 1px 2px #0f4c811a;
+  }
+  .ops-ui .ops-button-primary:hover {
+    background: #0a3660;
+    border-color: #0a3660;
+  }
+  .ops-ui .ops-button-soft,
+  .ops-ui .ops-button[aria-pressed='true'] {
+    background: #f0f6fc;
+    border-color: #dbeafe;
+    color: #0f4c81;
+  }
+  .ops-ui .ops-button-ghost {
+    background: transparent;
+    border-color: transparent;
+    color: #0f4c81;
+  }
+  .ops-ui .ops-button-compact {
+    min-height: 2rem;
+    padding: 0.375rem 0.625rem;
+    font-size: 0.6875rem;
+  }
+  .ops-ui .ops-button:disabled {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+    color: #94a3b8;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+  .ops-ui .ops-button:focus-visible,
+  .ops-ui .ops-field:focus-visible,
+  .ops-ui .ops-check:focus-visible {
+    outline: 2px solid #0284c7;
+    outline-offset: 3px;
+  }
+}

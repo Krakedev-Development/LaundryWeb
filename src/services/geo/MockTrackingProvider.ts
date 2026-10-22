@@ -1,3 +1,4 @@
+import { interpolateTrackingLocation } from './interpolateTrackingLocation';
 import {
   toLngLat,
   type Coordinates,
@@ -8,6 +9,7 @@ import {
 interface Journey {
   route: RouteSummary;
   startedAt: number;
+  pausedAt?: number;
   durationMs: number;
   listeners: Set<(location: DriverLocation) => void>;
   timer?: ReturnType<typeof setInterval>;
@@ -33,6 +35,7 @@ export class MockTrackingProvider implements TrackingProvider {
     };
     this.journeys.set(driverId, journey);
     journey.timer = setInterval(() => {
+      if (journey.pausedAt !== undefined) return;
       journey.last = this.locationAt(driverId, Date.now());
       journey.listeners.forEach((callback) => callback(journey.last));
       if (
@@ -47,35 +50,14 @@ export class MockTrackingProvider implements TrackingProvider {
   locationAt(driverId: string, now: number): DriverLocation {
     const journey = this.journeys.get(driverId);
     if (!journey) throw new Error('No existe un recorrido activo.');
-    const points = journey.route.geometry.coordinates;
-    const lengths = points
-      .slice(1)
-      .map((p, i) => Math.hypot(p[0] - points[i][0], p[1] - points[i][1]));
-    const total = lengths.reduce((sum, value) => sum + value, 0);
-    let remaining =
-      total *
-      Math.min(1, Math.max(0, (now - journey.startedAt) / journey.durationMs));
-    let segment = 0;
-    while (segment < lengths.length - 1 && remaining > lengths[segment]) {
-      remaining -= lengths[segment];
-      segment++;
-    }
-    const a = points[segment],
-      b = points[Math.min(segment + 1, points.length - 1)];
-    const progress = lengths[segment] ? remaining / lengths[segment] : 0;
-    return {
+    now = journey.pausedAt ?? now;
+    return interpolateTrackingLocation(
       driverId,
-      coordinates: {
-        lng: a[0] + (b[0] - a[0]) * progress,
-        lat: a[1] + (b[1] - a[1]) * progress,
-      },
-      updatedAt: new Date(now).toISOString(),
-      etaSeconds: Math.max(
-        0,
-        Math.ceil((journey.durationMs - (now - journey.startedAt)) / 1000),
-      ),
-      simulated: true,
-    };
+      journey.route,
+      journey.startedAt,
+      journey.durationMs,
+      now,
+    );
   }
   subscribeToDriver(
     driverId: string,
@@ -88,6 +70,26 @@ export class MockTrackingProvider implements TrackingProvider {
     return () => {
       journey.listeners.delete(callback);
     };
+  }
+  pause(driverId: string) {
+    const journey = this.journeys.get(driverId);
+    if (journey && journey.pausedAt === undefined)
+      journey.pausedAt = Date.now();
+  }
+  resume(driverId: string) {
+    const journey = this.journeys.get(driverId);
+    if (journey?.pausedAt !== undefined) {
+      journey.startedAt += Date.now() - journey.pausedAt;
+      journey.pausedAt = undefined;
+    }
+  }
+  restart(driverId: string) {
+    const journey = this.journeys.get(driverId);
+    if (!journey) return;
+    this.start(driverId, journey.route, journey.durationMs);
+    const restarted = this.journeys.get(driverId)!;
+    restarted.listeners = journey.listeners;
+    restarted.listeners.forEach((listener) => listener(restarted.last));
   }
   stop(driverId: string) {
     const journey = this.journeys.get(driverId);

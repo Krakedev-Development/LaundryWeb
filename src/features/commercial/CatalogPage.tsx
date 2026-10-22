@@ -16,22 +16,12 @@ import {
 } from 'lucide-react';
 
 export const CatalogPage: React.FC = () => {
-  const { catalog, createCatalogItem, updateCatalogItem, currentUser } = useApp();
+  const { catalog, createCatalogItem, updateCatalogItem, currentUser } =
+    useApp();
 
-  // Role Guard
-  if (currentUser.role !== 'ADMIN') {
-    return (
-      <div className="p-12 text-center bg-white rounded-2xl border border-red-200 shadow-2xs max-w-lg mx-auto my-12">
-        <div className="w-12 h-12 rounded-full bg-red-100 text-red-700 flex items-center justify-center mx-auto mb-4">
-          <Lock className="w-6 h-6" />
-        </div>
-        <h2 className="text-lg font-bold text-slate-900">Acceso No Autorizado</h2>
-        <p className="text-xs text-slate-500 mt-1">El módulo de Catálogo Comercial está reservado para el rol Administrador.</p>
-      </div>
-    );
-  }
-
-  const [activeTab, setActiveTab] = useState<'PRENDAS' | 'SERVICIOS' | 'EXTRAS'>('PRENDAS');
+  const [activeTab, setActiveTab] = useState<
+    'PRENDAS' | 'SERVICIOS' | 'EXTRAS'
+  >('PRENDAS');
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<CatalogItem | null>(null);
 
@@ -40,6 +30,13 @@ export const CatalogPage: React.FC = () => {
   const [type, setType] = useState('Prenda Individual');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState(10.0);
+  const [pricingModel, setPricingModel] = useState<'FIXED' | 'PER_WEIGHT'>(
+    'FIXED',
+  );
+  const [unit, setUnit] = useState<'LB' | 'KG'>('LB');
+  const [compatible, setCompatible] = useState(true);
+  const [restrictions, setRestrictions] = useState('');
+  const [selectable, setSelectable] = useState(true);
   const [estimatedHours, setEstimatedHours] = useState(24);
   const [minHours, setMinHours] = useState(12);
   const [maxHours, setMaxHours] = useState(36);
@@ -47,7 +44,9 @@ export const CatalogPage: React.FC = () => {
 
   // KPIs
   const prendasCount = catalog.filter((c) => c.category === 'PRENDAS').length;
-  const serviciosCount = catalog.filter((c) => c.category === 'SERVICIOS').length;
+  const serviciosCount = catalog.filter(
+    (c) => c.category === 'SERVICIOS',
+  ).length;
   const extrasCount = catalog.filter((c) => c.category === 'EXTRAS').length;
   const activosCount = catalog.filter((c) => c.status === 'ACTIVE').length;
 
@@ -57,8 +56,18 @@ export const CatalogPage: React.FC = () => {
 
   const handleOpenCreate = () => {
     setEditingItem(null);
+    setPricingModel('FIXED');
+    setUnit('LB');
+    setRestrictions('');
+    setSelectable(true);
     setName('');
-    setType(activeTab === 'PRENDAS' ? 'Prenda Individual' : activeTab === 'SERVICIOS' ? 'Carga por Peso' : 'Empaque Eco');
+    setType(
+      activeTab === 'PRENDAS'
+        ? 'Prenda Individual'
+        : activeTab === 'SERVICIOS'
+          ? 'Carga por Peso'
+          : 'Empaque Eco',
+    );
     setDescription('');
     setPrice(activeTab === 'EXTRAS' ? 3.0 : 15.0);
     setEstimatedHours(activeTab === 'EXTRAS' ? 0 : 24);
@@ -73,7 +82,16 @@ export const CatalogPage: React.FC = () => {
     setName(item.name);
     setType(item.type);
     setDescription(item.description);
-    setPrice(item.price);
+    setPrice(
+      item.pricingModel === 'PER_WEIGHT'
+        ? (item.pricePerWeightUnit ?? 0)
+        : item.price,
+    );
+    setPricingModel(item.pricingModel ?? 'FIXED');
+    setUnit(item.weightUnit ?? 'LB');
+    setRestrictions(item.restrictions?.join('\n') ?? '');
+    setSelectable(item.customerSelectable !== false);
+    setCompatible(item.compatibleWithWeight !== false);
     setEstimatedHours(item.estimatedHours);
     setMinHours(item.minHours);
     setMaxHours(item.maxHours);
@@ -88,6 +106,12 @@ export const CatalogPage: React.FC = () => {
     if (editingItem) {
       updateCatalogItem({
         ...editingItem,
+        pricingModel,
+        weightUnit: unit,
+        pricePerWeightUnit: pricingModel === 'PER_WEIGHT' ? price : undefined,
+        restrictions: restrictions.split('\n').filter(Boolean),
+        customerSelectable: selectable,
+        compatibleWithWeight: compatible,
         name,
         type,
         description,
@@ -99,6 +123,12 @@ export const CatalogPage: React.FC = () => {
       });
     } else {
       createCatalogItem({
+        pricingModel,
+        weightUnit: unit,
+        pricePerWeightUnit: pricingModel === 'PER_WEIGHT' ? price : undefined,
+        restrictions: restrictions.split('\n').filter(Boolean),
+        customerSelectable: selectable,
+        compatibleWithWeight: compatible,
         name,
         category: activeTab,
         type,
@@ -113,6 +143,24 @@ export const CatalogPage: React.FC = () => {
 
     setIsDrawerOpen(false);
   };
+
+  // Role Guard
+  if (currentUser.role !== 'ADMIN') {
+    return (
+      <div className="p-12 text-center bg-white rounded-2xl border border-red-200 shadow-2xs max-w-lg mx-auto my-12">
+        <div className="w-12 h-12 rounded-full bg-red-100 text-red-700 flex items-center justify-center mx-auto mb-4">
+          <Lock className="w-6 h-6" />
+        </div>
+        <h2 className="text-lg font-bold text-slate-900">
+          Acceso No Autorizado
+        </h2>
+        <p className="text-xs text-slate-500 mt-1">
+          El módulo de Catálogo Comercial está reservado para el rol
+          Administrador.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -164,7 +212,11 @@ export const CatalogPage: React.FC = () => {
       <div className="flex items-center gap-2 border-b border-slate-200">
         {[
           { id: 'PRENDAS', label: 'Prendas Individuales', count: prendasCount },
-          { id: 'SERVICIOS', label: 'Servicios & Paquetes', count: serviciosCount },
+          {
+            id: 'SERVICIOS',
+            label: 'Servicios & Paquetes',
+            count: serviciosCount,
+          },
           { id: 'EXTRAS', label: 'Extras & Empaque', count: extrasCount },
         ].map((tab) => (
           <button
@@ -176,7 +228,10 @@ export const CatalogPage: React.FC = () => {
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
-            {tab.label} <span className="opacity-75 font-mono text-[11px]">({tab.count})</span>
+            {tab.label}{' '}
+            <span className="opacity-75 font-mono text-[11px]">
+              ({tab.count})
+            </span>
           </button>
         ))}
       </div>
@@ -198,19 +253,30 @@ export const CatalogPage: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {currentItems.map((item) => (
-                <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
+                <tr
+                  key={item.id}
+                  className="hover:bg-slate-50/70 transition-colors"
+                >
                   <td className="py-3.5 px-4">
-                    <span className="font-bold text-slate-900 block">{item.name}</span>
-                    <span className="text-[11px] text-slate-500 line-clamp-1">{item.description}</span>
+                    <span className="font-bold text-slate-900 block">
+                      {item.name}
+                    </span>
+                    <span className="text-[11px] text-slate-500 line-clamp-1">
+                      {item.description}
+                    </span>
                   </td>
                   <td className="py-3.5 px-4 text-slate-600 font-medium whitespace-nowrap">
                     {item.type}
                   </td>
                   <td className="py-3.5 px-4 text-right font-mono font-bold text-slate-900 whitespace-nowrap tabular-nums">
-                    ${item.price.toFixed(2)}
+                    {item.pricingModel === 'PER_WEIGHT'
+                      ? `$${item.pricePerWeightUnit?.toFixed(2)}/${item.weightUnit}`
+                      : `$${item.price.toFixed(2)}`}
                   </td>
                   <td className="py-3.5 px-4 font-mono text-slate-700 whitespace-nowrap">
-                    {item.estimatedHours > 0 ? `${item.estimatedHours} horas` : 'Inmediato'}
+                    {item.estimatedHours > 0
+                      ? `${item.estimatedHours} horas`
+                      : 'Inmediato'}
                   </td>
                   <td className="py-3.5 px-4 font-mono text-slate-500 text-[11px] whitespace-nowrap">
                     {item.minHours}h - {item.maxHours}h
@@ -249,9 +315,13 @@ export const CatalogPage: React.FC = () => {
             <div className="p-5 border-b border-[#E5EAF0] bg-[#F7F9FC] flex items-center justify-between">
               <div>
                 <h3 className="text-base font-bold text-slate-900">
-                  {editingItem ? `Editar: ${editingItem.name}` : `Crear Nuevo Ítem (${activeTab})`}
+                  {editingItem
+                    ? `Editar: ${editingItem.name}`
+                    : `Crear Nuevo Ítem (${activeTab})`}
                 </h3>
-                <p className="text-xs text-slate-500">Configuración de precio, tiempos de procesamiento y estado</p>
+                <p className="text-xs text-slate-500">
+                  Configuración de precio, tiempos de procesamiento y estado
+                </p>
               </div>
               <button
                 onClick={() => setIsDrawerOpen(false)}
@@ -261,9 +331,68 @@ export const CatalogPage: React.FC = () => {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto flex-1 text-xs">
+            <form
+              onSubmit={handleSubmit}
+              className="p-5 space-y-4 overflow-y-auto flex-1 text-xs"
+            >
+              <label className="block">
+                Modelo de precio
+                <select
+                  className="mt-2 w-full rounded-xl border border-slate-200 p-3"
+                  value={pricingModel}
+                  onChange={(e) =>
+                    setPricingModel(e.target.value as typeof pricingModel)
+                  }
+                >
+                  <option value="FIXED">Precio fijo por prenda</option>
+                  <option value="PER_WEIGHT">Por peso recibido</option>
+                </select>
+              </label>
+              {pricingModel === 'PER_WEIGHT' && (
+                <label className="block">
+                  Unidad
+                  <select
+                    className="mt-2 w-full rounded-xl border border-slate-200 p-3"
+                    value={unit}
+                    onChange={(e) => setUnit(e.target.value as typeof unit)}
+                  >
+                    <option value="LB">Libras (LB)</option>
+                    <option value="KG">Kilogramos (KG)</option>
+                  </select>
+                  <p className="mt-2 text-slate-500">
+                    El precio ingresado será la tarifa por unidad; el total
+                    permanece pendiente hasta el pesaje.
+                  </p>
+                </label>
+              )}
+              <label className="flex gap-2">
+                <input
+                  type="checkbox"
+                  checked={compatible}
+                  onChange={(e) => setCompatible(e.target.checked)}
+                />
+                Compatible con lavado por peso (prendas)
+              </label>
+              <label className="block">
+                Restricciones (una por línea)
+                <textarea
+                  className="mt-2 w-full rounded-xl border border-slate-200 p-3"
+                  value={restrictions}
+                  onChange={(e) => setRestrictions(e.target.value)}
+                />
+              </label>
+              <label className="flex gap-2">
+                <input
+                  type="checkbox"
+                  checked={selectable}
+                  onChange={(e) => setSelectable(e.target.checked)}
+                />
+                Disponible para seleccionar en la app
+              </label>
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Nombre comercial *</label>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Nombre comercial *
+                </label>
                 <input
                   type="text"
                   required
@@ -275,7 +404,9 @@ export const CatalogPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Tipo / Subcategoría</label>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Tipo / Subcategoría
+                </label>
                 <input
                   type="text"
                   value={type}
@@ -286,7 +417,9 @@ export const CatalogPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Descripción para el cliente</label>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Descripción para el cliente
+                </label>
                 <textarea
                   rows={2}
                   value={description}
@@ -298,7 +431,9 @@ export const CatalogPage: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Precio ($) *</label>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Precio ($) *
+                  </label>
                   <input
                     type="number"
                     step="0.01"
@@ -309,11 +444,15 @@ export const CatalogPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Tiempo Estimado (horas)</label>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Tiempo Estimado (horas)
+                  </label>
                   <input
                     type="number"
                     value={estimatedHours}
-                    onChange={(e) => setEstimatedHours(parseInt(e.target.value) || 0)}
+                    onChange={(e) =>
+                      setEstimatedHours(parseInt(e.target.value) || 0)
+                    }
                     className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs font-mono"
                   />
                 </div>
@@ -321,7 +460,9 @@ export const CatalogPage: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Tiempo Mínimo (h)</label>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Tiempo Mínimo (h)
+                  </label>
                   <input
                     type="number"
                     value={minHours}
@@ -330,7 +471,9 @@ export const CatalogPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Tiempo Máximo (h)</label>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Tiempo Máximo (h)
+                  </label>
                   <input
                     type="number"
                     value={maxHours}
@@ -341,7 +484,9 @@ export const CatalogPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Estado de publicación</label>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Estado de publicación
+                </label>
                 <select
                   value={status}
                   onChange={(e) => setStatus(e.target.value as any)}

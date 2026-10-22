@@ -38,6 +38,7 @@ export function prepareWebDemoData(
     }),
   );
   data.drivers.forEach((d, i) => {
+    const migrateZone = force || !d.zoneId || old(d.location);
     if (old(d.location)) {
       const coordinates = demoCoordinate(i, d.facilityId);
       Object.assign(d.location, coordinates, {
@@ -52,7 +53,7 @@ export function prepareWebDemoData(
     const facility = data.facilities.find((f) => f.id === d.facilityId);
     if (facility) d.facilityName = facility.name;
     const area = serviceAreaService.findArea(d.location);
-    if (area) {
+    if (area && migrateZone) {
       d.zoneId = area.id;
       d.zoneName = area.name;
     }
@@ -62,6 +63,8 @@ export function prepareWebDemoData(
     if (legacyStatus === 'BUSY') d.status = 'ON_SERVICE';
   });
   data.orders.forEach((o, i) => {
+    const migrateZone =
+      force || !o.zoneId || old(o.customerAddress.coordinates);
     const facility = data.facilities.find((f) => f.id === o.facilityId);
     if (facility) o.facilityName = facility.name;
     [o.customerAddress, o.deliveryAddress].forEach((a, j) => {
@@ -73,7 +76,7 @@ export function prepareWebDemoData(
       }
     });
     const area = serviceAreaService.findArea(o.customerAddress.coordinates);
-    if (area) {
+    if (area && migrateZone) {
       o.zoneId = area.id;
       o.zoneName = area.name;
     }
