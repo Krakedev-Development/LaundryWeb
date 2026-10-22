@@ -14,6 +14,8 @@ Consulta la [guía del nuevo flujo y transferencias QR](FULFILLMENT-MVP.md) para
 
 Consulta la [guía completa de flujos de la Web](docs/FLUJOS-WEB-DEMO.md) para conocer las rutas, acciones, perfiles y límites de la demostración local simulada.
 
+Los [20 diagramas de flujos y relaciones](docs/DIAGRAMAS-FLUJOS-WEB.md) muestran cómo se conectan los módulos, sus decisiones y sus datos locales.
+
 ## Requisitos
 
 - Node.js 22.12 o superior (se recomienda Node.js 22 LTS).

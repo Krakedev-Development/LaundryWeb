@@ -2,6 +2,8 @@
 
 Esta guía explica las pantallas, acciones y recorridos operativos disponibles en LaundryWeb. Describe el comportamiento que existe en el código y los datos ficticios que utiliza el MVP; no es una especificación de un servicio productivo.
 
+Consulta también los [20 diagramas de flujos y relaciones](DIAGRAMAS-FLUJOS-WEB.md) para seguir visualmente cada recorrido y sus conexiones.
+
 ## Qué es esta demostración
 
 LaundryWeb permite ensayar la operación de una lavandería desde la solicitud hasta la devolución de las prendas. La interfaz incluye dos perfiles de demostración: Administrador y Supervisor. Las solicitudes, personas, sedes, choferes, cobros, validaciones, reportes, notificaciones y cambios de estado se procesan localmente en el navegador.
@@ -138,7 +140,7 @@ En los dos casos la solicitud se puede cerrar cuando la entrega está confirmada
 
 ### Incidencias y cuarentena
 
-Una incidencia se puede registrar desde el detalle o desde la tabla de incidencias. El formulario solicita tipo, severidad y descripción; la evidencia incluida por el detalle es una referencia vacía de demostración, no una foto subida. La recogida fallida o una diferencia de prendas también pueden dejar registros relacionados con el pedido.
+Una incidencia se puede registrar desde el detalle de una solicitud. La tabla de incidencias permite consultar, añadir notas y resolver casos. El formulario de alta solicita tipo, severidad y descripción; la evidencia incluida por el detalle es una referencia vacía de demostración, no una foto subida. La recogida fallida o una diferencia de prendas también pueden dejar registros relacionados con el pedido.
 
 En **Operaciones → Incidencias** se busca por identificador, pedido, cliente o descripción, y se filtra por estado. Al abrir un caso se pueden agregar notas internas y resolverlo con una explicación. La resolución queda en el historial local. Una incidencia abierta puede bloquear el cierre o un traspaso según su tipo y etapa.
 
