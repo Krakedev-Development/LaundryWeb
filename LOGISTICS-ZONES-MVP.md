@@ -31,6 +31,6 @@ Seleccionar un chofer permite seguir su ubicación. Pausar, reanudar y reiniciar
 
 ## Validación
 
-`npm run lint`, `npm test`, `npm run build` y `npx playwright test tests/zones.spec.cjs`.
+`pnpm run lint`, `pnpm test`, `pnpm run build` y `pnpm exec playwright test tests/zones.spec.cjs`.
 
 Las pruebas cubren polígonos inválidos, permisos, varias sedes por zona, protección de operaciones existentes, reversión de escrituras, pausa/reanudación/reinicio y el registro desde el navegador con cancelación, recarga y filtros.

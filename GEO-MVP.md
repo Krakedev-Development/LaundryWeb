@@ -56,10 +56,10 @@ Backend Geo queda desactivado. LaundryGeoApiProvider reserva POST /geo/search, /
 
 ## Verificación
 
-- npm run lint
-- npm test
-- npm run build
-- npx playwright test
+- pnpm run lint
+- pnpm test
+- pnpm run build
+- pnpm exec playwright test
 
 En Windows con Edge instalado y sin Chromium de Playwright, definir PLAYWRIGHT_CHANNEL=msedge antes de las pruebas UI.
 

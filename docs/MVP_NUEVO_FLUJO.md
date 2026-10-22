@@ -53,10 +53,10 @@ Los valores que el administrador configure son reglas de la instalación de demo
 Desde LaundryApp:
 
 ```powershell
-npx.cmd expo start --clear
+pnpm exec expo start --clear
 ```
 
-Se puede usar `npx expo start` sin un script especial de LAN. `--clear` limpia Metro cuando hace falta; `--lan` es opcional. El teléfono y Metro deben poder comunicarse, y Expo Go debe admitir el SDK instalado en el proyecto. Los mapas usan react-native-maps y WebView disponibles en Expo Go; no se agregó un requisito de development build.
+Se puede usar `pnpm exec expo start` sin un script especial de LAN. `--clear` limpia Metro cuando hace falta; `--lan` es opcional. El teléfono y Metro deben poder comunicarse, y Expo Go debe admitir el SDK instalado en el proyecto. Los mapas usan react-native-maps y WebView disponibles en Expo Go; no se agregó un requisito de development build.
 
 Los botones del login cargan estas cuentas; contraseña de demostración `123456`:
 
@@ -77,25 +77,25 @@ Fixtures comunes: SOL-HH-001, SOL-HS-001, SOL-SH-001, SOL-SS-001 y SOL-WEIGHT-00
 
 Estos ejemplos agregan datos nuevos y no reemplazan pedidos, saldos ni historial guardado. Si la configuración o disponibilidad existente impide preparar un ejemplo, se conserva el repositorio previo. Recepción, pesaje, inspección, procesamiento, asignación, KYC, configuración y revisión de canjes se realizan en LaundryWeb.
 
-LaundryWeb: `npm.cmd run dev`. Su login conserva Carlos Mendoza (Administrador, `admin@laundryweb.com`) y Elena Rostova (Supervisor, `supervisor@laundryweb.com`). Las solicitudes, recepción, despacho y planta trabajan sobre el mismo repositorio del navegador. Los controles rotulados MVP permiten al administrador representar la respuesta del cliente sin cambiar a una cuenta móvil; registran el actor cliente en auditoría.
+LaundryWeb: `pnpm run dev`. Su login conserva Carlos Mendoza (Administrador, `admin@laundryweb.com`) y Elena Rostova (Supervisor, `supervisor@laundryweb.com`). Las solicitudes, recepción, despacho y planta trabajan sobre el mismo repositorio del navegador. Los controles rotulados MVP permiten al administrador representar la respuesta del cliente sin cambiar a una cuenta móvil; registran el actor cliente en auditoría.
 
 ## Validación y mantenimiento
 
 ```powershell
 # LaundryWeb
-npm.cmd run lint
-npm.cmd test
-npm.cmd run build
-npm.cmd run test:ui
+pnpm run lint
+pnpm test
+pnpm run build
+pnpm run test:ui
 
 # LaundryApp
-npm.cmd run typecheck
-npx.cmd expo export --platform android --platform ios --platform web --output-dir dist-mvp-check
+pnpm run typecheck
+pnpm exec expo export --platform android --platform ios --platform web --output-dir dist-mvp-check
 ```
 
-Para probar la exportación web de Expo con Playwright: exportar primero la app y ejecutar `npm.cmd run test:app` en LaundryWeb. La configuración inicia la vista previa local en 8083.
+Para probar la exportación web de Expo con Playwright: exportar primero la app y ejecutar `pnpm run test:app` en LaundryWeb. La configuración inicia la vista previa local en 8083.
 
-Los dominios de LaundryWeb y LaundryApp son independientes. `npm.cmd run domain:check` verifica que ambos permiten las mismas dos modalidades. `domain:sync` se conserva como alias de esa comprobación y ya no sobrescribe modelos ni archivos de Expo.
+Los dominios de LaundryWeb y LaundryApp son independientes. `pnpm run domain:check` verifica que ambos permiten las mismas dos modalidades. `domain:sync` se conserva como alias de esa comprobación y ya no sobrescribe modelos ni archivos de Expo.
 
 La validación automatizada cubre los dos ciclos vigentes, QR, permisos, pago, pesaje, ajustes, reservas, reprogramación, cancelación, rutas, persistencia y fallos de almacenamiento. La exportación Android/iOS no sustituye la prueba física de escaneo, permisos y mapas en un teléfono con Expo Go.
 

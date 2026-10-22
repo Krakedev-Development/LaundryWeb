@@ -8,20 +8,20 @@ El layout usa un menú fijado de 260 px o compacto de 60 px desde 1024 px. La pr
 
 `MainLayout.tsx` sincroniza el margen; los hooks `useSidebarState`, `useSidebarHover` y `useExpandedModules` gestionan cada interacción. `PrefetchNavLink` anticipa las páginas de carga diferida al enfocarlas o pasar el cursor. El diseño usa únicamente fondos claros, Lucide y los logotipos oficiales de `assets/`. Ctrl/Cmd + K abre la búsqueda global.
 
-Para verificar la navegación: `npm run lint`, `npm run build` y `npx playwright test tests/sidebar.spec.cjs` con el navegador de Playwright instalado. Si se usa Edge, establecer `PLAYWRIGHT_CHANNEL=msedge`.
+Para verificar la navegación: `pnpm run lint`, `pnpm run build` y `pnpm exec playwright test tests/sidebar.spec.cjs` con el navegador de Playwright instalado. Si se usa Edge, establecer `PLAYWRIGHT_CHANNEL=msedge`.
 
 Consulta la [guía del nuevo flujo y transferencias QR](FULFILLMENT-MVP.md) para ejecutar los recorridos a domicilio y en sede desde Recepción y retiros.
 
 ## Requisitos
 
 - Node.js 22.12 o superior (se recomienda Node.js 22 LTS).
-- npm 11.
+- pnpm 10.30.3
 
 ## Instalacion local
 
 ```bash
-npm install
-npm run dev
+pnpm install --frozen-lockfile
+pnpm run dev
 ```
 
 La aplicacion intenta usar `http://localhost:3000`. Si ese puerto esta ocupado, Vite muestra en la terminal el siguiente puerto disponible.
@@ -31,17 +31,17 @@ El modo demo conserva datos locales y escenarios de Samborondón sin credenciale
 ## Verificacion
 
 ```bash
-npm run lint
-npm test
-npm run test:ui
-npm run build
-npm run preview
+pnpm run lint
+pnpm test
+pnpm run test:ui
+pnpm run build
+pnpm run preview
 ```
 
 Para eliminar el build generado:
 
 ```bash
-npm run clean
+pnpm run clean
 ```
 
 ## Modalidades vigentes

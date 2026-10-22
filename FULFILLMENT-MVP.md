@@ -11,11 +11,11 @@ No se puede crear ni reprogramar un ingreso inicial del cliente en el local. La 
 
 ## Ejecutar y comprobar
 
-- Expo: desde LaundryApp, npm install y npx expo start. Para navegador: npm run web. Los comandos y credenciales vigentes están en el README de LaundryApp.
-- Web administrativa: desde LaundryWeb, npm install y npm run dev. Recepción y retiros se encuentra en /operations/handoffs.
-- Lógica: npm test en cada proyecto. Tipos: npm run typecheck en LaundryApp y npm run lint en LaundryWeb.
-- Interfaz: npm run export:web y npm run test:ui en LaundryApp; npm run test:ui y npm run build en LaundryWeb. En Windows se puede usar PLAYWRIGHT_CHANNEL=msedge.
-- Compatibilidad de política: npm run domain:check en LaundryWeb. domain:sync es un alias de validación y no copia archivos sobre Expo.
+- Expo: desde LaundryApp, pnpm install --frozen-lockfile y pnpm exec expo start. Para navegador: pnpm run web. Los comandos y credenciales vigentes están en el README de LaundryApp.
+- Web administrativa: desde LaundryWeb, pnpm install --frozen-lockfile y pnpm run dev. Recepción y retiros se encuentra en /operations/handoffs.
+- Lógica: pnpm test en cada proyecto. Tipos: pnpm run typecheck en LaundryApp y pnpm run lint en LaundryWeb.
+- Interfaz: pnpm run export:web y pnpm run test:ui en LaundryApp; pnpm run test:ui y pnpm run build en LaundryWeb. En Windows se puede usar PLAYWRIGHT_CHANNEL=msedge.
+- Compatibilidad de política: pnpm run domain:check en LaundryWeb. domain:sync es un alias de validación y no copia archivos sobre Expo.
 
 ## Recorrido
 
