@@ -2,6 +2,10 @@ import { lazy, type ComponentType } from 'react';
 
 // Both navigation and the router share these loaders; preview warms the actual page chunk.
 const pageLoaders: Record<string, () => Promise<{ default: ComponentType }>> = {
+  '/commercial/memberships': () =>
+    import('../../features/commercial/MembershipsPage').then((module) => ({
+      default: module.MembershipsPage,
+    })),
   '/dashboard': () =>
     import('../../features/dashboard/DashboardPage').then((module) => ({
       default: module.DashboardPage,
@@ -23,8 +27,8 @@ const pageLoaders: Record<string, () => Promise<{ default: ComponentType }>> = {
       default: module.DispatchPage,
     })),
   '/operations/plant': () =>
-    import('../../features/plant/PlantKanbanPage').then((module) => ({
-      default: module.PlantKanbanPage,
+    import('../../features/plant/PlantPage').then((module) => ({
+      default: module.PlantPage,
     })),
   '/operations/deliveries': () =>
     import('../../features/deliveries/DeliveriesPage').then((module) => ({
@@ -81,7 +85,7 @@ export const OrdersListPage = lazy(pageLoaders['/operations/orders']);
 export const OrderDetailPage = lazy(pageLoaders['/operations/orders/:id']);
 export const HandoffsPage = lazy(pageLoaders['/operations/handoffs']);
 export const DispatchPage = lazy(pageLoaders['/operations/dispatch']);
-export const PlantKanbanPage = lazy(pageLoaders['/operations/plant']);
+export const PlantPage = lazy(pageLoaders['/operations/plant']);
 export const DeliveriesPage = lazy(pageLoaders['/operations/deliveries']);
 export const IncidentsPage = lazy(pageLoaders['/operations/incidents']);
 export const CustomersPage = lazy(pageLoaders['/customers']);
@@ -89,6 +93,7 @@ export const KycPage = lazy(pageLoaders['/customers/kyc']);
 export const CatalogPage = lazy(pageLoaders['/commercial/catalog']);
 export const PromotionsPage = lazy(pageLoaders['/commercial/promotions']);
 export const RewardsPage = lazy(pageLoaders['/commercial/rewards']);
+export const MembershipsPage = lazy(pageLoaders['/commercial/memberships']);
 export const DriversPage = lazy(pageLoaders['/logistics/drivers']);
 export const FacilitiesPage = lazy(pageLoaders['/logistics/facilities']);
 export const OperationalMapPage = lazy(pageLoaders['/logistics/map']);

@@ -1,3 +1,4 @@
+import { Modal } from '../../shared/ui/Modal';
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { PageHeader } from '../../components/common/PageHeader';
@@ -10,7 +11,6 @@ import {
   Plus,
   Clock,
   DollarSign,
-  X,
   Edit2,
   Lock,
 } from 'lucide-react';
@@ -310,211 +310,198 @@ export const CatalogPage: React.FC = () => {
 
       {/* Drawer Crear / Editar per spec #36 */}
       {isDrawerOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-end bg-slate-900/60 backdrop-blur-2xs animate-in fade-in">
-          <div className="bg-white w-full max-w-lg h-full shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right duration-200">
-            <div className="p-5 border-b border-[#E5EAF0] bg-[#F7F9FC] flex items-center justify-between">
-              <div>
-                <h3 className="text-base font-bold text-slate-900">
-                  {editingItem
-                    ? `Editar: ${editingItem.name}`
-                    : `Crear Nuevo Ítem (${activeTab})`}
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Configuración de precio, tiempos de procesamiento y estado
-                </p>
-              </div>
-              <button
-                onClick={() => setIsDrawerOpen(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200"
+        <Modal
+          title={
+            editingItem
+              ? `Editar: ${editingItem.name}`
+              : `Crear nuevo ítem (${activeTab})`
+          }
+          description="Configura el precio, los tiempos de procesamiento y el estado."
+          onClose={() => setIsDrawerOpen(false)}
+        >
+          <form
+            onSubmit={handleSubmit}
+            className="p-5 space-y-4 overflow-y-auto flex-1 text-xs"
+          >
+            <label className="block">
+              Modelo de precio
+              <select
+                className="mt-2 w-full rounded-xl border border-slate-200 p-3"
+                value={pricingModel}
+                onChange={(e) =>
+                  setPricingModel(e.target.value as typeof pricingModel)
+                }
               >
-                <X className="w-5 h-5" />
-              </button>
+                <option value="FIXED">Precio fijo por prenda</option>
+                <option value="PER_WEIGHT">Por peso recibido</option>
+              </select>
+            </label>
+            {pricingModel === 'PER_WEIGHT' && (
+              <label className="block">
+                Unidad
+                <select
+                  className="mt-2 w-full rounded-xl border border-slate-200 p-3"
+                  value={unit}
+                  onChange={(e) => setUnit(e.target.value as typeof unit)}
+                >
+                  <option value="LB">Libras (LB)</option>
+                  <option value="KG">Kilogramos (KG)</option>
+                </select>
+                <p className="mt-2 text-slate-500">
+                  El precio ingresado será la tarifa por unidad; el total
+                  permanece pendiente hasta el pesaje.
+                </p>
+              </label>
+            )}
+            <label className="flex gap-2">
+              <input
+                type="checkbox"
+                checked={compatible}
+                onChange={(e) => setCompatible(e.target.checked)}
+              />
+              Compatible con lavado por peso (prendas)
+            </label>
+            <label className="block">
+              Restricciones (una por línea)
+              <textarea
+                className="mt-2 w-full rounded-xl border border-slate-200 p-3"
+                value={restrictions}
+                onChange={(e) => setRestrictions(e.target.value)}
+              />
+            </label>
+            <label className="flex gap-2">
+              <input
+                type="checkbox"
+                checked={selectable}
+                onChange={(e) => setSelectable(e.target.checked)}
+              />
+              Disponible para seleccionar en la app
+            </label>
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">
+                Nombre comercial *
+              </label>
+              <input
+                type="text"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Ej: Camisa de lino o Lavado por Kilos"
+                className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs"
+              />
             </div>
 
-            <form
-              onSubmit={handleSubmit}
-              className="p-5 space-y-4 overflow-y-auto flex-1 text-xs"
-            >
-              <label className="block">
-                Modelo de precio
-                <select
-                  className="mt-2 w-full rounded-xl border border-slate-200 p-3"
-                  value={pricingModel}
-                  onChange={(e) =>
-                    setPricingModel(e.target.value as typeof pricingModel)
-                  }
-                >
-                  <option value="FIXED">Precio fijo por prenda</option>
-                  <option value="PER_WEIGHT">Por peso recibido</option>
-                </select>
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">
+                Tipo / Subcategoría
               </label>
-              {pricingModel === 'PER_WEIGHT' && (
-                <label className="block">
-                  Unidad
-                  <select
-                    className="mt-2 w-full rounded-xl border border-slate-200 p-3"
-                    value={unit}
-                    onChange={(e) => setUnit(e.target.value as typeof unit)}
-                  >
-                    <option value="LB">Libras (LB)</option>
-                    <option value="KG">Kilogramos (KG)</option>
-                  </select>
-                  <p className="mt-2 text-slate-500">
-                    El precio ingresado será la tarifa por unidad; el total
-                    permanece pendiente hasta el pesaje.
-                  </p>
-                </label>
-              )}
-              <label className="flex gap-2">
-                <input
-                  type="checkbox"
-                  checked={compatible}
-                  onChange={(e) => setCompatible(e.target.checked)}
-                />
-                Compatible con lavado por peso (prendas)
+              <input
+                type="text"
+                value={type}
+                onChange={(e) => setType(e.target.value)}
+                placeholder="Ej: Prenda Individual, Alta Costura, Hogar..."
+                className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs"
+              />
+            </div>
+
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">
+                Descripción para el cliente
               </label>
-              <label className="block">
-                Restricciones (una por línea)
-                <textarea
-                  className="mt-2 w-full rounded-xl border border-slate-200 p-3"
-                  value={restrictions}
-                  onChange={(e) => setRestrictions(e.target.value)}
-                />
-              </label>
-              <label className="flex gap-2">
-                <input
-                  type="checkbox"
-                  checked={selectable}
-                  onChange={(e) => setSelectable(e.target.checked)}
-                />
-                Disponible para seleccionar en la app
-              </label>
+              <textarea
+                rows={2}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Detalles sobre el proceso de lavado y cuidado..."
+                className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">
-                  Nombre comercial *
+                  Precio ($) *
                 </label>
                 <input
-                  type="text"
+                  type="number"
+                  step="0.01"
                   required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Ej: Camisa de lino o Lavado por Kilos"
-                  className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs"
+                  value={price}
+                  onChange={(e) => setPrice(parseFloat(e.target.value) || 0)}
+                  className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs font-mono"
                 />
               </div>
-
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">
-                  Tipo / Subcategoría
+                  Tiempo Estimado (horas)
                 </label>
                 <input
-                  type="text"
-                  value={type}
-                  onChange={(e) => setType(e.target.value)}
-                  placeholder="Ej: Prenda Individual, Alta Costura, Hogar..."
-                  className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs"
+                  type="number"
+                  value={estimatedHours}
+                  onChange={(e) =>
+                    setEstimatedHours(parseInt(e.target.value) || 0)
+                  }
+                  className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs font-mono"
                 />
               </div>
+            </div>
 
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">
-                  Descripción para el cliente
+                  Tiempo Mínimo (h)
                 </label>
-                <textarea
-                  rows={2}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Detalles sobre el proceso de lavado y cuidado..."
-                  className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs"
+                <input
+                  type="number"
+                  value={minHours}
+                  onChange={(e) => setMinHours(parseInt(e.target.value) || 0)}
+                  className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs font-mono"
                 />
               </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    Precio ($) *
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    required
-                    value={price}
-                    onChange={(e) => setPrice(parseFloat(e.target.value) || 0)}
-                    className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs font-mono"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    Tiempo Estimado (horas)
-                  </label>
-                  <input
-                    type="number"
-                    value={estimatedHours}
-                    onChange={(e) =>
-                      setEstimatedHours(parseInt(e.target.value) || 0)
-                    }
-                    className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs font-mono"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    Tiempo Mínimo (h)
-                  </label>
-                  <input
-                    type="number"
-                    value={minHours}
-                    onChange={(e) => setMinHours(parseInt(e.target.value) || 0)}
-                    className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs font-mono"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    Tiempo Máximo (h)
-                  </label>
-                  <input
-                    type="number"
-                    value={maxHours}
-                    onChange={(e) => setMaxHours(parseInt(e.target.value) || 0)}
-                    className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs font-mono"
-                  />
-                </div>
-              </div>
-
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">
-                  Estado de publicación
+                  Tiempo Máximo (h)
                 </label>
-                <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value as any)}
-                  className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs"
-                >
-                  <option value="ACTIVE">Activo (Visible para clientes)</option>
-                  <option value="INACTIVE">Inactivo (Pausado)</option>
-                </select>
+                <input
+                  type="number"
+                  value={maxHours}
+                  onChange={(e) => setMaxHours(parseInt(e.target.value) || 0)}
+                  className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs font-mono"
+                />
               </div>
+            </div>
 
-              <div className="pt-4 border-t border-slate-100 flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsDrawerOpen(false)}
-                  className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2.5 bg-[#0F4C81] hover:bg-[#0A3660] text-white font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
-                >
-                  {editingItem ? 'Guardar Cambios' : 'Crear Ítem'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">
+                Estado de publicación
+              </label>
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value as any)}
+                className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs"
+              >
+                <option value="ACTIVE">Activo (Visible para clientes)</option>
+                <option value="INACTIVE">Inactivo (Pausado)</option>
+              </select>
+            </div>
+
+            <div className="pt-4 border-t border-slate-100 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsDrawerOpen(false)}
+                className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="px-5 py-2.5 bg-[#0F4C81] hover:bg-[#0A3660] text-white font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
+              >
+                {editingItem ? 'Guardar Cambios' : 'Crear Ítem'}
+              </button>
+            </div>
+          </form>
+        </Modal>
       )}
     </div>
   );
