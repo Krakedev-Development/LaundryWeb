@@ -9,7 +9,7 @@ import {
   OrderDetailPage,
   HandoffsPage,
   DispatchPage,
-  PlantKanbanPage,
+  PlantPage,
   DeliveriesPage,
   IncidentsPage,
   CustomersPage,
@@ -17,6 +17,7 @@ import {
   CatalogPage,
   PromotionsPage,
   RewardsPage,
+  MembershipsPage,
   DriversPage,
   FacilitiesPage,
   OperationalMapPage,
@@ -45,7 +46,7 @@ export default function App() {
             <Route path="operations/orders/:id" element={<OrderDetailPage />} />
             <Route path="operations/handoffs" element={<HandoffsPage />} />
             <Route path="operations/dispatch" element={<DispatchPage />} />
-            <Route path="operations/plant" element={<PlantKanbanPage />} />
+            <Route path="operations/plant" element={<PlantPage />} />
             <Route path="operations/deliveries" element={<DeliveriesPage />} />
             <Route path="operations/incidents" element={<IncidentsPage />} />
             <Route
@@ -62,6 +63,10 @@ export default function App() {
             <Route path="commercial/catalog" element={<CatalogPage />} />
             <Route path="commercial/promotions" element={<PromotionsPage />} />
             <Route path="commercial/rewards" element={<RewardsPage />} />
+            <Route
+              path="commercial/memberships"
+              element={<MembershipsPage />}
+            />
 
             {/* Logistics */}
             <Route path="logistics/drivers" element={<DriversPage />} />

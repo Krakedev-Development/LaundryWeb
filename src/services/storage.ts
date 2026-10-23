@@ -1,4 +1,9 @@
 import { validateFacilityRelocation } from '../entities/zone/model/facilityLocation.rules';
+import {
+  INITIAL_MEMBERSHIP_PLANS,
+  validateMembershipPlan,
+  type MembershipPlan,
+} from '../features/commercial/membershipPlans';
 import { LocalHandoffRepository } from './LocalHandoffRepository';
 import {
   BusinessService,
@@ -72,6 +77,7 @@ const STORAGE_KEYS = {
   POINTS_LEDGER: 'lw_points_ledger',
   AUDIT_LOGS: 'lw_audit_logs',
   SETTINGS: 'lw_settings',
+  MEMBERSHIPS: 'lw_membership_plans_v1',
 };
 
 type Listener = () => void;
@@ -513,6 +519,7 @@ class StorageService {
   }
 
   public resetAll(): void {
+    localStorage.removeItem(STORAGE_KEYS.MEMBERSHIPS);
     localStorage.removeItem(ZONES_KEY);
     localStorage.removeItem(this.workflowKey);
     localStorage.setItem(
@@ -1093,26 +1100,7 @@ class StorageService {
     reason: string,
     notes?: string,
   ): { success: boolean; error?: string } {
-    const orders = this.getOrders();
-    const orderIndex = orders.findIndex((o) => o.id === orderId);
-    if (orderIndex === -1)
-      return { success: false, error: 'Orden no encontrada' };
-
-    const order = orders[orderIndex];
-    order.quarantineReason = reason;
-    order.quarantineNotes = notes;
-    order.quarantineDate =
-      'Hoy ' +
-      new Date().toLocaleTimeString('es-ES', {
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-
-    return this.updateOrderStatus(
-      orderId,
-      'QUARANTINE',
-      `Inscidencia: ${reason}. ${notes || ''}`,
-    );
+    return this.changePlantRetention(orderId, reason, notes);
   }
 
   public releaseFromQuarantine(
@@ -1120,18 +1108,92 @@ class StorageService {
     targetStatus: OrderStatus = 'QUALITY_CONTROL',
     resolutionNotes?: string,
   ): { success: boolean; error?: string } {
-    const orders = this.getOrders();
-    const order = orders.find((o) => o.id === orderId);
-    if (!order) return { success: false, error: 'Orden no encontrada' };
-
-    order.quarantineReason = undefined;
-    order.quarantineNotes = undefined;
-
-    return this.updateOrderStatus(
+    if (targetStatus !== 'QUALITY_CONTROL')
+      return {
+        success: false,
+        error: 'La liberación requiere una revisión de calidad.',
+      };
+    return this.changePlantRetention(
       orderId,
-      targetStatus,
-      `Liberado de inscidencia: ${resolutionNotes || 'Tratamiento aprobado'}`,
+      undefined,
+      resolutionNotes || 'Revisión técnica completada',
     );
+  }
+
+  private changePlantRetention(
+    orderId: string,
+    reason?: string,
+    notes?: string,
+  ): { success: boolean; error?: string } {
+    const state = this.getWorkflow();
+    const order = state.orders.find((item) => item.id === orderId);
+    if (!order) return { success: false, error: 'Orden no encontrada.' };
+    const user = this.getCurrentUser();
+    if (user.role === 'SUPERVISOR' && user.facilityId !== order.facilityId)
+      return {
+        success: false,
+        error: 'Esta solicitud corresponde a otra sede.',
+      };
+    const previous = operationalStage(order);
+    const releasing = reason === undefined;
+    if (
+      releasing
+        ? previous !== 'QUARANTINE'
+        : !['IN_PROCESS', 'QUALITY_CONTROL'].includes(previous)
+    )
+      return {
+        success: false,
+        error: 'La etapa actual no permite esta operación de planta.',
+      };
+    if ((releasing ? (notes ?? '') : (reason ?? '')).trim().length < 5)
+      return {
+        success: false,
+        error: 'Registra un motivo de al menos cinco caracteres.',
+      };
+    if (order.intakeHold && !order.intakeHold.resolvedAt)
+      return {
+        success: false,
+        error: 'Resuelve primero la diferencia de prendas.',
+      };
+    const now = new Date().toISOString();
+    const target = releasing ? 'QUALITY_CONTROL' : 'QUARANTINE';
+    order.previousStatus = previous;
+    order.quarantineReason = releasing ? undefined : reason!.trim();
+    order.quarantineNotes = releasing ? undefined : notes?.trim();
+    order.quarantineDate = releasing ? undefined : now;
+    advanceOperational(order, target);
+    const label = releasing
+      ? 'Retención resuelta; enviado a control de calidad'
+      : 'Pedido retenido para revisión';
+    order.timeline.push({
+      id: crypto.randomUUID(),
+      status: target,
+      label,
+      timestamp: now,
+      userName: user.name,
+      userRole: user.role,
+      notes: [reason?.trim(), notes?.trim()].filter(Boolean).join(' · '),
+    });
+    state.businessAudits.push({
+      id: crypto.randomUUID(),
+      orderId,
+      actorId: user.id,
+      actorRole: user.role,
+      action: label,
+      reason: [reason?.trim(), notes?.trim()].filter(Boolean).join(' · '),
+      at: now,
+    });
+    this.handoffService.refresh(state, order);
+    try {
+      localStorage.setItem(this.workflowKey, JSON.stringify(state));
+    } catch {
+      return {
+        success: false,
+        error: 'No se pudo guardar la operación. Intenta de nuevo.',
+      };
+    }
+    this.notify();
+    return { success: true };
   }
 
   public scheduleDelivery(
@@ -1661,7 +1723,8 @@ class StorageService {
     >,
   ): Facility {
     this.validateFacility(facData);
-    if (!facData.zoneId) throw Error('Selecciona una zona y ubica el pin de la sede.');
+    if (!facData.zoneId)
+      throw Error('Selecciona una zona y ubica el pin de la sede.');
     const facilities = this.getFacilities();
     const newId = 'FAC-0' + (facilities.length + 1);
     const newFacility: Facility = {
@@ -1683,7 +1746,10 @@ class StorageService {
     const idx = facilities.findIndex((f) => f.id === facility.id);
     if (idx !== -1) {
       validateFacilityRelocation(
-        facilities[idx], facility, readZones(), this.getWorkflow().orders,
+        facilities[idx],
+        facility,
+        readZones(),
+        this.getWorkflow().orders,
       );
       facilities[idx] = facility;
       if (facility.zoneId) {
@@ -1995,6 +2061,50 @@ class StorageService {
     localStorage.setItem(this.workflowKey, JSON.stringify(state));
     this.notify();
     return { success: true };
+  }
+
+  public getMembershipPlans(): MembershipPlan[] {
+    const plans: MembershipPlan[] = JSON.parse(
+      localStorage.getItem(STORAGE_KEYS.MEMBERSHIPS) ?? '[]',
+    );
+    const missing = INITIAL_MEMBERSHIP_PLANS.filter(
+      (seed) =>
+        !plans.some(
+          (plan) =>
+            plan.id === seed.id ||
+            plan.name.trim().toLocaleLowerCase() ===
+              seed.name.toLocaleLowerCase(),
+        ),
+    );
+    if (!missing.length) return plans;
+    const initialized: MembershipPlan[] = [
+      ...plans,
+      ...JSON.parse(JSON.stringify(missing)),
+    ];
+    localStorage.setItem(STORAGE_KEYS.MEMBERSHIPS, JSON.stringify(initialized));
+    return initialized;
+  }
+
+  public saveMembershipPlan(plan: MembershipPlan): void {
+    if (this.getCurrentUser().role !== 'ADMIN')
+      throw Error('Solo el administrador configura membresías.');
+    const plans = this.getMembershipPlans();
+    validateMembershipPlan(plan, plans);
+    const existing = plans.find((item) => item.id === plan.id);
+    const saved = {
+      ...plan,
+      createdAt: existing?.createdAt ?? new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    localStorage.setItem(
+      STORAGE_KEYS.MEMBERSHIPS,
+      JSON.stringify(
+        existing
+          ? plans.map((item) => (item.id === plan.id ? saved : item))
+          : [...plans, saved],
+      ),
+    );
+    this.notify();
   }
 
   // --- SETTINGS ---

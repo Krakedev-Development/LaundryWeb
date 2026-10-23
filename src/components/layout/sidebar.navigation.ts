@@ -69,6 +69,7 @@ export const SIDEBAR_MODULES: readonly SidebarModule[] = [
       { label: 'Catálogo', path: '/commercial/catalog' },
       { label: 'Promociones', path: '/commercial/promotions' },
       { label: 'Recompensas', path: '/commercial/rewards' },
+      { label: 'Membresías', path: '/commercial/memberships' },
     ],
   },
   {

@@ -12,6 +12,14 @@ Para verificar la navegación: `pnpm run lint`, `pnpm run build` y `pnpm exec pl
 
 Consulta la [guía del nuevo flujo y transferencias QR](FULFILLMENT-MVP.md) para ejecutar los recorridos a domicilio y en sede desde Recepción y retiros.
 
+## Documentación funcional
+
+- [Flujos y límites de la demo](docs/FLUJOS-WEB-DEMO.md).
+- [Diagramas de flujos y relaciones](docs/DIAGRAMAS-FLUJOS-WEB.md).
+- [Revisión de la lógica de negocio](docs/REVISION-LOGICA-NEGOCIO.md).
+- [Propuesta de organización de módulos](docs/PROPUESTA-ORGANIZACION-MODULOS.md).
+- [Cambios para revisar: membresías, Planta y formularios centrales](docs/REVISION-COMERCIAL-PLANTA.md).
+
 ## Requisitos
 
 - Node.js 22.12 o superior (se recomienda Node.js 22 LTS).
