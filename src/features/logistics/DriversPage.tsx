@@ -1,3 +1,4 @@
+import { Modal } from '../../shared/ui/Modal';
 import { useZones } from './zones/useZones';
 import { IconPlaceholder } from '../../components/common/IconPlaceholder';
 import React, { useState } from 'react';
@@ -16,7 +17,6 @@ import {
   Phone,
   Mail,
   Edit2,
-  X,
   Gauge,
 } from 'lucide-react';
 
@@ -345,189 +345,174 @@ export const DriversPage: React.FC = () => {
 
       {/* Drawer Crear / Editar Chofer (Solo Admin) */}
       {isAdmin && isDrawerOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-end bg-slate-900/60 backdrop-blur-2xs animate-in fade-in">
-          <div className="bg-white w-full max-w-lg h-full shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right duration-200">
-            <div className="p-5 border-b border-slate-200/80 bg-slate-50/70 flex items-center justify-between">
-              <div>
-                <h3 className="text-base font-bold text-slate-900">
-                  {editingDriver
-                    ? `Editar: ${editingDriver.name}`
-                    : 'Registrar Nuevo Chofer'}
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Asignación vehicular, sede base y límites de carga
-                </p>
-              </div>
-              <button
-                onClick={() => setIsDrawerOpen(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200 cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
+        <Modal
+          title={
+            editingDriver
+              ? `Editar: ${editingDriver.name}`
+              : 'Registrar Nuevo Chofer'
+          }
+          description="Asignación vehicular, sede base y límites de carga"
+          onClose={() => setIsDrawerOpen(false)}
+        >
+          <form
+            onSubmit={handleSubmit}
+            className="p-5 space-y-4 overflow-y-auto flex-1 text-xs"
+          >
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">
+                Nombre completo *
+              </label>
+              <input
+                type="text"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Ej: Carlos Ruiz"
+                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-sky-500"
+              />
             </div>
 
-            <form
-              onSubmit={handleSubmit}
-              className="p-5 space-y-4 overflow-y-auto flex-1 text-xs"
-            >
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">
-                  Nombre completo *
+                  Teléfono móvil *
                 </label>
                 <input
                   type="text"
                   required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Ej: Carlos Ruiz"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
                   className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-sky-500"
                 />
               </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    Teléfono móvil *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-sky-500"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    Correo corporativo
-                  </label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-sky-500"
-                  />
-                </div>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Correo corporativo
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-sky-500"
+                />
               </div>
+            </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    Tipo de Vehículo
-                  </label>
-                  <select
-                    value={vehicleType}
-                    onChange={(e) => setVehicleType(e.target.value as any)}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-sky-500"
-                  >
-                    <option value="VAN">VAN de carga</option>
-                    <option value="MOTO">Moto Courier</option>
-                    <option value="CAMIONETA">Camioneta</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    Placa Vehicular *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={vehiclePlate}
-                    onChange={(e) =>
-                      setVehiclePlate(e.target.value.toUpperCase())
-                    }
-                    placeholder="ABC-123"
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold focus:outline-none focus:border-sky-500"
-                  />
-                </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Tipo de Vehículo
+                </label>
+                <select
+                  value={vehicleType}
+                  onChange={(e) => setVehicleType(e.target.value as any)}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-sky-500"
+                >
+                  <option value="VAN">VAN de carga</option>
+                  <option value="MOTO">Moto Courier</option>
+                  <option value="CAMIONETA">Camioneta</option>
+                </select>
               </div>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Placa Vehicular *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={vehiclePlate}
+                  onChange={(e) =>
+                    setVehiclePlate(e.target.value.toUpperCase())
+                  }
+                  placeholder="ABC-123"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold focus:outline-none focus:border-sky-500"
+                />
+              </div>
+            </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    Sede Base
-                  </label>
-                  <select
-                    value={facilityId}
-                    onChange={(e) => setFacilityId(e.target.value)}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-sky-500"
-                  >
-                    {facilities.map((fac) => (
-                      <option key={fac.id} value={fac.id}>
-                        {fac.name}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Sede Base
+                </label>
+                <select
+                  value={facilityId}
+                  onChange={(e) => setFacilityId(e.target.value)}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-sky-500"
+                >
+                  {facilities.map((fac) => (
+                    <option key={fac.id} value={fac.id}>
+                      {fac.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Zona Cobertura
+                </label>
+                <select
+                  value={zoneId}
+                  onChange={(e) => setZoneId(e.target.value)}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-sky-500"
+                >
+                  {zones
+                    .filter((zone) => zone.active || zone.id === zoneId)
+                    .map((zone) => (
+                      <option key={zone.id} value={zone.id}>
+                        {zone.name}
                       </option>
                     ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    Zona Cobertura
-                  </label>
-                  <select
-                    value={zoneId}
-                    onChange={(e) => setZoneId(e.target.value)}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-sky-500"
-                  >
-                    {zones
-                      .filter((zone) => zone.active || zone.id === zoneId)
-                      .map((zone) => (
-                        <option key={zone.id} value={zone.id}>
-                          {zone.name}
-                        </option>
-                      ))}
-                  </select>
-                </div>
+                </select>
               </div>
+            </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    Capacidad Máx. Pedidos
-                  </label>
-                  <input
-                    type="number"
-                    value={maxOrders}
-                    onChange={(e) =>
-                      setMaxOrders(parseInt(e.target.value) || 5)
-                    }
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono focus:outline-none focus:border-sky-500"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    Estado Operativo
-                  </label>
-                  <select
-                    value={status}
-                    onChange={(e) => setStatus(e.target.value as DriverStatus)}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-sky-500"
-                  >
-                    <option value="AVAILABLE">Disponible</option>
-                    <option value="ON_SERVICE">En Servicio / En ruta</option>
-                    <option value="BREAK">Pausa</option>
-                    <option value="OFFLINE">Offline / Mantenimiento</option>
-                  </select>
-                </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Capacidad Máx. Pedidos
+                </label>
+                <input
+                  type="number"
+                  value={maxOrders}
+                  onChange={(e) => setMaxOrders(parseInt(e.target.value) || 5)}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono focus:outline-none focus:border-sky-500"
+                />
               </div>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Estado Operativo
+                </label>
+                <select
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value as DriverStatus)}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-sky-500"
+                >
+                  <option value="AVAILABLE">Disponible</option>
+                  <option value="ON_SERVICE">En Servicio / En ruta</option>
+                  <option value="BREAK">Pausa</option>
+                  <option value="OFFLINE">Offline / Mantenimiento</option>
+                </select>
+              </div>
+            </div>
 
-              <div className="pt-4 border-t border-slate-200 flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsDrawerOpen(false)}
-                  className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2.5 bg-[#0F4C81] hover:bg-[#0A3660] text-white font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
-                >
-                  {editingDriver ? 'Guardar Cambios' : 'Registrar Chofer'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+            <div className="pt-4 border-t border-slate-200 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsDrawerOpen(false)}
+                className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="px-5 py-2.5 bg-[#0F4C81] hover:bg-[#0A3660] text-white font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
+              >
+                {editingDriver ? 'Guardar Cambios' : 'Registrar Chofer'}
+              </button>
+            </div>
+          </form>
+        </Modal>
       )}
     </div>
   );

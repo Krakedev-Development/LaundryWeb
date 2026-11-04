@@ -136,11 +136,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   const [currentUser, setCurrentUser] = useState<User>(
     storageService.getCurrentUser(),
   );
-  const [orders, setOrders] = useState<Order[]>(storageService.getOperationalOrders());
+  const [orders, setOrders] = useState<Order[]>(
+    storageService.getOperationalOrders(),
+  );
   const [customers, setCustomers] = useState<Customer[]>(
     storageService.getOperationalCustomers(),
   );
-  const [drivers, setDrivers] = useState<Driver[]>(storageService.getOperationalDrivers());
+  const [drivers, setDrivers] = useState<Driver[]>(
+    storageService.getOperationalDrivers(),
+  );
   const [facilities, setFacilities] = useState<Facility[]>(
     storageService.getOperationalFacilities(),
   );
@@ -315,11 +319,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     if (res.success) {
       showToast({
         type: 'warning',
-        title: 'Lote enviado a INSCIDENCIA',
+        title: 'Pedido retenido para revisión',
         message: `Motivo: ${reason}`,
       });
       return true;
     }
+    showToast({
+      type: 'error',
+      title: 'No se pudo retener el pedido',
+      message: res.error,
+    });
     return false;
   };
 
@@ -336,11 +345,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     if (res.success) {
       showToast({
         type: 'success',
-        title: 'Orden liberada de inscidencia',
+        title: 'Pedido liberado a control de calidad',
         message: `Ha avanzado a control de calidad para inspección final.`,
       });
       return true;
     }
+    showToast({
+      type: 'error',
+      title: 'No se pudo liberar el pedido',
+      message: res.error,
+    });
     return false;
   };
 
@@ -552,14 +566,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const updateRedemptionStatus = (
     id: string,
-    status: RewardRedemption["status"],
+    status: RewardRedemption['status'],
     notes?: string,
   ) => {
     try {
       const res = storageService.updateRedemptionStatus(id, status, notes);
       if (res.success) {
         showToast({
-          type: status === "APPROVED" ? "success" : "info",
+          type: status === 'APPROVED' ? 'success' : 'info',
           title: `Canje de recompensa ${status}`,
           message: notes,
         });
@@ -568,8 +582,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       return false;
     } catch (error) {
       showToast({
-        type: "error",
-        title: "No se pudo revisar el canje",
+        type: 'error',
+        title: 'No se pudo revisar el canje',
         message: error instanceof Error ? error.message : String(error),
       });
       return false;

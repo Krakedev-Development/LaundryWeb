@@ -1,3 +1,4 @@
+import { Modal } from '../../shared/ui/Modal';
 import React, { useState } from 'react';
 import { storageService } from '../../services/storage';
 import { useApp } from '../../context/AppContext';
@@ -10,7 +11,6 @@ import {
   CheckCircle2,
   Clock,
   Plus,
-  X,
   BookOpen,
   Lock,
 } from 'lucide-react';
@@ -560,137 +560,118 @@ export const RewardsPage: React.FC = () => {
 
       {/* Drawer Crear Recompensa */}
       {isDrawerOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-end bg-slate-900/60 backdrop-blur-2xs animate-in fade-in">
-          <div className="bg-white w-full max-w-lg h-full shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right duration-200">
-            <div className="p-5 border-b border-[#E5EAF0] bg-[#F7F9FC] flex items-center justify-between">
-              <div>
-                <h3 className="text-base font-bold text-slate-900">
-                  Nueva Recompensa
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Agrega premios canjeables al catálogo de fidelización
-                </p>
-              </div>
-              <button
-                onClick={() => setIsDrawerOpen(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200"
-              >
-                <X className="w-5 h-5" />
-              </button>
+        <Modal
+          title="Nueva recompensa"
+          description="Agrega un premio al catálogo de fidelización."
+          onClose={() => setIsDrawerOpen(false)}
+        >
+          <form
+            onSubmit={handleCreateRewardSubmit}
+            className="p-5 space-y-4 overflow-y-auto flex-1 text-xs"
+          >
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">
+                Nombre del premio *
+              </label>
+              <input
+                type="text"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Ej: Lavado de Edredón Gratis"
+                className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs"
+              />
             </div>
 
-            <form
-              onSubmit={handleCreateRewardSubmit}
-              className="p-5 space-y-4 overflow-y-auto flex-1 text-xs"
-            >
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">
+                Descripción y alcances
+              </label>
+              <textarea
+                rows={2}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Condiciones de aplicación para el cliente..."
+                className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">
-                  Nombre del premio *
+                  Costo en Puntos *
                 </label>
                 <input
-                  type="text"
+                  type="number"
                   required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Ej: Lavado de Edredón Gratis"
-                  className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs"
+                  aria-label="Costo en puntos"
+                  value={pointsCost}
+                  onChange={(e) => setPointsCost(parseInt(e.target.value) || 0)}
+                  className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs font-mono"
                 />
               </div>
-
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">
-                  Descripción y alcances
+                  Compras previas mínimas
                 </label>
-                <textarea
-                  rows={2}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Condiciones de aplicación para el cliente..."
-                  className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs"
+                <input
+                  type="number"
+                  aria-label="Compras previas mínimas"
+                  value={minPurchases}
+                  onChange={(e) =>
+                    setMinPurchases(parseInt(e.target.value) || 0)
+                  }
+                  className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs font-mono"
                 />
               </div>
+            </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    Costo en Puntos *
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    aria-label="Costo en puntos"
-                    value={pointsCost}
-                    onChange={(e) =>
-                      setPointsCost(parseInt(e.target.value) || 0)
-                    }
-                    className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs font-mono"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    Compras previas mínimas
-                  </label>
-                  <input
-                    type="number"
-                    aria-label="Compras previas mínimas"
-                    value={minPurchases}
-                    onChange={(e) =>
-                      setMinPurchases(parseInt(e.target.value) || 0)
-                    }
-                    className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs font-mono"
-                  />
-                </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Gasto previo acumulado ($)
+                </label>
+                <input
+                  type="number"
+                  aria-label="Gasto previo acumulado"
+                  value={minSpend}
+                  onChange={(e) => setMinSpend(parseFloat(e.target.value) || 0)}
+                  className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs font-mono"
+                />
               </div>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Vigencia (Días)
+                </label>
+                <input
+                  type="number"
+                  aria-label="Vigencia en días"
+                  value={validityDays}
+                  onChange={(e) =>
+                    setValidityDays(parseInt(e.target.value) || 30)
+                  }
+                  className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs font-mono"
+                />
+              </div>
+            </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    Gasto previo acumulado ($)
-                  </label>
-                  <input
-                    type="number"
-                    aria-label="Gasto previo acumulado"
-                    value={minSpend}
-                    onChange={(e) =>
-                      setMinSpend(parseFloat(e.target.value) || 0)
-                    }
-                    className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs font-mono"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    Vigencia (Días)
-                  </label>
-                  <input
-                    type="number"
-                    aria-label="Vigencia en días"
-                    value={validityDays}
-                    onChange={(e) =>
-                      setValidityDays(parseInt(e.target.value) || 30)
-                    }
-                    className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs font-mono"
-                  />
-                </div>
-              </div>
-
-              <div className="pt-4 border-t border-slate-100 flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsDrawerOpen(false)}
-                  className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2.5 bg-[#0F4C81] hover:bg-[#0A3660] text-white font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
-                >
-                  Crear Recompensa
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+            <div className="pt-4 border-t border-slate-100 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsDrawerOpen(false)}
+                className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="px-5 py-2.5 bg-[#0F4C81] hover:bg-[#0A3660] text-white font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
+              >
+                Crear Recompensa
+              </button>
+            </div>
+          </form>
+        </Modal>
       )}
     </div>
   );
