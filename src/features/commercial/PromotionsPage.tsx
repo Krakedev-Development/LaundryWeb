@@ -206,7 +206,8 @@ export const PromotionsPage: React.FC = () => {
                     )}
                   </td>
                   <td className="py-3.5 px-4 whitespace-nowrap">
-                    <span className="font-mono font-bold text-xs bg-sky-50 text-sky-800 px-2.5 py-1 rounded-md border border-sky-200">
+                    <span className="inline-flex items-center gap-1.5 font-mono font-bold text-xs bg-sky-50 text-sky-800 px-2.5 py-1 rounded-lg border border-sky-200 border-dashed shadow-2xs">
+                      <Tag className="w-3 h-3 text-sky-600" />
                       {promo.code}
                     </span>
                   </td>

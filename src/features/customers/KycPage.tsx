@@ -1,5 +1,6 @@
 import { IconPlaceholder } from '../../components/common/IconPlaceholder';
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import { useApp } from '../../context/AppContext';
 import { PageHeader } from '../../components/common/PageHeader';
 import { MetricCard } from '../../components/common/MetricCard';
@@ -405,8 +406,18 @@ export const KycPage: React.FC = () => {
 
       {/* Mandatory Rejection Reason Modal per spec #35 */}
       {isRejecting && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-rose-200">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.16 }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ type: 'spring', stiffness: 360, damping: 28 }}
+            className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-rose-200"
+          >
             <div className="flex items-center gap-2.5 text-rose-700 mb-3">
               <AlertTriangle className="w-5 h-5" />
               <h3 className="text-base font-bold text-slate-900">
@@ -443,14 +454,14 @@ export const KycPage: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 bg-rose-700 hover:bg-rose-800 text-white font-bold rounded-lg"
+                  className="px-4 py-1.5 bg-rose-700 hover:bg-rose-800 text-white font-bold rounded-lg cursor-pointer"
                 >
                   Confirmar Rechazo
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       )}
     </div>
   );

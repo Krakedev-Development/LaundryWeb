@@ -186,12 +186,19 @@ export function MembershipsPage() {
                     </td>
                     <td className="px-5 py-4">
                       <span
-                        className={
+                        className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-0.5 text-xs font-semibold ${
                           plan.status === 'ACTIVE'
-                            ? 'text-emerald-800'
-                            : 'text-slate-600'
-                        }
+                            ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                            : 'border-slate-200 bg-slate-100 text-slate-600'
+                        }`}
                       >
+                        <span
+                          className={`size-1.5 rounded-full ${
+                            plan.status === 'ACTIVE'
+                              ? 'bg-emerald-500'
+                              : 'bg-slate-400'
+                          }`}
+                        />
                         {plan.status === 'ACTIVE' ? 'Activa' : 'Inactiva'}
                       </span>
                     </td>
