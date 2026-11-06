@@ -1,4 +1,4 @@
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, ArrowRight } from 'lucide-react';
 import { OrderListModel } from '../../features/orders/model/useOrderList';
 export function OrderExceptionsNotice({
   problematicOrders,
@@ -32,9 +32,10 @@ export function OrderExceptionsNotice({
               setQuickTab('ALL');
               setSelectedStatus('QUARANTINE');
             }}
-            className="text-xs font-bold text-sky-800 hover:text-sky-900 hover:underline shrink-0"
+            className="text-xs font-bold text-sky-800 hover:text-sky-900 hover:underline shrink-0 inline-flex items-center gap-1"
           >
-            Filtrar excepciones →
+            <span>Filtrar excepciones</span>
+            <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
       )}
