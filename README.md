@@ -14,7 +14,7 @@ Consulta la [guía del nuevo flujo y transferencias QR](FULFILLMENT-MVP.md) para
 
 ## Documentación funcional
 
-- [Flujos y límites de la demo](docs/FLUJOS-WEB-DEMO.md).
+- [Flujos del prototipo anterior (histórico)](docs/FLUJOS-WEB-DEMO.md).
 - [Diagramas de flujos y relaciones](docs/DIAGRAMAS-FLUJOS-WEB.md).
 - [Revisión de la lógica de negocio](docs/REVISION-LOGICA-NEGOCIO.md).
 - [Propuesta de organización de módulos](docs/PROPUESTA-ORGANIZACION-MODULOS.md).
@@ -34,7 +34,7 @@ pnpm run dev
 
 La aplicacion intenta usar `http://localhost:3000`. Si ese puerto esta ocupado, Vite muestra en la terminal el siguiente puerto disponible.
 
-El modo demo conserva datos locales y escenarios de Samborondón sin credenciales. Copia `.env.example` a `.env` y configura Mapbox para mapas, Geocoding v6, Directions y Matrix reales. Consulta [el alcance, configuración y recorrido completo](GEO-MVP.md) y [el registro de zonas y varias sedes mediante el mapa](LOGISTICS-ZONES-MVP.md). LaundryApp y LaundryWeb son demostraciones independientes.
+La aplicación no trae datos: arranca vacía y exige iniciar sesión contra la API del backend. Copia `.env.example` a `.env` y define `VITE_API_URL`, `VITE_APP_DEFAULT_LATITUDE`, `VITE_APP_DEFAULT_LONGITUDE` y `VITE_MAPBOX_PUBLIC_TOKEN`. La primera cuenta administradora se crea en el backend (`pnpm db:bootstrap`) y cambia su contraseña temporal al entrar. Mientras las pantallas operativas se conectan a la API, las ediciones se guardan en el navegador (`localStorage`) sobre un espacio vacío.
 
 ## Verificacion
 

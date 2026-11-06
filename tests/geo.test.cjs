@@ -8,7 +8,7 @@ const {
   DEMO_CENTER,
   DEMO_FACILITIES,
   SERVICE_AREAS,
-} = require('../src/services/geo/demo.ts');
+} = require('./fixtures/demo/geoDemo.ts');
 const {
   MapboxGeoProvider,
 } = require('../src/services/geo/mapbox/MapboxGeoProvider.ts');
@@ -18,14 +18,11 @@ const {
   eligibilityReasons,
   isLocationStale,
 } = require('../src/services/geo/DispatchService.ts');
-const { DemoGeoProvider } = require('../src/services/geo/DemoGeoProvider.ts');
+const { DemoGeoProvider } = require('./fixtures/demo/DemoGeoProvider.ts');
 const {
   RoutingService,
   routeCacheKey,
 } = require('../src/services/geo/RoutingService.ts');
-const {
-  MockTrackingProvider,
-} = require('../src/services/geo/MockTrackingProvider.ts');
 const config = {
   accessToken: 'pk.test',
   country: 'EC',
@@ -35,7 +32,7 @@ const config = {
 const json = (data, status = 200, headers = {}) =>
   new Response(JSON.stringify(data), { status, headers });
 test('coverage handles active zones, boundaries, holes and invalid coordinates', () => {
-  const coverage = new ServiceAreaService();
+  const coverage = new ServiceAreaService(SERVICE_AREAS);
   assert.equal(coverage.findArea(DEMO_CENTER).facilityId, 'FAC-02');
   DEMO_FACILITIES.forEach((f) =>
     assert.equal(coverage.findArea(f.coordinates).facilityId, f.id),
@@ -267,36 +264,4 @@ test('route cache includes waypoints/profile, caches valid responses and expires
   time += 20;
   await cache.getRoute(DEMO_CENTER, DEMO_CENTER);
   assert.equal(calls, 3);
-});
-test('mock movement follows its polyline, reports completion and releases timers', () => {
-  const tracking = new MockTrackingProvider();
-  const start = Date.now();
-  tracking.start(
-    'a',
-    {
-      distanceMeters: 10,
-      durationSeconds: 1,
-      geometry: {
-        type: 'LineString',
-        coordinates: [
-          [0, 0],
-          [1, 0],
-          [1, 1],
-        ],
-      },
-    },
-    1000,
-  );
-  const midpoint = tracking.locationAt('a', start + 500);
-  assert.ok(Math.abs(midpoint.coordinates.lng - 1) < 0.05);
-  assert.ok(Math.abs(midpoint.coordinates.lat) < 0.05);
-  const last = tracking.locationAt('a', start + 2000);
-  assert.deepEqual(last.coordinates, { lng: 1, lat: 1 });
-  assert.equal(last.etaSeconds, 0);
-  let calls = 0;
-  const unsubscribe = tracking.subscribeToDriver('a', () => calls++);
-  assert.equal(calls, 1);
-  unsubscribe();
-  tracking.dispose();
-  assert.throws(() => tracking.locationAt('a', Date.now()));
 });

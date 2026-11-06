@@ -13,11 +13,11 @@ const {
 const {
   commitLocalRecords,
 } = require("../src/shared/storage/LocalStorageAdapter.ts");
-test("zones persist without replacing seed areas; multiple facilities retain their zone", () => {
+test("zones persist from an empty start; multiple facilities retain their zone", () => {
   const f = fixture();
   f.repository.save(zone);
   const zones = readZones(f.storage);
-  assert.equal(zones.length, 4);
+  assert.equal(zones.length, 1);
   assert.equal(zones.at(-1).name, zone.name);
   assert.equal(zones.at(-1).facilityId, undefined);
   for (const id of ["FAC-04", "FAC-05"]) {

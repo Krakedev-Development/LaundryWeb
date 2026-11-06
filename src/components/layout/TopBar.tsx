@@ -4,7 +4,6 @@ import {
   Search,
   Bell,
   Menu,
-  Settings,
   AlertTriangle,
   Clock,
   ShieldCheck,
@@ -33,7 +32,7 @@ export function TopBar({
   mobileSidebarOpen,
   onOpenSearch,
 }: TopBarProps) {
-  const { currentUser, resetAll, orders, incidents, customers } = useApp();
+  const { currentUser, orders, incidents, customers } = useApp();
   const [showNotifications, setShowNotifications] = useState(false);
   const menus = useRef<HTMLDivElement>(null);
   const notificationButton = useRef<HTMLButtonElement>(null);
@@ -215,19 +214,6 @@ export function TopBar({
             </section>
           )}
         </div>
-        {/* MVP only: remove this demo reset control before full development. */}
-        <button
-          type="button"
-          aria-label="Restablecer datos demo"
-          title="Restablecer datos demo"
-          onClick={() => {
-            setShowNotifications(false);
-            resetAll();
-          }}
-          className="sidebar-focus flex size-10 items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100"
-        >
-          <Settings className="size-[18px]" aria-hidden="true" />
-        </button>
       </div>
     </header>
   );

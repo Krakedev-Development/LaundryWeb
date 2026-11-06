@@ -35,14 +35,12 @@ export const RewardsPage: React.FC = () => {
   // Form State for new reward
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [pointsCost, setPointsCost] = useState(500);
-  const [minPurchases, setMinPurchases] = useState(2);
-  const [minSpend, setMinSpend] = useState(50);
-  const [validityDays, setValidityDays] = useState(60);
+  const [pointsCost, setPointsCost] = useState(0);
+  const [minPurchases, setMinPurchases] = useState(0);
+  const [minSpend, setMinSpend] = useState(0);
+  const [validityDays, setValidityDays] = useState(0);
 
   const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
-  const [demoCustomer, setDemoCustomer] = useState('');
-  const [demoReward, setDemoReward] = useState('');
   // Role Guard
   if (currentUser.role !== 'ADMIN') {
     return (
@@ -101,10 +99,10 @@ export const RewardsPage: React.FC = () => {
             onClick={() => {
               setName('');
               setDescription('');
-              setPointsCost(500);
-              setMinPurchases(2);
-              setMinSpend(50);
-              setValidityDays(60);
+              setPointsCost(0);
+              setMinPurchases(0);
+              setMinSpend(0);
+              setValidityDays(0);
               setIsDrawerOpen(true);
             }}
             className="px-4 py-2.5 text-xs font-bold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
@@ -259,109 +257,16 @@ export const RewardsPage: React.FC = () => {
             finalización conforme de cada orden.
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pt-2">
-            <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200/80">
-              <span className="text-xs font-bold text-sky-800 block mb-1">
-                Ratio Estándar
-              </span>
-              <p className="text-xl font-bold font-mono text-slate-900">
-                $1 = 10 Puntos
-              </p>
-              <p className="text-xs text-slate-500 mt-2 leading-relaxed">
-                Aplica en todas las órdenes de lavado y tintorería para clientes
-                registrados.
-              </p>
-            </div>
-            <div className="p-5 rounded-2xl bg-emerald-50/60 border border-emerald-200/80">
-              <span className="text-xs font-bold text-emerald-800 block mb-1">
-                Membresía Eco Wash
-              </span>
-              <p className="text-xl font-bold font-mono text-emerald-900">
-                $1 = 15 Puntos
-              </p>
-              <p className="text-xs text-emerald-700 mt-2 leading-relaxed">
-                Multiplicador x1.5 para suscripciones sostenibles con detergente
-                biodegradables.
-              </p>
-            </div>
-            <div className="p-5 rounded-2xl bg-indigo-50/60 border border-indigo-200/80">
-              <span className="text-xs font-bold text-indigo-800 block mb-1">
-                Cuentas Corporativas
-              </span>
-              <p className="text-xl font-bold font-mono text-indigo-900">
-                $1 = 20 Puntos
-              </p>
-              <p className="text-xs text-indigo-700 mt-2 leading-relaxed">
-                Multiplicador x2 para hoteles, clínicas y restaurantes con
-                volumen garantizado.
-              </p>
-            </div>
-          </div>
+          <p className="rounded-2xl border border-slate-200/80 bg-slate-50 p-5 text-xs text-slate-600">
+            La tasa de puntos por unidad monetaria se define en la política de
+            negocio. Aún no hay una política publicada.
+          </p>
         </div>
       )}
 
       {/* Tab 3: Solicitudes de Canje */}
       {activeTab === 'REDEMPTIONS' && (
         <div className="bg-white rounded-2xl border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.03)] overflow-hidden">
-          <div className="border-b border-slate-200 bg-slate-50 p-4 space-y-3">
-            <p className="text-xs text-slate-600">
-              MVP: simular una solicitud local del cliente para revisar el
-              canje. Los puntos quedan reservados hasta la aprobación. No
-              sincroniza con la app.
-            </p>
-            <div className="flex flex-wrap gap-3">
-              <select
-                aria-label="Cliente del canje demo"
-                value={demoCustomer}
-                onChange={(e) => setDemoCustomer(e.target.value)}
-                className="rounded-lg border border-slate-200 bg-white p-2 text-xs"
-              >
-                <option value="">Seleccionar cliente</option>
-                {customers.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.fullName}
-                  </option>
-                ))}
-              </select>
-              <select
-                aria-label="Recompensa del canje demo"
-                value={demoReward}
-                onChange={(e) => setDemoReward(e.target.value)}
-                className="rounded-lg border border-slate-200 bg-white p-2 text-xs"
-              >
-                <option value="">Seleccionar recompensa</option>
-                {rewards
-                  .filter((r) => r.status === 'ACTIVE')
-                  .map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.name}
-                    </option>
-                  ))}
-              </select>
-              <button
-                disabled={!demoCustomer || !demoReward}
-                onClick={() => {
-                  try {
-                    storageService.requestDemoReward(demoCustomer, demoReward);
-                    showToast({
-                      type: 'success',
-                      title: 'Solicitud demo creada; puntos reservados',
-                    });
-                  } catch (error) {
-                    showToast({
-                      type: 'error',
-                      title: 'No se pudo solicitar el canje',
-                      message:
-                        error instanceof Error ? error.message : String(error),
-                    });
-                  }
-                }}
-                className="rounded-lg bg-[#0F4C81] px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
-              >
-                Simular solicitud · MVP
-              </button>
-            </div>
-          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-xs text-left">
               <thead className="bg-slate-50/80 text-slate-600 font-semibold border-b border-slate-200/80">
@@ -648,7 +553,7 @@ export const RewardsPage: React.FC = () => {
                   aria-label="Vigencia en días"
                   value={validityDays}
                   onChange={(e) =>
-                    setValidityDays(parseInt(e.target.value) || 30)
+                    setValidityDays(parseInt(e.target.value) || 0)
                   }
                   className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs font-mono"
                 />

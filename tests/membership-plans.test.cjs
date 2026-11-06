@@ -7,7 +7,7 @@ global.localStorage = {
   setItem: (key, value) => values.set(key, value),
   removeItem: (key) => values.delete(key),
 };
-const { storageService: storage } = require('../src/services/storage.ts');
+const storage = require('./fixtures/seed.cjs').seededStorage();
 const plan = () => ({
   id: 'plan-family',
   name: 'Plan personalizado',
@@ -25,7 +25,7 @@ const plan = () => ({
   updatedAt: '',
 });
 
-test('membership plans persist edits without duplicating the plan and reset with the demo', () => {
+test('membership plans persist edits without duplicating the plan', () => {
   storage.resetAll();
   storage.saveMembershipPlan(plan());
   const created = storage
@@ -40,28 +40,16 @@ test('membership plans persist edits without duplicating the plan and reset with
   assert.equal(edited.status, 'INACTIVE');
   assert.equal(edited.createdAt, created.createdAt);
   storage.resetAll();
-  assert.deepEqual(
-    storage.getMembershipPlans().map((item) => item.name),
-    ['Plan Esencial', 'Plan Familiar'],
-  );
+  assert.deepEqual(storage.getMembershipPlans(), []);
 });
 
-test('demo membership seeds are added once without replacing saved edits or custom plans', () => {
+test('there are no preloaded plans and returned copies do not alias the stored plans', () => {
   storage.resetAll();
-  const seeds = storage.getMembershipPlans();
-  assert.equal(seeds.length, 2);
-  storage.saveMembershipPlan({ ...seeds[0], price: 31, status: 'INACTIVE' });
+  assert.deepEqual(storage.getMembershipPlans(), []);
   storage.saveMembershipPlan(plan());
-  const afterReload = storage.getMembershipPlans();
-  assert.equal(afterReload.length, 3);
-  assert.equal(afterReload.find((item) => item.id === seeds[0].id).price, 31);
-  assert.equal(
-    afterReload.find((item) => item.id === seeds[0].id).status,
-    'INACTIVE',
-  );
-  afterReload[0].benefits.push('Cambio en una copia');
-  storage.resetAll();
-  assert.equal(storage.getMembershipPlans()[0].price, 29.9);
+  const plans = storage.getMembershipPlans();
+  assert.equal(plans.length, 1);
+  plans[0].benefits.push('Cambio en una copia');
   assert.equal(
     storage.getMembershipPlans()[0].benefits.includes('Cambio en una copia'),
     false,

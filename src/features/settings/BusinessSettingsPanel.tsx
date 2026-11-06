@@ -18,9 +18,9 @@ export function BusinessSettingsPanel() {
     facilityId: facilities[0]?.id ?? '',
     context: 'DRIVER_PICKUP',
     date: '',
-    start: '09:00',
-    end: '11:00',
-    capacity: 8,
+    start: '',
+    end: '',
+    capacity: 0,
     reservedCount: 0,
     active: true,
   });
@@ -52,7 +52,7 @@ export function BusinessSettingsPanel() {
     <section className="rounded-2xl border border-blue-100 bg-white shadow-sm p-6 space-y-6">
       <h2 className="font-bold text-lg flex gap-2">
         <Settings2 />
-        Políticas y agenda del MVP
+        Políticas y agenda
       </h2>
       <div className="bg-amber-50 rounded-xl p-4 text-sm text-amber-900 flex gap-3">
         <Info className="shrink-0" />
@@ -60,7 +60,7 @@ export function BusinessSettingsPanel() {
           <p className="font-semibold">Decisiones en revisión</p>
           <p>
             Los campos vacíos conservan la decisión pendiente. Los valores
-            configurados son reglas de esta instalación de demostración.
+            configurados son las reglas vigentes de la operación.
           </p>
           <ul className="list-disc pl-4 mt-2">
             {policy.review.map((item) => (
@@ -134,10 +134,6 @@ export function BusinessSettingsPanel() {
           <CalendarDays size={20} />
           Franjas con capacidad
         </h3>
-        <p className="text-sm text-slate-500">
-          La agenda inicial utiliza ocho cupos de demostración por franja. No
-          representa una capacidad definitiva del negocio.
-        </p>
         <div className="grid sm:grid-cols-3 gap-3">
           <label className="text-sm">
             Sede

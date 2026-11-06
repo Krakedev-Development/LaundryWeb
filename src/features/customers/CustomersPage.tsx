@@ -41,7 +41,7 @@ export const CustomersPage: React.FC = () => {
 
   // Points adjustment state (Ledger rule #39)
   const [isAdjustingPoints, setIsAdjustingPoints] = useState(false);
-  const [pointsDelta, setPointsDelta] = useState(100);
+  const [pointsDelta, setPointsDelta] = useState(0);
   const [pointsReason, setPointsReason] = useState(
     'Bonificación por fidelidad o cortesía comercial',
   );

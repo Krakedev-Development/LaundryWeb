@@ -235,8 +235,7 @@ export function MembershipsPage() {
         )}
       </section>
       <p className="text-xs leading-relaxed text-slate-600">
-        Los planes Esencial y Familiar son ejemplos editables de esta demo. La
-        contratación por clientes, el consumo de cupos y los cobros recurrentes
+        La contratación por clientes, el consumo de cupos y los cobros recurrentes
         se incorporarán a su flujo de suscripción.
       </p>
       {draft && (

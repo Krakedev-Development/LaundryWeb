@@ -1,4 +1,4 @@
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require('./support/fixtures.cjs');
 
 test('membership creation and editing survive a reload', async ({ page }) => {
   await page.goto('/commercial/memberships');

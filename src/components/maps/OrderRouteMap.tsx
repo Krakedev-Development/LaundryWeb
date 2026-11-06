@@ -96,7 +96,6 @@ export function OrderRouteMap({ order }: { order: Order }) {
         <p className="text-sm">
           {(route.distanceMeters / 1000).toFixed(1)} km ·{' '}
           {Math.ceil(route.durationSeconds / 60)} min estimados
-          {route.simulated ? ' · demostración' : ''}
         </p>
       )}
       <p className="text-xs text-slate-500">

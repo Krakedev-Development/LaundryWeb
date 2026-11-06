@@ -38,7 +38,7 @@ export const FacilitiesPage: React.FC = () => {
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('Metropolitana');
   const [zone, setZone] = useState('Zona Norte & Centro');
-  const [capacityMaxKgDay, setCapacityMaxKgDay] = useState(1200);
+  const [capacityMaxKgDay, setCapacityMaxKgDay] = useState(0);
   const [phone, setPhone] = useState('+51 1 555-0100');
   const [managerName, setManagerName] = useState('Roberto Gómez');
   const [status, setStatus] = useState<'ACTIVE' | 'MAINTENANCE'>('ACTIVE');
@@ -77,7 +77,7 @@ export const FacilitiesPage: React.FC = () => {
     setAddress('');
     setCity('');
     setZone('Zona Norte & Centro');
-    setCapacityMaxKgDay(1000);
+    setCapacityMaxKgDay(0);
     setPhone('');
     setManagerName('');
     setStatus('ACTIVE');

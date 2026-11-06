@@ -7,7 +7,7 @@ global.localStorage = {
   setItem: (key, value) => values.set(key, value),
   removeItem: (key) => values.delete(key),
 };
-const { storageService: storage } = require('../src/services/storage.ts');
+const storage = require('./fixtures/seed.cjs').seededStorage();
 const { ensureBusinessState } = require('../src/services/BusinessService.ts');
 
 test('persisted pending customer drop-off releases its booking, revokes its QR and requires a new home pickup', () => {
@@ -46,7 +46,10 @@ test('persisted pending customer drop-off releases its booking, revokes its QR a
   ).walletBalance;
   const timeline = structuredClone(order.timeline);
   values.set('lw_workflow_v2', JSON.stringify(state));
-  const migratedStorage = new storage.constructor();
+  const migratedStorage = Object.assign(
+    new storage.constructor(),
+    require('./fixtures/seed.cjs').demoMethods,
+  );
   const next = migratedStorage.getWorkflow(),
     migrated = next.orders.find((o) => o.id === order.id);
   assert.equal(migrated.fulfillment.mode, 'HOME_STORE');
@@ -154,7 +157,7 @@ test('an already recorded local reception keeps receipts, counts, status and his
     timeline = structuredClone(order.timeline);
   const normalized = ensureBusinessState(state),
     next = normalized.orders.find((o) => o.id === order.id);
-  storage.handoffService.initialize(normalized, next, false, true);
+  storage.handoffService.initialize(normalized, next, true);
   assert.equal(next.status, 'READY');
   assert.equal(next.pickupNeedsScheduling, undefined);
   assert.deepEqual(

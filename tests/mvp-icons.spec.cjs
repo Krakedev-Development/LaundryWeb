@@ -1,4 +1,4 @@
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require('./support/fixtures.cjs');
 
 test.use({ viewport: { width: 1440, height: 900 } });
 

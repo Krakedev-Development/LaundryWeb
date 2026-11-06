@@ -31,12 +31,6 @@ import {
 } from 'lucide-react';
 import { OrderStatus, IncidentType, IncidentSeverity } from '../../types';
 
-const demoLifecycleSteps: Partial<Record<OrderStatus, [OrderStatus, string]>> =
-  {
-    HEADING_TO_PICKUP: ['ARRIVED_FOR_PICKUP', 'Marcar llegada'],
-
-    HEADING_TO_FACILITY: ['ARRIVED_AT_FACILITY', 'Marcar llegada a planta'],
-  };
 export const OrderDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const {
@@ -348,17 +342,6 @@ export const OrderDetailPage: React.FC = () => {
               </button>
             )}
 
-            {demoLifecycleSteps[operationalStage(order)] && (
-              <button
-                className="px-4 py-2 rounded-lg bg-[#143F73] text-white"
-                onClick={() => {
-                  const step = demoLifecycleSteps[operationalStage(order)]!;
-                  handleAdvanceStatus(step[0], step[1]);
-                }}
-              >
-                {demoLifecycleSteps[operationalStage(order)]![1]}
-              </button>
-            )}
             {/* Registrar Incidencia */}
             <button
               onClick={() => setIsIncidentModalOpen(true)}

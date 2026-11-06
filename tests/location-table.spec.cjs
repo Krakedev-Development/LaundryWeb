@@ -1,4 +1,4 @@
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require('./support/fixtures.cjs');
 test.use({ viewport: { width: 1440, height: 1100 }, actionTimeout: 15000 });
 
 test('location table combines filters, paginates, respects map layers and opens detail', async ({

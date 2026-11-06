@@ -21,52 +21,6 @@ export const MEMBERSHIP_INTERVALS = {
   YEARLY: 'Anual',
 } as const;
 
-// Configuración comercial ficticia para recorrer la demostración.
-export const INITIAL_MEMBERSHIP_PLANS: MembershipPlan[] = [
-  {
-    id: 'membership-demo-essential',
-    name: 'Plan Esencial',
-    description: 'Un plan mensual para el cuidado habitual de tus prendas.',
-    price: 29.9,
-    interval: 'MONTHLY',
-    includedWeight: 10,
-    weightUnit: 'KG',
-    includedPickups: 2,
-    discountPercent: 5,
-    priorityService: false,
-    benefits: [
-      '10 kg de lavado por mes',
-      '2 recogidas a domicilio por mes',
-      '5 % de descuento en servicios adicionales',
-    ],
-    status: 'ACTIVE',
-    createdAt: '2026-10-24T00:00:00.000Z',
-    updatedAt: '2026-10-24T00:00:00.000Z',
-  },
-  {
-    id: 'membership-demo-family',
-    name: 'Plan Familiar',
-    description:
-      'Mayor capacidad mensual y atención prioritaria para el hogar.',
-    price: 59.9,
-    interval: 'MONTHLY',
-    includedWeight: 25,
-    weightUnit: 'KG',
-    includedPickups: 4,
-    discountPercent: 10,
-    priorityService: true,
-    benefits: [
-      '25 kg de lavado por mes',
-      '4 recogidas a domicilio por mes',
-      '10 % de descuento en servicios adicionales',
-      'Atención prioritaria',
-    ],
-    status: 'ACTIVE',
-    createdAt: '2026-10-24T00:00:00.000Z',
-    updatedAt: '2026-10-24T00:00:00.000Z',
-  },
-];
-
 export function validateMembershipPlan(
   plan: MembershipPlan,
   plans: MembershipPlan[],

@@ -1,4 +1,4 @@
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require('./support/fixtures.cjs');
 
 test.use({ viewport: { width: 1440, height: 1000 } });
 
@@ -52,9 +52,16 @@ test('assignment controls, keyboard dismissal and operation screens work at desk
     .filter({ hasText: 'SOL-DEMO-FAC-02-CHOFER' })
     .filter({ hasText: 'Ingreso del chofer en planta' })
     .click();
-  await page
-    .getByRole('button', { name: 'Demo: cargar código preparado', exact: true })
-    .click();
+  // El código lo conoce quien presenta; la prueba lo lee de los datos sembrados.
+  const code = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem('lw_workflow_v2')).handoffs.find(
+      (h) =>
+        h.orderId === 'SOL-DEMO-FAC-02-CHOFER' &&
+        h.type === 'DRIVER_TO_FACILITY' &&
+        h.status === 'ACTIVE',
+    ).fallbackCode,
+  );
+  await page.getByLabel('Código de transferencia').fill(code);
   await page
     .getByRole('button', { name: 'Verificar código', exact: true })
     .click();

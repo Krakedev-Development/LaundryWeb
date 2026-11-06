@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider } from './context/AppContext';
 import { MainLayout } from './components/layout/MainLayout';
@@ -27,17 +27,38 @@ import {
 
 // Public page
 import { LoginPage } from './features/auth/LoginPage';
+import { session, useSessionStatus } from './services/auth/session';
 
-export default function App() {
+// Solo se monta el espacio de trabajo (y sus datos) con una sesión válida.
+function RequireSession() {
+  const status = useSessionStatus();
+  if (status === 'checking')
+    return (
+      <p role="status" className="p-8 text-sm text-slate-500">
+        Verificando sesión…
+      </p>
+    );
+  if (status !== 'signed-in') return <Navigate to="/login" replace />;
   return (
     <AppProvider>
+      <MainLayout />
+    </AppProvider>
+  );
+}
+
+export default function App() {
+  useEffect(() => {
+    void session.restore();
+  }, []);
+  return (
+    <>
       <BrowserRouter>
         <Routes>
           {/* Public login */}
           <Route path="/login" element={<LoginPage />} />
 
           {/* Authenticated workspace layout */}
-          <Route path="/" element={<MainLayout />}>
+          <Route path="/" element={<RequireSession />}>
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<DashboardPage />} />
 
@@ -82,6 +103,6 @@ export default function App() {
           </Route>
         </Routes>
       </BrowserRouter>
-    </AppProvider>
+    </>
   );
 }

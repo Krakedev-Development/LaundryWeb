@@ -163,7 +163,7 @@ export function BaseMap({
       instance.removeLayer('laundry-route');
     if (instance.getSource('laundry-route'))
       instance.removeSource('laundry-route');
-    if (route && !route.simulated) {
+    if (route) {
       instance.addSource('laundry-route', {
         type: 'geojson',
         data: { type: 'Feature', properties: {}, geometry: route.geometry },
@@ -203,12 +203,6 @@ export function BaseMap({
       {error && (
         <p role="alert" className="text-sm text-amber-800">
           {error}
-        </p>
-      )}
-      {route?.simulated && (
-        <p className="text-xs text-slate-500">
-          Estimación de demostración. La ruta por carretera se mostrará cuando
-          esté disponible.
         </p>
       )}
       <div

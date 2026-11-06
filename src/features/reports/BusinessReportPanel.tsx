@@ -31,7 +31,7 @@ export function BusinessReportPanel({ facilityId }: { facilityId: string }) {
         .toFixed(2)}`,
     ],
     [
-      'Pagos de demostración',
+      'Pagos registrados',
       `$${state.payments
         .filter((p) => ids.has(p.orderId))
         .reduce((n, p) => n + p.amount, 0)
@@ -60,8 +60,7 @@ export function BusinessReportPanel({ facilityId }: { facilityId: string }) {
         ))}
       </div>
       <p className="text-xs text-slate-500">
-        Los pedidos sin importe calculado se excluyen de ingresos. Datos de esta
-        instalación local del MVP.
+        Los pedidos sin importe calculado se excluyen de ingresos.
       </p>
     </section>
   );

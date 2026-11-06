@@ -1,5 +1,4 @@
-import { WebMockTracking } from '../services/geo/WebMockTracking';
-import { geoConfig } from '../services/geo/geo.config';
+import { session } from '../services/auth/session';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import {
   AuditLog,
@@ -18,7 +17,6 @@ import {
   RewardRedemption,
   SystemSettings,
   User,
-  UserRole,
 } from '../types';
 import { storageService } from '../services/storage';
 
@@ -31,7 +29,6 @@ export interface ToastMessage {
 
 interface AppContextType {
   currentUser: User;
-  switchRole: (role: UserRole) => void;
   logout: () => void;
   orders: Order[];
   customers: Customer[];
@@ -121,7 +118,6 @@ interface AppContextType {
     notes?: string,
   ) => boolean;
   updateSettings: (settings: SystemSettings) => void;
-  resetAll: () => void;
   // Toasts
   toasts: ToastMessage[];
   showToast: (toast: Omit<ToastMessage, 'id'>) => void;
@@ -195,30 +191,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     return () => unsubscribe();
   }, []);
 
-  useEffect(() => {
-    const tracking = new WebMockTracking();
-    if (geoConfig.trackingMode !== 'mock') return () => tracking.dispose();
-    const reconcile = () =>
-      tracking.reconcile(
-        storageService.getOperationalOrders(),
-        storageService.getOperationalDrivers(),
-        storageService.getOperationalFacilities(),
-        (id, coordinates, updatedAt) =>
-          storageService.publishDemoLocation(id, coordinates, updatedAt),
-      );
-    reconcile();
-    const unsubscribe = storageService.subscribe(reconcile);
-    const timer = setInterval(
-      () => storageService.refreshDemoLocations(),
-      30000,
-    );
-    return () => {
-      unsubscribe();
-      clearInterval(timer);
-      tracking.dispose();
-    };
-  }, []);
-
   const showToast = (toast: Omit<ToastMessage, 'id'>) => {
     const id =
       'toast-' + Date.now() + '-' + Math.random().toString(36).substring(2, 5);
@@ -232,22 +204,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
-  const switchRole = (role: UserRole) => {
-    storageService.switchRole(role);
-    showToast({
-      type: 'info',
-      title: `Modo de sesión cambiado a ${role === 'ADMIN' ? 'Administrador' : 'Supervisor'}`,
-      message:
-        'Los permisos y opciones de navegación se han actualizado según la matriz de acceso.',
-    });
-  };
-
   const logout = () => {
-    // switch to logged out state or navigate to /login
-    showToast({
-      type: 'info',
-      title: 'Sesión finalizada',
-    });
+    void session.logout();
   };
 
   const assignDriver = (
@@ -598,21 +556,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     });
   };
 
-  const resetAll = () => {
-    storageService.resetAll();
-    showToast({
-      type: 'info',
-      title: 'Datos de demostración restablecidos',
-      message:
-        'Todas las solicitudes, choferes y estados han vuelto a su valor inicial.',
-    });
-  };
-
   return (
     <AppContext.Provider
       value={{
         currentUser,
-        switchRole,
         logout,
         orders,
         customers,
@@ -646,7 +593,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         createReward,
         updateRedemptionStatus,
         updateSettings,
-        resetAll,
         toasts,
         showToast,
         dismissToast,

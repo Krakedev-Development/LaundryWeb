@@ -1,6 +1,5 @@
 import { validateFacilityRelocation } from '../entities/zone/model/facilityLocation.rules';
 import {
-  INITIAL_MEMBERSHIP_PLANS,
   validateMembershipPlan,
   type MembershipPlan,
 } from '../features/commercial/membershipPlans';
@@ -11,7 +10,6 @@ import {
   recordBusinessCustody,
   type BusinessState,
 } from './BusinessService';
-import { prepareBusinessDemoData } from './BusinessDemoData';
 import {
   operationalStage,
   migrateOrder,
@@ -21,8 +19,6 @@ import {
   Actor,
 } from './fulfillment';
 import { HandoffService, HandoffState } from './HandoffService';
-import { prepareWebDemoData } from './geo/WebDemoData';
-import { prepareHandoffDemoData } from './HandoffDemoData';
 import { eligibilityReasons } from './geo/DispatchService';
 import { serviceAreaService } from './geo/ServiceAreaService';
 import { commitFacility } from './zones/commitFacility';
@@ -47,21 +43,22 @@ import {
   User,
   UserRole,
 } from '../types';
-import {
-  INITIAL_AUDIT_LOGS,
-  INITIAL_CATALOG,
-  INITIAL_CUSTOMERS,
-  INITIAL_DRIVERS,
-  INITIAL_FACILITIES,
-  INITIAL_INCIDENTS,
-  INITIAL_ORDERS,
-  INITIAL_POINTS_LEDGER,
-  INITIAL_PROMOTIONS,
-  INITIAL_REDEMPTIONS,
-  INITIAL_REWARDS,
-  INITIAL_SETTINGS,
-  INITIAL_USERS,
-} from './mockData';
+
+// Sin valores de negocio por defecto: el administrador configura cada parámetro.
+const UNCONFIGURED_SETTINGS: SystemSettings = {
+  maxOrdersPerDriver: 0,
+  slaPickupMinutes: 0,
+  slaDeliveryHours: 0,
+  defaultFacilityId: '',
+  currency: '',
+  currencySymbol: '',
+  timezone: '',
+  locale: '',
+  defaultCity: '',
+  phoneCountryCode: '',
+  quarantineNotifySupervisor: false,
+  autoSuggestDrivers: false,
+};
 
 const STORAGE_KEYS = {
   CURRENT_USER: 'lw_current_user',
@@ -109,19 +106,6 @@ class StorageService {
           role: current.role,
           facilityId: current.facilityId,
         };
-      const staff = /^DEMO-(ADMIN|SUPERVISOR)-(FAC-\d+)$/.exec(id);
-      if (
-        staff &&
-        this.getFacilities().some((f) => f.id === staff[2]) &&
-        (current.role === 'ADMIN' ||
-          (staff[1] === 'SUPERVISOR' && current.facilityId === staff[2]))
-      )
-        return {
-          id,
-          name: 'Operador demo de sede',
-          role: staff[1] as 'ADMIN' | 'SUPERVISOR',
-          facilityId: staff[2],
-        };
       const driver = this.getDrivers().find((d) => d.id === id);
       if (
         driver &&
@@ -157,7 +141,7 @@ class StorageService {
         timestamp: h.usedAt!,
         userName: actor.name,
         userRole: actor.role,
-        notes: 'Validación local de demo. ' + (h.receipt?.notes ?? ''),
+        notes: 'Validación de custodia. ' + (h.receipt?.notes ?? ''),
       });
       if (['DRIVER_TO_FACILITY', 'DRIVER_TO_CUSTOMER'].includes(h.type)) {
         const leg =
@@ -262,106 +246,17 @@ class StorageService {
       handoffAudits: [],
     });
   }
-  public demoBusinessActor(actor: Actor) {
-    if (this.getCurrentUser().role !== 'ADMIN')
-      throw new Error(
-        'La simulación de cliente o chofer está reservada al Administrador del MVP.',
-      );
-    if (
-      (actor.role === 'CLIENT' &&
-        !this.getWorkflow().customers.some((c) => c.id === actor.id)) ||
-      (actor.role === 'DRIVER' &&
-        !this.getDrivers().some((d) => d.id === actor.id))
-    )
-      throw new Error('Cuenta demo no encontrada.');
-    return new BusinessService({
-      read: () => this.getWorkflow(),
-      transaction: (work) => {
-        const state = this.getWorkflow();
-        const result = work(state);
-        localStorage.setItem(this.workflowKey, JSON.stringify(state));
-        this.notify();
-        return result;
-      },
-      actor: () => actor,
-      facilities: () => this.getFacilities(),
-      catalog: () => this.getCatalog(),
-      promotions: () => this.getPromotions(),
-      zoneFor: (address, facility) => {
-        const area = serviceAreaService.findArea(address.coordinates);
-        return area?.facilityId === facility ? area.id : undefined;
-      },
-      covers: (address, facility) =>
-        serviceAreaService.findArea(address.coordinates)?.facilityId ===
-        facility,
-      handoffs: this.handoffService,
-    });
-  }
   private initializeWorkflow() {
     const fac = this.getFacilities();
     fac.forEach((f) => {
       f.acceptsCustomerDropoff = false;
       f.allowsCustomerPickup ??= true;
-      f.openingHours ??= 'Lunes a sábado, 08:00–18:00';
       f.serviceAreaIds ??= serviceAreaService.areas
         .filter((a) => a.facilityId === f.id)
         .map((a) => a.id);
     });
     localStorage.setItem(STORAGE_KEYS.FACILITIES, JSON.stringify(fac));
     const state = this.getWorkflow();
-    for (const [id, mode] of [
-      ['SOL-STORE-001', 'HOME_STORE'],
-      ['SOL-HOME-001', 'HOME_HOME'],
-    ] as const) {
-      if (state.orders.some((o) => o.id === id)) continue;
-      const template =
-        state.orders.find((o) => o.facilityId === 'FAC-02') ?? state.orders[0];
-      if (!template) continue;
-      const o: Order = JSON.parse(JSON.stringify(template));
-      o.id = id;
-      o.status = 'PICKUP_PENDING';
-      o.workflowVersion = undefined;
-      o.fulfillment = undefined;
-      o.intakeHold = undefined;
-      o.timeline = [];
-      o.pickup.completedAt = undefined;
-      o.delivery.completedAt = undefined;
-      o.customerId = 'CUST-001';
-      o.customerName = this.getCustomers().find(
-        (c) => c.id === 'CUST-001',
-      )!.fullName;
-      o.createdAt = new Date().toISOString();
-      o.updatedAt = o.createdAt;
-      o.trackingNumber = id;
-      o.incidentsCount = 0;
-      o.quarantineReason = undefined;
-      o.previousStatus = undefined;
-      o.pricing.paymentStatus = 'PAID';
-      o.pickup.driverId = undefined;
-      o.delivery.driverId = undefined;
-      if (mode === 'HOME_STORE') {
-        const f = this.getFacilities().find((f) => f.id === o.facilityId)!;
-        o.deliveryAddress = {
-          ...o.customerAddress,
-          street: f.address,
-          number: '',
-          coordinates: f.coordinates,
-        };
-        o.delivery.timeSlot = 'Retiro al estar listo';
-      }
-      migrateOrder(o, mode);
-      if (mode === 'HOME_STORE') {
-        o.pricing.deliveryFee = 0;
-        o.pricing.total = Number(
-          (
-            o.pricing.subtotal +
-            o.pricing.extrasTotal -
-            o.pricing.discount
-          ).toFixed(2),
-        );
-      }
-      state.orders.unshift(o);
-    }
     state.orders.forEach((o) => {
       const legacy = o.workflowVersion !== 2;
       migrateOrder(o);
@@ -369,18 +264,9 @@ class StorageService {
         if (leg.driverId)
           leg.driverAssignmentId ??=
             o.id + (leg === o.fulfillment!.inbound ? '-pickup' : '-delivery');
-      this.handoffService.initialize(
-        state,
-        o,
-        ['SOL-STORE-001', 'SOL-HOME-001'].includes(o.id),
-        legacy,
-      );
+      this.handoffService.initialize(state, o, legacy);
     });
-    prepareHandoffDemoData(state, fac, this.handoffService);
-    const catalog = this.getCatalog();
-    prepareBusinessDemoData(state, fac, this.handoffService, catalog);
     localStorage.setItem(STORAGE_KEYS.FACILITIES, JSON.stringify(fac));
-    localStorage.setItem(STORAGE_KEYS.CATALOG, JSON.stringify(catalog));
     localStorage.setItem(this.workflowKey, JSON.stringify(state));
   }
   public getHandoffs() {
@@ -401,25 +287,6 @@ class StorageService {
 
   constructor() {
     this.initIfEmpty();
-    const data = {
-      orders: this.getOrders(),
-      customers: this.getCustomers(),
-      drivers: this.getDrivers(),
-      facilities: this.getFacilities(),
-      settings: this.getSettings(),
-    };
-    prepareWebDemoData(data);
-    localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(data.orders));
-    localStorage.setItem(
-      STORAGE_KEYS.CUSTOMERS,
-      JSON.stringify(data.customers),
-    );
-    localStorage.setItem(STORAGE_KEYS.DRIVERS, JSON.stringify(data.drivers));
-    localStorage.setItem(
-      STORAGE_KEYS.FACILITIES,
-      JSON.stringify(data.facilities),
-    );
-    localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(data.settings));
     this.initializeWorkflow();
   }
 
@@ -440,202 +307,37 @@ class StorageService {
     });
   }
 
+  // Primera ejecución: todo arranca vacío. Los datos reales vendrán de la API.
   private initIfEmpty() {
-    if (!localStorage.getItem(STORAGE_KEYS.CURRENT_USER)) {
-      localStorage.setItem(
-        STORAGE_KEYS.CURRENT_USER,
-        JSON.stringify(INITIAL_USERS[0]),
-      ); // default admin
-    }
-    if (!localStorage.getItem(STORAGE_KEYS.ORDERS)) {
-      localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(INITIAL_ORDERS));
-    }
-    if (!localStorage.getItem(STORAGE_KEYS.CUSTOMERS)) {
-      localStorage.setItem(
-        STORAGE_KEYS.CUSTOMERS,
-        JSON.stringify(INITIAL_CUSTOMERS),
-      );
-    }
-    if (!localStorage.getItem(STORAGE_KEYS.DRIVERS)) {
-      localStorage.setItem(
-        STORAGE_KEYS.DRIVERS,
-        JSON.stringify(INITIAL_DRIVERS),
-      );
-    }
-    if (!localStorage.getItem(STORAGE_KEYS.FACILITIES)) {
-      localStorage.setItem(
-        STORAGE_KEYS.FACILITIES,
-        JSON.stringify(INITIAL_FACILITIES),
-      );
-    }
-    if (!localStorage.getItem(STORAGE_KEYS.INCIDENTS)) {
-      localStorage.setItem(
-        STORAGE_KEYS.INCIDENTS,
-        JSON.stringify(INITIAL_INCIDENTS),
-      );
-    }
-    if (!localStorage.getItem(STORAGE_KEYS.CATALOG)) {
-      localStorage.setItem(
-        STORAGE_KEYS.CATALOG,
-        JSON.stringify(INITIAL_CATALOG),
-      );
-    }
-    if (!localStorage.getItem(STORAGE_KEYS.PROMOTIONS)) {
-      localStorage.setItem(
-        STORAGE_KEYS.PROMOTIONS,
-        JSON.stringify(INITIAL_PROMOTIONS),
-      );
-    }
-    if (!localStorage.getItem(STORAGE_KEYS.REWARDS)) {
-      localStorage.setItem(
-        STORAGE_KEYS.REWARDS,
-        JSON.stringify(INITIAL_REWARDS),
-      );
-    }
-    if (!localStorage.getItem(STORAGE_KEYS.REDEMPTIONS)) {
-      localStorage.setItem(
-        STORAGE_KEYS.REDEMPTIONS,
-        JSON.stringify(INITIAL_REDEMPTIONS),
-      );
-    }
-    if (!localStorage.getItem(STORAGE_KEYS.POINTS_LEDGER)) {
-      localStorage.setItem(
-        STORAGE_KEYS.POINTS_LEDGER,
-        JSON.stringify(INITIAL_POINTS_LEDGER),
-      );
-    }
-    if (!localStorage.getItem(STORAGE_KEYS.AUDIT_LOGS)) {
-      localStorage.setItem(
-        STORAGE_KEYS.AUDIT_LOGS,
-        JSON.stringify(INITIAL_AUDIT_LOGS),
-      );
-    }
-    if (!localStorage.getItem(STORAGE_KEYS.SETTINGS)) {
-      localStorage.setItem(
-        STORAGE_KEYS.SETTINGS,
-        JSON.stringify(INITIAL_SETTINGS),
-      );
-    }
-  }
-
-  public resetAll(): void {
-    localStorage.removeItem(STORAGE_KEYS.MEMBERSHIPS);
-    localStorage.removeItem(ZONES_KEY);
-    localStorage.removeItem(this.workflowKey);
-    localStorage.setItem(
-      STORAGE_KEYS.CURRENT_USER,
-      JSON.stringify(INITIAL_USERS[0]),
-    );
-    localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(INITIAL_ORDERS));
-    localStorage.setItem(
-      STORAGE_KEYS.CUSTOMERS,
-      JSON.stringify(INITIAL_CUSTOMERS),
-    );
-    localStorage.setItem(STORAGE_KEYS.DRIVERS, JSON.stringify(INITIAL_DRIVERS));
-    localStorage.setItem(
-      STORAGE_KEYS.FACILITIES,
-      JSON.stringify(INITIAL_FACILITIES),
-    );
-    localStorage.setItem(
-      STORAGE_KEYS.INCIDENTS,
-      JSON.stringify(INITIAL_INCIDENTS),
-    );
-    localStorage.setItem(STORAGE_KEYS.CATALOG, JSON.stringify(INITIAL_CATALOG));
-    localStorage.setItem(
-      STORAGE_KEYS.PROMOTIONS,
-      JSON.stringify(INITIAL_PROMOTIONS),
-    );
-    localStorage.setItem(STORAGE_KEYS.REWARDS, JSON.stringify(INITIAL_REWARDS));
-    localStorage.setItem(
-      STORAGE_KEYS.REDEMPTIONS,
-      JSON.stringify(INITIAL_REDEMPTIONS),
-    );
-    localStorage.setItem(
-      STORAGE_KEYS.POINTS_LEDGER,
-      JSON.stringify(INITIAL_POINTS_LEDGER),
-    );
-    localStorage.setItem(
-      STORAGE_KEYS.AUDIT_LOGS,
-      JSON.stringify(INITIAL_AUDIT_LOGS),
-    );
-    localStorage.setItem(
-      STORAGE_KEYS.SETTINGS,
-      JSON.stringify(INITIAL_SETTINGS),
-    );
-    this.initializeWorkflow();
-    notifyZones();
-    this.notify();
-  }
-
-  public publishDemoLocation(
-    id: string,
-    coordinates: { lat: number; lng: number },
-    updatedAt: string,
-  ) {
-    const drivers = this.getDrivers();
-    const driver = drivers.find((d) => d.id === id);
-    if (driver) {
-      Object.assign(driver.location, coordinates, {
-        lastUpdated: updatedAt,
-        simulated: true,
-      });
-      this.saveDrivers(drivers);
-    }
-  }
-  public refreshDemoLocations() {
-    const user = this.getCurrentUser();
-    const drivers = this.getDrivers();
-    drivers.forEach((d) => {
-      if (
-        (user.role === 'ADMIN' ||
-          (user.role === 'SUPERVISOR' && user.facilityId === d.facilityId)) &&
-        d.location.simulated &&
-        d.status !== 'OFFLINE'
-      )
-        d.location.lastUpdated = new Date().toISOString();
-    });
-    this.saveDrivers(drivers);
-  }
-  public createDemoOrder(): Order {
-    const orders = this.getOrders();
-    const existing = orders.find((o) => o.id === 'SOL-DEMO-001');
-    if (existing) return existing;
-    const template =
-      INITIAL_ORDERS.find((o) => o.facilityId === 'FAC-02') ??
-      INITIAL_ORDERS[0];
-    const order: Order = JSON.parse(JSON.stringify(template));
-    Object.assign(order, {
-      id: 'SOL-DEMO-001',
-      trackingNumber: 'DEMO-SAMBORONDON',
-      status: 'PICKUP_PENDING',
-      incidentsCount: 0,
-      timeline: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    });
-    order.pickup = {
-      date: new Date().toISOString().slice(0, 10),
-      timeSlot: '16:00 - 18:00',
-    };
-    order.delivery = {
-      targetDate: new Date(Date.now() + 86400000).toISOString().slice(0, 10),
-      timeSlot: '16:00 - 18:00',
-      recipientName: order.customerName,
-      recipientPhone: order.customerPhone,
-    };
-    this.saveOrders([order, ...orders]);
-    return order;
+    const empty: [string, unknown][] = [
+      [STORAGE_KEYS.ORDERS, []],
+      [STORAGE_KEYS.CUSTOMERS, []],
+      [STORAGE_KEYS.DRIVERS, []],
+      [STORAGE_KEYS.FACILITIES, []],
+      [STORAGE_KEYS.INCIDENTS, []],
+      [STORAGE_KEYS.CATALOG, []],
+      [STORAGE_KEYS.PROMOTIONS, []],
+      [STORAGE_KEYS.REWARDS, []],
+      [STORAGE_KEYS.REDEMPTIONS, []],
+      [STORAGE_KEYS.POINTS_LEDGER, []],
+      [STORAGE_KEYS.AUDIT_LOGS, []],
+      [STORAGE_KEYS.SETTINGS, UNCONFIGURED_SETTINGS],
+    ];
+    for (const [key, value] of empty)
+      if (!localStorage.getItem(key))
+        localStorage.setItem(key, JSON.stringify(value));
   }
 
   // --- AUTH ---
+  // La sesión la establece el inicio de sesión contra la API; sin sesión no hay usuario.
   public getCurrentUser(): User {
     const raw = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
-    if (!raw) return INITIAL_USERS[0];
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return INITIAL_USERS[0];
-    }
+    if (!raw) throw new Error('No hay una sesión iniciada.');
+    return JSON.parse(raw);
+  }
+
+  public hasSession(): boolean {
+    return !!localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
   }
 
   public setCurrentUser(user: User): void {
@@ -643,13 +345,8 @@ class StorageService {
     this.notify();
   }
 
-  public switchRole(role: UserRole): void {
-    const target = INITIAL_USERS.find((u) => u.role === role) || {
-      ...this.getCurrentUser(),
-      role,
-      name: role === 'ADMIN' ? 'Carlos Mendoza' : 'Elena Rostova',
-    };
-    this.setCurrentUser(target);
+  public clearSession(): void {
+    localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
   }
 
   // --- ORDERS ---
@@ -1674,7 +1371,7 @@ class StorageService {
       },
       id: newId,
       activeOrders: 0,
-      rating: 5.0,
+      rating: 0,
       completedTripsToday: 0,
     };
     drivers.push(newDriver);
@@ -1943,68 +1640,6 @@ class StorageService {
     return JSON.parse(localStorage.getItem(STORAGE_KEYS.REDEMPTIONS) ?? '[]');
   }
 
-  public requestDemoReward(
-    customerId: string,
-    rewardId: string,
-  ): RewardRedemption {
-    if (this.getCurrentUser().role !== 'ADMIN')
-      throw Error(
-        'Solo el Administrador puede simular una solicitud de canje en este MVP web.',
-      );
-    const state = this.getWorkflow();
-    state.redemptions ??= this.getRedemptions();
-    const customer = state.customers.find((c) => c.id === customerId);
-    const reward = this.getRewards().find(
-      (r) => r.id === rewardId && r.status === 'ACTIVE',
-    );
-    if (!customer || !reward)
-      throw Error('Selecciona un cliente y una recompensa activa.');
-    const reserved = state.redemptions
-      .filter(
-        (r) =>
-          r.customerId === customerId &&
-          r.status === 'PENDING' &&
-          r.pointsReserved,
-      )
-      .reduce((sum, r) => sum + r.pointsSpent, 0);
-    const purchases = state.orders.filter(
-      (o) => o.customerId === customerId && o.status === 'COMPLETED',
-    );
-    const spend = purchases.reduce((sum, o) => sum + o.pricing.total, 0);
-    if (
-      customer.points - reserved < reward.pointsCost ||
-      customer.completedOrders < reward.minPurchases ||
-      spend < reward.minSpend
-    )
-      throw Error(
-        'El cliente no cumple los requisitos del canje o tiene puntos reservados.',
-      );
-    const redemption: RewardRedemption = {
-      id: 'RED-' + crypto.randomUUID(),
-      customerId,
-      customerName: customer.fullName,
-      rewardId,
-      rewardName: reward.name,
-      pointsSpent: reward.pointsCost,
-      date: new Date().toISOString(),
-      status: 'PENDING',
-      pointsReserved: true,
-    };
-    state.redemptions.push(redemption);
-    state.businessAudits.push({
-      id: crypto.randomUUID(),
-      actorId: customerId,
-      actorRole: 'CLIENT',
-      action: 'DEMO_REWARD_REQUESTED',
-      reason:
-        'Solicitud local simulada por Administrador; no sincroniza con LaundryApp.',
-      at: redemption.date,
-    });
-    localStorage.setItem(this.workflowKey, JSON.stringify(state));
-    this.notify();
-    return redemption;
-  }
-
   public updateRedemptionStatus(
     redemptionId: string,
     status: RewardRedemption['status'],
@@ -2067,22 +1702,7 @@ class StorageService {
     const plans: MembershipPlan[] = JSON.parse(
       localStorage.getItem(STORAGE_KEYS.MEMBERSHIPS) ?? '[]',
     );
-    const missing = INITIAL_MEMBERSHIP_PLANS.filter(
-      (seed) =>
-        !plans.some(
-          (plan) =>
-            plan.id === seed.id ||
-            plan.name.trim().toLocaleLowerCase() ===
-              seed.name.toLocaleLowerCase(),
-        ),
-    );
-    if (!missing.length) return plans;
-    const initialized: MembershipPlan[] = [
-      ...plans,
-      ...JSON.parse(JSON.stringify(missing)),
-    ];
-    localStorage.setItem(STORAGE_KEYS.MEMBERSHIPS, JSON.stringify(initialized));
-    return initialized;
+    return plans;
   }
 
   public saveMembershipPlan(plan: MembershipPlan): void {
@@ -2110,7 +1730,7 @@ class StorageService {
   // --- SETTINGS ---
   public getSettings(): SystemSettings {
     const raw = localStorage.getItem(STORAGE_KEYS.SETTINGS);
-    return raw ? JSON.parse(raw) : INITIAL_SETTINGS;
+    return raw ? JSON.parse(raw) : UNCONFIGURED_SETTINGS;
   }
 
   public updateSettings(settings: SystemSettings): void {

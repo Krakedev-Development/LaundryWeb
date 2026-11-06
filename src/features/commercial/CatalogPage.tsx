@@ -29,7 +29,7 @@ export const CatalogPage: React.FC = () => {
   const [name, setName] = useState('');
   const [type, setType] = useState('Prenda Individual');
   const [description, setDescription] = useState('');
-  const [price, setPrice] = useState(10.0);
+  const [price, setPrice] = useState(0);
   const [pricingModel, setPricingModel] = useState<'FIXED' | 'PER_WEIGHT'>(
     'FIXED',
   );
@@ -37,9 +37,9 @@ export const CatalogPage: React.FC = () => {
   const [compatible, setCompatible] = useState(true);
   const [restrictions, setRestrictions] = useState('');
   const [selectable, setSelectable] = useState(true);
-  const [estimatedHours, setEstimatedHours] = useState(24);
-  const [minHours, setMinHours] = useState(12);
-  const [maxHours, setMaxHours] = useState(36);
+  const [estimatedHours, setEstimatedHours] = useState(0);
+  const [minHours, setMinHours] = useState(0);
+  const [maxHours, setMaxHours] = useState(0);
   const [status, setStatus] = useState<'ACTIVE' | 'INACTIVE'>('ACTIVE');
 
   // KPIs
@@ -69,10 +69,10 @@ export const CatalogPage: React.FC = () => {
           : 'Empaque Eco',
     );
     setDescription('');
-    setPrice(activeTab === 'EXTRAS' ? 3.0 : 15.0);
-    setEstimatedHours(activeTab === 'EXTRAS' ? 0 : 24);
-    setMinHours(activeTab === 'EXTRAS' ? 0 : 12);
-    setMaxHours(activeTab === 'EXTRAS' ? 0 : 36);
+    setPrice(0);
+    setEstimatedHours(0);
+    setMinHours(0);
+    setMaxHours(0);
     setStatus('ACTIVE');
     setIsDrawerOpen(true);
   };

@@ -1,6 +1,5 @@
 import type { Zone } from '../../entities/zone/model/zone.types';
 import { validateZone } from '../../entities/zone/model/zone.rules';
-import { SERVICE_AREAS } from '../geo/demo';
 import {
   localStorageAdapter,
   type StorageAdapter,
@@ -22,7 +21,7 @@ export function readZones(
   storage: StorageAdapter = localStorageAdapter,
 ): Zone[] {
   const raw = storage.getItem(ZONES_KEY);
-  if (!raw) return structuredClone(SERVICE_AREAS);
+  if (!raw) return [];
   const saved = JSON.parse(raw);
   if (saved.version !== 1 || !Array.isArray(saved.zones))
     throw Error('No se pudieron leer las zonas guardadas.');
