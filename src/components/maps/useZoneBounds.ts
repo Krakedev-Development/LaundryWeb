@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
-import type { Map } from 'mapbox-gl';
+import type L from 'leaflet';
 import type { Zone } from '../../entities/zone/model/zone.types';
 
 export function useZoneBounds(
-  map: React.RefObject<Map | null>,
+  map: React.RefObject<L.Map | null>,
   ready: boolean,
   zones: Zone[],
   enabled?: boolean,
@@ -16,14 +16,27 @@ export function useZoneBounds(
         ? zone.polygon.coordinates.flat()
         : zone.polygon.coordinates.flat(2),
     );
-    const lngs = points.map((point) => point[0]),
-      lats = points.map((point) => point[1]);
+    if (!points.length) return;
+    const lngs = points.map((point) => point[0]);
+    const lats = points.map((point) => point[1]);
+    const minLat = Math.min(...lats);
+    const maxLat = Math.max(...lats);
+    const minLng = Math.min(...lngs);
+    const maxLng = Math.max(...lngs);
+    if (
+      !Number.isFinite(minLat) ||
+      !Number.isFinite(maxLat) ||
+      !Number.isFinite(minLng) ||
+      !Number.isFinite(maxLng)
+    ) {
+      return;
+    }
     map.current.fitBounds(
       [
-        [Math.min(...lngs), Math.min(...lats)],
-        [Math.max(...lngs), Math.max(...lats)],
+        [minLat, minLng],
+        [maxLat, maxLng],
       ],
-      { padding: 45, maxZoom: 16, duration: 400 },
+      { padding: [44, 44], maxZoom: 15, animate: true },
     );
   }, [map, ready, key, enabled]);
 }

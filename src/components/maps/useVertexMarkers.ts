@@ -1,42 +1,70 @@
-import { useEffect } from 'react';
-import type mapboxgl from 'mapbox-gl';
+import { useEffect, useRef } from 'react';
+import L from 'leaflet';
 import type { ZoneMapOptions } from './zoneMap.types';
 
 export function useVertexMarkers(
-  map: React.RefObject<mapboxgl.Map | null>,
-  runtime: React.RefObject<typeof mapboxgl | null>,
+  map: React.RefObject<L.Map | null>,
   ready: boolean,
   options: ZoneMapOptions,
 ) {
   const { vertices = [], onVertexMove, onClosePolygon } = options;
+  const moveRef = useRef(onVertexMove);
+  const closeRef = useRef(onClosePolygon);
+  moveRef.current = onVertexMove;
+  closeRef.current = onClosePolygon;
+
   useEffect(() => {
-    if (!ready || !runtime.current || !map.current) return;
-    if (vertices.length) map.current.doubleClickZoom.disable();
-    else map.current.doubleClickZoom.enable();
+    const instance = map.current;
+    if (!ready || !instance) return;
+
+    if (vertices.length) {
+      instance.doubleClickZoom.disable();
+    } else {
+      instance.doubleClickZoom.enable();
+    }
+
     const markers = vertices.map((point, index) => {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.textContent = String(index + 1);
-      button.title = index === 0 ? 'Cerrar polígono' : `Vértice ${index + 1}`;
-      button.setAttribute('aria-label', button.title);
-      button.className =
-        'rounded-full bg-white border-2 border-sky-700 text-sky-900 w-7 h-7 font-bold';
-      button.onclick = (event) => {
-        event.stopPropagation();
-        if (!index) onClosePolygon?.();
-      };
-      const marker = new runtime.current!.Marker({
-        element: button,
-        draggable: !!onVertexMove,
-      })
-        .setLngLat([point.lng, point.lat])
-        .addTo(map.current!);
-      marker.on('dragend', () => {
-        const position = marker.getLngLat();
-        onVertexMove?.(index, { lat: position.lat, lng: position.lng });
+      const isFirst = index === 0;
+      const title = isFirst ? 'Cerrar polígono' : `Vértice ${index + 1}`;
+      const badgeTone = isFirst
+        ? 'border-emerald-500 bg-emerald-600 text-white ring-emerald-400/40'
+        : 'border-sky-600 bg-white text-sky-950 ring-sky-400/30';
+
+      const icon = L.divIcon({
+        className: 'bg-transparent border-0',
+        iconSize: [28, 28],
+        iconAnchor: [14, 14],
+        html: `<button type="button" title="${title}" aria-label="${title}" class="flex size-7 items-center justify-center rounded-full border-2 font-mono text-xs font-extrabold shadow-lg ring-3 transition-transform duration-150 hover:scale-110 ${
+          moveRef.current ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'
+        } ${badgeTone}">${index + 1}</button>`,
       });
+
+      const marker = L.marker([point.lat, point.lng], {
+        icon,
+        draggable: Boolean(moveRef.current),
+        zIndexOffset: isFirst ? 1000 : 900,
+      }).addTo(instance);
+
+      marker.on('click', (event) => {
+        L.DomEvent.stopPropagation(event);
+        if (isFirst) {
+          closeRef.current?.();
+        }
+      });
+
+      marker.on('dragend', () => {
+        const position = marker.getLatLng();
+        moveRef.current?.(index, {
+          lat: Number(position.lat.toFixed(6)),
+          lng: Number(position.lng.toFixed(6)),
+        });
+      });
+
       return marker;
     });
-    return () => markers.forEach((marker) => marker.remove());
-  }, [map, runtime, ready, vertices, onVertexMove, onClosePolygon]);
+
+    return () => {
+      markers.forEach((marker) => marker.remove());
+    };
+  }, [map, ready, vertices, Boolean(onVertexMove), Boolean(onClosePolygon)]);
 }

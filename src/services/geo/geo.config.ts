@@ -1,11 +1,16 @@
-import { DEMO_CENTER } from './demo';
+export const GUAYAQUIL_CENTER = { lat: -2.1894, lng: -79.8891 };
+
 export const geoConfig = {
   accessToken: import.meta.env.VITE_MAPBOX_PUBLIC_TOKEN ?? '',
   country: import.meta.env.VITE_APP_COUNTRY ?? 'EC',
   language: import.meta.env.VITE_APP_MAP_LANGUAGE ?? 'es',
   center: {
-    lat: Number(import.meta.env.VITE_APP_DEFAULT_LATITUDE ?? DEMO_CENTER.lat),
-    lng: Number(import.meta.env.VITE_APP_DEFAULT_LONGITUDE ?? DEMO_CENTER.lng),
+    lat: Number(
+      import.meta.env.VITE_APP_DEFAULT_LATITUDE ?? GUAYAQUIL_CENTER.lat,
+    ),
+    lng: Number(
+      import.meta.env.VITE_APP_DEFAULT_LONGITUDE ?? GUAYAQUIL_CENTER.lng,
+    ),
   },
   style:
     import.meta.env.VITE_MAPBOX_STYLE ?? 'mapbox://styles/mapbox/streets-v12',
