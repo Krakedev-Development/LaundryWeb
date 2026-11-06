@@ -16,6 +16,7 @@ import {
   Camera,
   Plus,
   Send,
+  ArrowRight,
 } from 'lucide-react';
 
 export const IncidentsPage: React.FC = () => {
@@ -85,60 +86,73 @@ export const IncidentsPage: React.FC = () => {
   const getSeverityBadge = (sev: IncidentSeverity) => {
     const config: Record<
       IncidentSeverity,
-      { bg: string; text: string; border: string }
+      { bg: string; text: string; border: string; dot: string }
     > = {
       CRITICA: {
-        bg: 'bg-red-100',
-        text: 'text-red-900',
-        border: 'border-red-300',
+        bg: 'bg-rose-50',
+        text: 'text-rose-800',
+        border: 'border-rose-200',
+        dot: 'bg-rose-500',
       },
       ALTA: {
-        bg: 'bg-amber-100',
-        text: 'text-amber-900',
-        border: 'border-amber-300',
+        bg: 'bg-amber-50',
+        text: 'text-amber-800',
+        border: 'border-amber-200',
+        dot: 'bg-amber-500',
       },
       MEDIA: {
-        bg: 'bg-yellow-50',
-        text: 'text-yellow-800',
-        border: 'border-yellow-200',
+        bg: 'bg-indigo-50',
+        text: 'text-indigo-800',
+        border: 'border-indigo-200',
+        dot: 'bg-indigo-500',
       },
       BAJA: {
-        bg: 'bg-blue-50',
-        text: 'text-blue-800',
-        border: 'border-blue-200',
+        bg: 'bg-sky-50',
+        text: 'text-sky-800',
+        border: 'border-sky-200',
+        dot: 'bg-sky-500',
       },
     };
     const c = config[sev] || config.MEDIA;
     return (
       <span
-        className={`inline-flex items-center gap-1 font-bold text-[10px] px-2 py-0.5 rounded border ${c.bg} ${c.text} ${c.border}`}
+        className={`inline-flex items-center gap-1.5 font-bold text-[10px] px-2.5 py-0.5 rounded-md border ${c.bg} ${c.text} ${c.border}`}
       >
+        <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />
         {sev}
       </span>
     );
   };
 
   const getStatusBadge = (st: IncidentStatus) => {
-    const config: Record<IncidentStatus, { label: string; bg: string }> = {
-      OPEN: { label: 'Abierta', bg: 'bg-red-50 text-red-700 border-red-200' },
+    const config: Record<IncidentStatus, { label: string; bg: string; dot: string }> = {
+      OPEN: {
+        label: 'Abierta',
+        bg: 'bg-rose-50 text-rose-700 border-rose-200',
+        dot: 'bg-rose-500',
+      },
       IN_PROGRESS: {
         label: 'En investigación',
         bg: 'bg-amber-50 text-amber-800 border-amber-200',
+        dot: 'bg-amber-500',
       },
       PENDING_CLOSURE: {
         label: 'Pendiente cierre',
         bg: 'bg-sky-50 text-sky-800 border-sky-200',
+        dot: 'bg-sky-500',
       },
       RESOLVED: {
         label: 'Resuelta',
         bg: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+        dot: 'bg-emerald-500',
       },
     };
     const c = config[st] || config.OPEN;
     return (
       <span
-        className={`inline-block font-semibold text-xs px-2 py-0.5 rounded border ${c.bg}`}
+        className={`inline-flex items-center gap-1.5 font-semibold text-xs px-2.5 py-0.5 rounded-lg border ${c.bg}`}
       >
+        <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />
         {c.label}
       </span>
     );
@@ -500,9 +514,10 @@ export const IncidentsPage: React.FC = () => {
               onClick={() =>
                 navigate(`/operations/orders/${selectedIncident.orderId}`)
               }
-              className="text-xs font-semibold text-sky-700 hover:underline"
+              className="text-xs font-semibold text-sky-700 hover:underline inline-flex items-center gap-1.5 cursor-pointer"
             >
-              Abrir Solicitud {selectedIncident.orderId} →
+              <span>Abrir Solicitud {selectedIncident.orderId}</span>
+              <ArrowRight className="w-3.5 h-3.5" />
             </button>
 
             <div className="flex items-center gap-2">

@@ -1,5 +1,6 @@
 import { Suspense, useEffect, useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { LoaderCircle } from 'lucide-react';
 import { AppSidebar } from './AppSidebar';
 import { TopBar } from './TopBar';
@@ -15,6 +16,8 @@ function Workspace() {
   const { collapsed, isLargeScreen, mobileOpen, openMobile } =
     useSidebarState();
   const [searchOpen, setSearchOpen] = useState(false);
+  const location = useLocation();
+
   useEffect(() => {
     const onShortcut = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
@@ -25,11 +28,13 @@ function Workspace() {
     window.addEventListener('keydown', onShortcut);
     return () => window.removeEventListener('keydown', onShortcut);
   }, []);
+
   const margin = isLargeScreen
     ? collapsed
       ? SIDEBAR_MINI_WIDTH
       : SIDEBAR_EXPANDED_WIDTH
     : 0;
+
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-900">
       <a
@@ -53,19 +58,34 @@ function Workspace() {
         <div className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
           <Suspense
             fallback={
-              <div
-                role="status"
-                className="flex items-center gap-2 py-12 text-sm text-slate-500"
-              >
-                <LoaderCircle
-                  className="size-4 animate-spin motion-reduce:animate-none"
-                  aria-hidden="true"
-                />
-                Cargando sección…
+              <div className="space-y-6 py-4" role="status">
+                <div className="flex items-center gap-2.5 text-sm font-medium text-slate-500">
+                  <LoaderCircle
+                    className="size-4 animate-spin text-[#0F4C81] motion-reduce:animate-none"
+                    aria-hidden="true"
+                  />
+                  <span>Cargando sección…</span>
+                </div>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  {[0, 1, 2, 3].map((item) => (
+                    <div
+                      key={item}
+                      className="h-28 rounded-2xl border border-slate-200/70 skeleton-shimmer"
+                    />
+                  ))}
+                </div>
+                <div className="h-72 rounded-2xl border border-slate-200/70 skeleton-shimmer" />
               </div>
             }
           >
-            <Outlet />
+            <motion.div
+              key={location.pathname}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.22, ease: 'easeOut' }}
+            >
+              <Outlet />
+            </motion.div>
           </Suspense>
         </div>
       </main>

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { MapPinned, X } from 'lucide-react';
 
 export function Dialog({
@@ -29,31 +30,38 @@ export function Dialog({
         event.preventDefault();
         onClose();
       }}
-      className="ops-ui ops-dialog"
+      className="ops-ui ops-dialog backdrop:bg-slate-900/55 backdrop:backdrop-blur-sm"
     >
-      <header className="ops-dialog-header">
-        <span className="ops-icon">
-          <MapPinned aria-hidden="true" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="ops-eyebrow">Logística</p>
-          <h2
-            id="logistics-dialog-title"
-            className="mt-1 text-base font-bold tracking-tight text-[#102A43]"
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ type: 'spring', stiffness: 360, damping: 28 }}
+        className="flex max-h-[92dvh] w-full flex-col overflow-hidden"
+      >
+        <header className="ops-dialog-header">
+          <span className="ops-icon">
+            <MapPinned aria-hidden="true" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="ops-eyebrow">Logística</p>
+            <h2
+              id="logistics-dialog-title"
+              className="mt-1 text-base font-bold tracking-tight text-[#102A43]"
+            >
+              {title}
+            </h2>
+          </div>
+          <button
+            type="button"
+            aria-label="Cerrar"
+            onClick={onClose}
+            className="flex size-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-700 focus-visible:outline-sky-600 cursor-pointer"
           >
-            {title}
-          </h2>
-        </div>
-        <button
-          type="button"
-          aria-label="Cerrar"
-          onClick={onClose}
-          className="flex size-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-700 focus-visible:outline-sky-600"
-        >
-          <X size={18} />
-        </button>
-      </header>
-      <div className="ops-dialog-body">{children}</div>
+            <X size={18} />
+          </button>
+        </header>
+        <div className="ops-dialog-body">{children}</div>
+      </motion.div>
     </dialog>
   );
 }

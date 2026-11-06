@@ -1,5 +1,6 @@
 import { operationalStage } from '../../services/fulfillment';
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import {
@@ -10,6 +11,7 @@ import {
   Truck,
   AlertTriangle,
   ChevronRight,
+  Command,
 } from 'lucide-react';
 
 interface GlobalSearchModalProps {
@@ -98,25 +100,38 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-16 sm:pt-24 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
-      <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[80vh]">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.16 }}
+      className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-16 sm:pt-24 bg-slate-900/60 backdrop-blur-sm"
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: -8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ type: 'spring', stiffness: 360, damping: 28 }}
+        className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-200/90 ring-1 ring-slate-900/5 overflow-hidden flex flex-col max-h-[80vh]"
+      >
         {/* Search Input Bar */}
-        <div className="flex items-center gap-3 px-4 py-3.5 border-b border-[#E5EAF0] bg-slate-50/50">
-          <Search className="w-5 h-5 text-slate-400 shrink-0" />
+        <div className="flex items-center gap-3 px-4 py-3.5 border-b border-slate-200/80 bg-slate-900 text-white">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-sky-500/20 text-sky-400 border border-sky-400/30">
+            <Search className="w-4 h-4 shrink-0" />
+          </span>
           <input
             type="text"
             autoFocus
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Buscar por SOL-4587, cliente María Torres, INC-0187, chofer Carlos..."
-            className="w-full text-sm bg-transparent border-none focus:outline-none text-[#102A43] placeholder:text-slate-400 font-sans"
+            className="w-full text-sm bg-transparent border-none focus:outline-none text-white placeholder:text-slate-400 font-sans"
           />
-          <kbd className="hidden sm:inline-block px-2 py-0.5 text-[11px] font-mono font-semibold text-slate-500 bg-white border border-slate-200 rounded shadow-2xs">
+          <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-mono font-semibold text-slate-300 bg-slate-800 border border-slate-700 rounded-md shadow-2xs">
+            <Command className="size-2.5 text-sky-400" />
             ESC
           </kbd>
           <button
             onClick={onClose}
-            className="p-1 rounded-md text-slate-400 hover:text-slate-600"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -289,13 +304,15 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="px-4 py-2 border-t border-[#E5EAF0] bg-slate-50 text-[11px] text-slate-500 flex items-center justify-between">
+        <div className="px-4 py-2.5 border-t border-slate-200/80 bg-slate-50 text-[11px] text-slate-500 flex items-center justify-between">
           <span>
-            Presiona <strong>Enter</strong> para seleccionar
+            Presiona <strong className="font-mono text-slate-700">Enter</strong> para seleccionar
           </span>
-          <span>LaundryWeb Search v1.0</span>
+          <span className="font-mono text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+            LaundryWeb Tactical Search
+          </span>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };

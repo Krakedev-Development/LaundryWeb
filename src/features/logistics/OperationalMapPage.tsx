@@ -13,9 +13,12 @@ import { BaseMap, type MapPoint } from '../../components/maps/BaseMap';
 import { isLocationStale } from '../../services/geo/DispatchService';
 import { useZones } from './zones/useZones';
 import { facilityZoneId } from '../../entities/zone/model/zone.rules';
+import { polygonFromVertices } from '../../entities/zone/model/polygonGeometry';
+import type { Coordinates } from '../../services/geo/geo.types';
 import { DriverMapControls } from './zones/DriverMapControls';
 export function OperationalMapPage() {
-  const { facilities, drivers, orders, incidents } = useApp();
+  const { facilities, drivers, orders, incidents, currentUser } = useApp();
+  const isAdmin = currentUser.role === 'ADMIN';
   const navigate = useNavigate();
   const [layers, setLayers] = useState({
     facility: true,
@@ -25,8 +28,15 @@ export function OperationalMapPage() {
     incident: true,
   });
   const [zone, setZone] = useState('');
-  const { zones, error } = useZones();
+  const { zones, error, save } = useZones();
   const [showZones, setShowZones] = useState(true);
+  const activeZone = zone ? zones.find((area) => area.id === zone) : undefined;
+  const activeVertices: Coordinates[] =
+    isAdmin && showZones && activeZone?.polygon.type === 'Polygon'
+      ? activeZone.polygon.coordinates[0]
+          .slice(0, -1)
+          .map(([lng, lat]) => ({ lng, lat }))
+      : [];
   const [selectedDriver, setSelectedDriver] = useState('');
   const [following, setFollowing] = useState(false);
   const filteredDrivers = drivers.filter(
@@ -183,6 +193,24 @@ export function OperationalMapPage() {
             points={points}
             zones={
               showZones ? zones.filter((area) => !zone || area.id === zone) : []
+            }
+            vertices={activeVertices}
+            onVertexMove={
+              isAdmin && activeZone
+                ? (index, point) => {
+                    const nextVertices = activeVertices.map((vertex, i) =>
+                      i === index ? point : vertex,
+                    );
+                    try {
+                      save({
+                        ...activeZone,
+                        polygon: polygonFromVertices(nextVertices),
+                      });
+                    } catch {
+                      // Keep existing polygon if moved vertex invalidates geometry
+                    }
+                  }
+                : undefined
             }
             center={followed ? followed.location : undefined}
             onSelect={(id) => {
