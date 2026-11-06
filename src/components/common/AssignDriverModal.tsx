@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { motion } from 'framer-motion';
 import { Check, Info, LoaderCircle, Truck, UserRound, X } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import type { Order } from '../../types';
@@ -69,9 +70,17 @@ export const AssignDriverModal = ({
   if (!isOpen) return null;
   const selectedDriver = drivers.find((driver) => driver.id === selected);
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-3 backdrop-blur-sm sm:p-6">
-      <section
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.16 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-3 backdrop-blur-sm sm:p-6"
+    >
+      <motion.section
         ref={dialog}
+        initial={{ opacity: 0, scale: 0.95, y: 8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ type: 'spring', stiffness: 360, damping: 28 }}
         role="dialog"
         aria-modal="true"
         aria-label="Asignar chofer"
@@ -211,7 +220,7 @@ export const AssignDriverModal = ({
             </button>
           </div>
         </div>
-      </section>
-    </div>
+      </motion.section>
+    </motion.div>
   );
 };

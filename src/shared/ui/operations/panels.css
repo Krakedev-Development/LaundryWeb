@@ -6,6 +6,14 @@
     border-radius: 1rem;
     background: white;
     box-shadow: 0 1px 3px #00000008;
+    transition:
+      box-shadow 200ms ease,
+      border-color 200ms ease,
+      transform 200ms ease;
+  }
+  .ops-ui .ops-panel:hover {
+    box-shadow: 0 10px 25px -5px #0f172a0d, 0 4px 10px -6px #0f172a08;
+    border-color: #cbd5e1;
   }
   .ops-ui .ops-panel-header {
     display: flex;
