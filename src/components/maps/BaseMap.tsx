@@ -38,7 +38,7 @@ export interface MapPoint {
 export function BaseMap({
   points = [],
   route,
-  center = geoConfig.center ?? GUAYAQUIL_CENTER,
+  center: centerProp,
   onPick,
   onSelect,
   height = 430,
@@ -56,6 +56,7 @@ export function BaseMap({
   height?: number;
   fitZones?: boolean;
 } & ZoneMapOptions) {
+  const center = centerProp ?? geoConfig.center ?? GUAYAQUIL_CENTER;
   const zones = useMapCoverage(providedZones);
   const host = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
@@ -70,6 +71,7 @@ export function BaseMap({
 
   const [theme, setTheme] = useMapTheme();
   const [ready, setReady] = useState(false);
+  const [liveCenter, setLiveCenter] = useState<Coordinates>(center);
 
   useZoneLayers(map, ready, { zones, vertices, onPick, theme });
   useZoneBounds(map, ready, zones, fitZones);
@@ -86,6 +88,8 @@ export function BaseMap({
     const instance = L.map(host.current, {
       center: [center.lat, center.lng],
       zoom: 13,
+      zoomSnap: 0.25,
+      zoomDelta: 0.5,
       zoomControl: false,
       renderer: svgRenderer,
       attributionControl: true,
@@ -95,9 +99,8 @@ export function BaseMap({
 
     const tiles = L.tileLayer(MAP_TILE_URLS[theme], {
       attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-      subdomains: 'abcd',
-      maxZoom: 20,
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      maxZoom: 19,
     }).addTo(instance);
 
     tileLayerRef.current = tiles;
@@ -118,6 +121,14 @@ export function BaseMap({
       svgEl.setAttribute('aria-label', 'Mapa de ubicaciones Laundry');
     }
     dummyPolygon.remove();
+
+    instance.on('moveend', () => {
+      const current = instance.getCenter();
+      setLiveCenter({
+        lat: Number(current.lat.toFixed(4)),
+        lng: Number(current.lng.toFixed(4)),
+      });
+    });
 
     instance.on('click', (event: L.LeafletMouseEvent) => {
       pick.current?.({
@@ -158,12 +169,12 @@ export function BaseMap({
   });
 
   useEffect(() => {
-    if (!ready || !map.current) return;
-    map.current.panTo([center.lat, center.lng], {
+    if (!ready || !map.current || !centerProp) return;
+    map.current.panTo([centerProp.lat, centerProp.lng], {
       animate: true,
       duration: 0.45,
     });
-  }, [center.lat, center.lng, ready]);
+  }, [centerProp?.lat, centerProp?.lng, ready]);
 
   useEffect(() => {
     if (!ready || !map.current || !markersLayerRef.current) return;
@@ -257,7 +268,7 @@ export function BaseMap({
             [Math.min(...lats), Math.min(...lngs)],
             [Math.max(...lats), Math.max(...lngs)],
           ],
-          { padding: [44, 44], maxZoom: 15, animate: true },
+          { padding: [24, 24], maxZoom: 15, animate: true },
         );
         return;
       }
@@ -283,7 +294,7 @@ export function BaseMap({
             </span>
             <Radar className="size-3.5 text-sky-400" aria-hidden="true" />
             <span className="font-mono tracking-tight">
-              GYE · {center.lat.toFixed(4)}, {center.lng.toFixed(4)}
+              GYE · {liveCenter.lat.toFixed(4)}, {liveCenter.lng.toFixed(4)}
             </span>
           </div>
 
@@ -345,7 +356,9 @@ export function BaseMap({
           ref={host}
           style={{ height }}
           className={`w-full transition-colors duration-300 ${
-            theme === 'tactical' ? 'bg-slate-950' : 'bg-slate-100'
+            theme === 'tactical'
+              ? 'lw-map-tactical bg-slate-950'
+              : 'lw-map-light bg-slate-100'
           }`}
           aria-label="Mapa de ubicaciones Laundry"
         />

@@ -36,7 +36,7 @@ export function useZoneBounds(
         [minLat, minLng],
         [maxLat, maxLng],
       ],
-      { padding: [44, 44], maxZoom: 15, animate: true },
+      { padding: [24, 24], maxZoom: 15, animate: true },
     );
   }, [map, ready, key, enabled]);
 }

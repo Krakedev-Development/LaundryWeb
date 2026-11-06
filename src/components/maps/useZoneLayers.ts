@@ -33,29 +33,35 @@ export function useZoneLayers(
     group.clearLayers();
 
     const isDark = theme === 'tactical';
+    const zonePalette = isDark
+      ? [
+          { stroke: '#38BDF8', fill: '#0284C7' },
+          { stroke: '#34D399', fill: '#059669' },
+          { stroke: '#818CF8', fill: '#4F46E5' },
+          { stroke: '#FBBF24', fill: '#D97706' },
+        ]
+      : [
+          { stroke: '#0F4C81', fill: '#0EA5E9' },
+          { stroke: '#047857', fill: '#10B981' },
+          { stroke: '#4338CA', fill: '#6366F1' },
+          { stroke: '#B45309', fill: '#F59E0B' },
+        ];
 
-    zones.forEach((zone) => {
+    zones.forEach((zone, index) => {
       const feature: Feature = {
         type: 'Feature',
         properties: { name: zone.name, active: zone.active },
         geometry: zone.polygon,
       };
+      const palette = zonePalette[index % zonePalette.length];
 
       const geoLayer = L.geoJSON(feature, {
         style: () => ({
-          color: zone.active
-            ? isDark
-              ? '#38BDF8'
-              : '#0F4C81'
-            : '#64748B',
-          weight: zone.active ? 2.25 : 1.75,
-          opacity: zone.active ? 0.9 : 0.65,
-          fillColor: zone.active
-            ? isDark
-              ? '#0284C7'
-              : '#0EA5E9'
-            : '#64748B',
-          fillOpacity: zone.active ? (isDark ? 0.16 : 0.12) : 0.08,
+          color: zone.active ? palette.stroke : '#64748B',
+          weight: zone.active ? 2.5 : 1.75,
+          opacity: zone.active ? 0.92 : 0.65,
+          fillColor: zone.active ? palette.fill : '#64748B',
+          fillOpacity: zone.active ? (isDark ? 0.18 : 0.14) : 0.08,
           dashArray: zone.active ? undefined : '6 6',
         }),
       });

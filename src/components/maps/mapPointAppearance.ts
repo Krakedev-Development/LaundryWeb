@@ -16,8 +16,8 @@ export const MAP_THEME_STORAGE_KEY = 'lw_map_theme_v1';
 const MAP_THEME_EVENT = 'lw:map-theme-change';
 
 export const MAP_TILE_URLS: Record<MapTheme, string> = {
-  tactical: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-  light: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+  tactical: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+  light: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
 };
 
 export function readMapTheme(): MapTheme {

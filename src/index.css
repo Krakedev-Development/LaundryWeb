@@ -57,9 +57,24 @@
   animation: lw-shimmer 1.6s infinite linear;
 }
 
-/* Leaflet tactical popup & attribution refinements */
+/* Leaflet tactical popup, tile filter & attribution refinements */
 .leaflet-container {
   font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
+}
+
+.leaflet-container img.leaflet-tile {
+  max-width: none !important;
+  max-height: none !important;
+}
+
+.lw-map-tactical .leaflet-tile-pane {
+  filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%) saturate(85%);
+  transition: filter 250ms ease;
+}
+
+.lw-map-light .leaflet-tile-pane {
+  filter: contrast(98%) saturate(92%) brightness(101%);
+  transition: filter 250ms ease;
 }
 
 .leaflet-control-attribution {
