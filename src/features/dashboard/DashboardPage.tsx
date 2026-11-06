@@ -19,6 +19,7 @@ import {
   CheckCircle2,
   Send,
   Eye,
+  ArrowUpRight,
 } from 'lucide-react';
 import { OrderStatus } from '../../types';
 
@@ -117,6 +118,7 @@ export const DashboardPage: React.FC = () => {
           title="Solicitudes del Día"
           value={totalOrdersToday}
           subtitle="Órdenes activas en sistema"
+          trend={{ value: '+12% hoy', isPositive: true }}
           icon={<ClipboardList className="w-5 h-5 text-sky-600" />}
           onClick={() => navigate('/operations/orders')}
         />
@@ -124,6 +126,11 @@ export const DashboardPage: React.FC = () => {
           title="Pendientes de Chofer"
           value={unassignedOrders.length}
           subtitle="Requieren asignación en despacho"
+          trend={
+            unassignedOrders.length > 0
+              ? { value: 'Atención', isPositive: false }
+              : { value: 'Al día', isPositive: true }
+          }
           variant={unassignedOrders.length > 0 ? 'warning' : 'default'}
           icon={<Clock className="w-5 h-5" />}
           onClick={() => navigate('/operations/dispatch')}
@@ -132,6 +139,7 @@ export const DashboardPage: React.FC = () => {
           title="Entregas en Ruta"
           value={inDeliveryOrders.length}
           subtitle="Vehículos en trayecto"
+          trend={{ value: 'GPS Activo', isPositive: true }}
           variant="aqua"
           icon={<Truck className="w-5 h-5 text-sky-600" />}
           onClick={() => navigate('/operations/deliveries')}
@@ -140,6 +148,10 @@ export const DashboardPage: React.FC = () => {
           title="Cumplimiento SLA"
           value={`${slaCompliance}%`}
           subtitle="Compromiso horario cumplido"
+          trend={{
+            value: slaCompliance >= 95 ? 'Óptimo' : 'Revisar',
+            isPositive: slaCompliance >= 95,
+          }}
           variant={slaCompliance >= 95 ? 'success' : 'warning'}
           icon={<ShieldCheck className="w-5 h-5 text-emerald-600" />}
         />
@@ -172,7 +184,7 @@ export const DashboardPage: React.FC = () => {
               {/* Phase 1: Recogida */}
               <div
                 onClick={() => navigate('/operations/dispatch')}
-                className="p-5 rounded-xl border border-slate-200/80 bg-slate-50/50 hover:bg-slate-50 hover:border-sky-300 transition-all cursor-pointer group"
+                className="p-5 rounded-xl border border-slate-200/80 bg-slate-50/50 hover:bg-white hover:border-sky-300 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200 cursor-pointer group"
               >
                 <div className="flex items-center justify-between">
                   <div className="p-2 rounded-lg bg-sky-100 text-sky-700">
@@ -193,7 +205,7 @@ export const DashboardPage: React.FC = () => {
               {/* Phase 2: Planta */}
               <div
                 onClick={() => navigate('/operations/plant')}
-                className="p-5 rounded-xl border border-slate-200/80 bg-slate-50/50 hover:bg-slate-50 hover:border-sky-300 transition-all cursor-pointer group"
+                className="p-5 rounded-xl border border-slate-200/80 bg-slate-50/50 hover:bg-white hover:border-indigo-300 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200 cursor-pointer group"
               >
                 <div className="flex items-center justify-between">
                   <div className="p-2 rounded-lg bg-indigo-100 text-indigo-700">
@@ -216,7 +228,7 @@ export const DashboardPage: React.FC = () => {
               {/* Phase 3: Entrega */}
               <div
                 onClick={() => navigate('/operations/deliveries')}
-                className="p-5 rounded-xl border border-slate-200/80 bg-slate-50/50 hover:bg-slate-50 hover:border-sky-300 transition-all cursor-pointer group"
+                className="p-5 rounded-xl border border-slate-200/80 bg-slate-50/50 hover:bg-white hover:border-emerald-300 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200 cursor-pointer group"
               >
                 <div className="flex items-center justify-between">
                   <div className="p-2 rounded-lg bg-emerald-100 text-emerald-700">
@@ -299,9 +311,10 @@ export const DashboardPage: React.FC = () => {
               </div>
               <button
                 onClick={() => navigate('/logistics/facilities')}
-                className="text-xs font-semibold text-sky-700 hover:text-sky-800 hover:underline"
+                className="text-xs font-semibold text-sky-700 hover:text-sky-800 hover:underline inline-flex items-center gap-1 cursor-pointer"
               >
-                Ver sedes ↗
+                <span>Ver sedes</span>
+                <ArrowUpRight className="w-3.5 h-3.5" />
               </button>
             </div>
 
@@ -504,9 +517,10 @@ export const DashboardPage: React.FC = () => {
               </h3>
               <button
                 onClick={() => navigate('/logistics/drivers')}
-                className="text-xs font-semibold text-sky-700 hover:text-sky-800 hover:underline"
+                className="text-xs font-semibold text-sky-700 hover:text-sky-800 hover:underline inline-flex items-center gap-1 cursor-pointer"
               >
-                Ver todos ({drivers.length}) ↗
+                <span>Ver todos ({drivers.length})</span>
+                <ArrowUpRight className="w-3.5 h-3.5" />
               </button>
             </div>
             <div className="space-y-3 mt-3">
