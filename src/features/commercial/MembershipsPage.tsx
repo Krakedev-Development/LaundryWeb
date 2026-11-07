@@ -2,9 +2,22 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { CreditCard, Pencil, Plus, Search } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { storageService } from '../../services/storage';
+import {
+  getMemberships,
+  createMembership,
+  updateMembership,
+  mapMembershipResponseToPlan,
+} from '../../services/api/catalogApi';
+import { ApiError } from '../../services/api/apiConfig';
 import { PageHeader } from '../../components/common/PageHeader';
 import { Modal } from '../../shared/ui/Modal';
-import { MEMBERSHIP_INTERVALS, type MembershipPlan } from './membershipPlans';
+import {
+  MEMBERSHIP_INTERVALS,
+  validateMembershipPlan,
+  type MembershipPlan,
+} from './membershipPlans';
+
+const MEMBERSHIPS_STORAGE_KEY = 'lw_membership_plans_v1';
 
 const field =
   'mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm focus:outline-2 focus:outline-sky-700';
@@ -35,13 +48,34 @@ export function MembershipsPage() {
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('ALL');
   const [error, setError] = useState('');
-  useEffect(
-    () =>
-      storageService.subscribe(() =>
-        setPlans(storageService.getMembershipPlans()),
-      ),
-    [],
-  );
+
+  useEffect(() => {
+    const unsubscribe = storageService.subscribe(() =>
+      setPlans(storageService.getMembershipPlans()),
+    );
+
+    let cancelled = false;
+    getMemberships()
+      .then((apiPlans) => {
+        if (cancelled) return;
+        const current = storageService.getMembershipPlans();
+        const byId = new Map(current.map((p) => [p.id, p]));
+        const mapped = apiPlans.map((raw) =>
+          mapMembershipResponseToPlan(raw, byId.get(raw.id)),
+        );
+        localStorage.setItem(MEMBERSHIPS_STORAGE_KEY, JSON.stringify(mapped));
+        setPlans(mapped);
+      })
+      .catch(() => {
+        // Keep local snapshot if offline during isolated tests
+      });
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, []);
+
   if (currentUser.role !== 'ADMIN')
     return (
       <p
@@ -69,26 +103,84 @@ export function MembershipsPage() {
     key: K,
     value: MembershipPlan[K],
   ) => setDraft((plan) => (plan ? { ...plan, [key]: value } : plan));
-  const save = (event: FormEvent) => {
+
+  const save = async (event: FormEvent) => {
     event.preventDefault();
     if (!draft) return;
+
+    const normalizedPlan: MembershipPlan = {
+      ...draft,
+      name: draft.name.trim(),
+      description: draft.description.trim(),
+      benefits: benefits
+        .split('\n')
+        .map((text) => text.trim())
+        .filter(Boolean),
+    };
+
     try {
-      storageService.saveMembershipPlan({
-        ...draft,
-        name: draft.name.trim(),
-        description: draft.description.trim(),
-        benefits: benefits
-          .split('\n')
-          .map((text) => text.trim())
-          .filter(Boolean),
-      });
+      validateMembershipPlan(normalizedPlan, plans);
+      const isExisting = plans.some((plan) => plan.id === normalizedPlan.id);
+
+      let syncedPlan: MembershipPlan;
+      if (isExisting) {
+        const res = await updateMembership(normalizedPlan.id, {
+          name: normalizedPlan.name,
+          priceMonthly: normalizedPlan.price,
+          weeklyPickups: normalizedPlan.includedPickups,
+          garmentDiscountPercent: normalizedPlan.discountPercent,
+          benefits: normalizedPlan.benefits,
+          active: normalizedPlan.status === 'ACTIVE',
+        });
+        syncedPlan = mapMembershipResponseToPlan(res, normalizedPlan);
+      } else {
+        let res = await createMembership({
+          name: normalizedPlan.name,
+          priceMonthly: normalizedPlan.price,
+          weeklyPickups: normalizedPlan.includedPickups,
+          garmentDiscountPercent: normalizedPlan.discountPercent,
+          benefits: normalizedPlan.benefits,
+        });
+        if (normalizedPlan.status === 'INACTIVE') {
+          res = await updateMembership(res.id, { active: false });
+        }
+        syncedPlan = mapMembershipResponseToPlan(res, normalizedPlan);
+      }
+
+      const nextPlans = isExisting
+        ? plans.map((item) =>
+            item.id === normalizedPlan.id ? syncedPlan : item,
+          )
+        : [...plans, syncedPlan];
+
+      localStorage.setItem(MEMBERSHIPS_STORAGE_KEY, JSON.stringify(nextPlans));
+      setPlans(nextPlans);
       setDraft(null);
       showToast({
         type: 'success',
         title: 'Membresía guardada',
-        message: draft.name,
+        message: syncedPlan.name,
       });
     } catch (cause) {
+      if (cause instanceof ApiError && cause.status === 0) {
+        try {
+          storageService.saveMembershipPlan(normalizedPlan);
+          setDraft(null);
+          showToast({
+            type: 'success',
+            title: 'Membresía guardada',
+            message: normalizedPlan.name,
+          });
+          return;
+        } catch (localErr) {
+          setError(
+            localErr instanceof Error
+              ? localErr.message
+              : 'No se pudo guardar. Intenta de nuevo.',
+          );
+          return;
+        }
+      }
       setError(
         cause instanceof Error
           ? cause.message
@@ -96,6 +188,7 @@ export function MembershipsPage() {
       );
     }
   };
+
   return (
     <div className="space-y-6">
       <PageHeader

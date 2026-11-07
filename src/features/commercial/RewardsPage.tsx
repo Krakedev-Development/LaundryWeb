@@ -1,17 +1,24 @@
 import { Modal } from '../../shared/ui/Modal';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { storageService } from '../../services/storage';
+import {
+  getRewards,
+  createReward as createRewardApi,
+  updateReward as updateRewardApi,
+  mapRewardResponseToReward,
+} from '../../services/api/catalogApi';
+import { ApiError } from '../../services/api/apiConfig';
 import { useApp } from '../../context/AppContext';
 import { PageHeader } from '../../components/common/PageHeader';
 import { MetricCard } from '../../components/common/MetricCard';
-import { Reward, RewardRedemption } from '../../types';
+import { Reward } from '../../types';
 import {
   Gift,
   Coins,
   CheckCircle2,
   Clock,
   Plus,
-  BookOpen,
+  Edit2,
   Lock,
 } from 'lucide-react';
 
@@ -23,7 +30,6 @@ export const RewardsPage: React.FC = () => {
     createReward,
     updateRedemptionStatus,
     currentUser,
-    customers,
     showToast,
   } = useApp();
 
@@ -31,16 +37,39 @@ export const RewardsPage: React.FC = () => {
     'REWARDS' | 'RULES' | 'REDEMPTIONS' | 'LEDGER'
   >('REWARDS');
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [editingReward, setEditingReward] = useState<Reward | null>(null);
 
-  // Form State for new reward
+  // Form State for reward
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [pointsCost, setPointsCost] = useState(0);
   const [minPurchases, setMinPurchases] = useState(0);
   const [minSpend, setMinSpend] = useState(0);
   const [validityDays, setValidityDays] = useState(0);
+  const [status, setStatus] = useState<Reward['status']>('ACTIVE');
 
   const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    getRewards()
+      .then((apiRewards) => {
+        if (cancelled) return;
+        const current = storageService.getRewards();
+        const byId = new Map(current.map((r) => [r.id, r]));
+        const mapped = apiRewards.map((raw) =>
+          mapRewardResponseToReward(raw, byId.get(raw.id)),
+        );
+        storageService.saveRewards(mapped);
+      })
+      .catch(() => {
+        // Keep local snapshot if offline during isolated tests
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // Role Guard
   if (currentUser.role !== 'ADMIN') {
     return (
@@ -72,21 +101,92 @@ export const RewardsPage: React.FC = () => {
     0,
   );
 
-  const handleCreateRewardSubmit = (e: React.FormEvent) => {
+  const handleOpenEditReward = (rew: Reward) => {
+    setEditingReward(rew);
+    setName(rew.name);
+    setDescription(rew.description);
+    setPointsCost(rew.pointsCost);
+    setMinPurchases(rew.minPurchases);
+    setMinSpend(rew.minSpend);
+    setValidityDays(rew.validityDays);
+    setStatus(rew.status);
+    setIsDrawerOpen(true);
+  };
+
+  const handleCreateRewardSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
 
-    createReward({
-      name,
-      description,
+    const draftLocal: Reward = {
+      id: editingReward?.id ?? 'TEMP',
+      name: name.trim(),
+      description: description.trim(),
       pointsCost,
       minPurchases,
       minSpend,
       validityDays,
-      status: 'ACTIVE',
-    });
+      status,
+    };
 
-    setIsDrawerOpen(false);
+    try {
+      if (editingReward) {
+        const res = await updateRewardApi(editingReward.id, {
+          title: draftLocal.name,
+          description: draftLocal.description || undefined,
+          category: 'GENERAL',
+          pointsCost: draftLocal.pointsCost,
+          active: draftLocal.status === 'ACTIVE',
+        });
+        const synced = mapRewardResponseToReward(res, draftLocal);
+        const current = storageService.getRewards();
+        storageService.saveRewards(
+          current.map((r) => (r.id === editingReward.id ? synced : r)),
+        );
+        showToast({
+          type: 'info',
+          title: 'Recompensa actualizada',
+          message: synced.name,
+        });
+      } else {
+        const res = await createRewardApi({
+          title: draftLocal.name,
+          description: draftLocal.description || undefined,
+          category: 'GENERAL',
+          pointsCost: draftLocal.pointsCost,
+        });
+        const synced = mapRewardResponseToReward(res, draftLocal);
+        const current = storageService.getRewards();
+        storageService.saveRewards([...current, synced]);
+        showToast({
+          type: 'success',
+          title: 'Recompensa creada en el catálogo de fidelización',
+          message: synced.name,
+        });
+      }
+      setIsDrawerOpen(false);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 0) {
+        if (editingReward) {
+          const current = storageService.getRewards();
+          storageService.saveRewards(
+            current.map((r) => (r.id === editingReward.id ? draftLocal : r)),
+          );
+        } else {
+          const { id: _id, ...rest } = draftLocal;
+          createReward(rest);
+        }
+        setIsDrawerOpen(false);
+        return;
+      }
+      showToast({
+        type: 'error',
+        title: 'Error al guardar recompensa',
+        message:
+          err instanceof Error
+            ? err.message
+            : 'No se pudo sincronizar con el servidor.',
+      });
+    }
   };
 
   return (
@@ -97,12 +197,14 @@ export const RewardsPage: React.FC = () => {
         actions={
           <button
             onClick={() => {
+              setEditingReward(null);
               setName('');
               setDescription('');
               setPointsCost(0);
               setMinPurchases(0);
               setMinSpend(0);
               setValidityDays(0);
+              setStatus('ACTIVE');
               setIsDrawerOpen(true);
             }}
             className="px-4 py-2.5 text-xs font-bold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
@@ -203,15 +305,26 @@ export const RewardsPage: React.FC = () => {
                   <span className="font-mono text-xs font-bold text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded-md border border-amber-200">
                     {rew.pointsCost} puntos
                   </span>
-                  <span
-                    className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-md border ${
-                      rew.status === 'ACTIVE'
-                        ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                        : 'bg-slate-100 text-slate-600 border-slate-200'
-                    }`}
-                  >
-                    {rew.status}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-md border ${
+                        rew.status === 'ACTIVE'
+                          ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                          : 'bg-slate-100 text-slate-600 border-slate-200'
+                      }`}
+                    >
+                      {rew.status}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEditReward(rew)}
+                      className="p-1 text-slate-500 hover:text-sky-800 hover:bg-sky-50 rounded-lg transition-colors cursor-pointer"
+                      title={`Editar recompensa ${rew.name}`}
+                      aria-label={`Editar recompensa ${rew.name}`}
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
                 <h3 className="font-bold text-base text-slate-900">
                   {rew.name}
@@ -463,11 +576,15 @@ export const RewardsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Drawer Crear Recompensa */}
+      {/* Drawer Crear / Editar Recompensa */}
       {isDrawerOpen && (
         <Modal
-          title="Nueva recompensa"
-          description="Agrega un premio al catálogo de fidelización."
+          title={
+            editingReward
+              ? `Editar recompensa: ${editingReward.name}`
+              : 'Nueva recompensa'
+          }
+          description="Agrega o actualiza un premio en el catálogo de fidelización."
           onClose={() => setIsDrawerOpen(false)}
         >
           <form
@@ -560,6 +677,22 @@ export const RewardsPage: React.FC = () => {
               </div>
             </div>
 
+            {editingReward && (
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Estado
+                </label>
+                <select
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value as Reward['status'])}
+                  className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs"
+                >
+                  <option value="ACTIVE">Activa</option>
+                  <option value="INACTIVE">Inactiva</option>
+                </select>
+              </div>
+            )}
+
             <div className="pt-4 border-t border-slate-100 flex justify-end gap-2">
               <button
                 type="button"
@@ -572,7 +705,7 @@ export const RewardsPage: React.FC = () => {
                 type="submit"
                 className="px-5 py-2.5 bg-[#0F4C81] hover:bg-[#0A3660] text-white font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
               >
-                Crear Recompensa
+                {editingReward ? 'Guardar Cambios' : 'Crear Recompensa'}
               </button>
             </div>
           </form>
