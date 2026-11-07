@@ -75,6 +75,7 @@ function adopt(user: ApiUser) {
 
 export const session = {
   getStatus: () => status,
+  getToken: () => accessToken,
   subscribe(listener: () => void) {
     listeners.add(listener);
     return () => {
