@@ -9,6 +9,7 @@ import type { Zone } from '../../../entities/zone/model/zone.types';
 import type { Coordinates } from '../../../services/geo/geo.types';
 import type { Facility } from '../../../types';
 import { facilityZoneId } from '../../../entities/zone/model/zone.rules';
+import { polygonFromVertices } from '../../../entities/zone/model/polygonGeometry';
 
 export function ZonesPanel({
   facilities,
@@ -27,6 +28,15 @@ export function ZonesPanel({
   const [editor, setEditor] = useState<Zone | 'new' | null>(null);
   const [selected, setSelected] = useState('');
   const visible = zones.filter((zone) => !selected || zone.id === selected);
+  const activeZone = selected
+    ? zones.find((zone) => zone.id === selected)
+    : undefined;
+  const activeVertices: Coordinates[] =
+    editable && activeZone?.polygon.type === 'Polygon'
+      ? activeZone.polygon.coordinates[0]
+          .slice(0, -1)
+          .map(([lng, lat]) => ({ lng, lat }))
+      : [];
   return (
     <section className="ops-panel" aria-label="Zonas y sedes">
       <div className="ops-panel-header">
@@ -88,6 +98,24 @@ export function ZonesPanel({
           <BaseMap
             fitZones
             zones={visible}
+            vertices={activeVertices}
+            onVertexMove={
+              editable && activeZone
+                ? (index, point) => {
+                    const nextVertices = activeVertices.map((vertex, i) =>
+                      i === index ? point : vertex,
+                    );
+                    try {
+                      save({
+                        ...activeZone,
+                        polygon: polygonFromVertices(nextVertices),
+                      });
+                    } catch {
+                      // Keep existing polygon if moved vertex invalidates geometry
+                    }
+                  }
+                : undefined
+            }
             height={420}
             points={facilities
               .filter(

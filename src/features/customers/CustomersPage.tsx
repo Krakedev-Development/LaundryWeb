@@ -204,10 +204,10 @@ export const CustomersPage: React.FC = () => {
                 <tr
                   key={cust.id}
                   onClick={() => setSelectedCustomerId(cust.id)}
-                  className="hover:bg-slate-50/70 cursor-pointer transition-colors"
+                  className="hover:bg-sky-50/40 cursor-pointer transition-colors group"
                 >
                   <td className="py-3.5 px-4 whitespace-nowrap">
-                    <span className="font-bold text-slate-900 block">
+                    <span className="font-bold text-slate-900 group-hover:text-[#0F4C81] transition-colors block">
                       {cust.fullName}
                     </span>
                     <span className="text-[11px] text-slate-400 font-mono">
@@ -229,13 +229,14 @@ export const CustomersPage: React.FC = () => {
                     {cust.addresses[0]?.neighborhood || 'Sin dirección'}
                   </td>
                   <td className="py-3.5 px-4 whitespace-nowrap">
-                    <span className="font-semibold text-[11px] text-sky-800 bg-sky-50 px-2.5 py-0.5 rounded-md border border-sky-200/80">
+                    <span className="inline-flex items-center gap-1.5 font-semibold text-[11px] text-indigo-800 bg-indigo-50 px-2.5 py-0.5 rounded-lg border border-indigo-200/80">
+                      <Award className="w-3 h-3 text-indigo-600" />
                       {cust.membership.replace('_', ' ')}
                     </span>
                   </td>
                   <td className="py-3.5 px-4 whitespace-nowrap">
                     <span
-                      className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-md border ${
+                      className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-0.5 rounded-lg border ${
                         cust.kycStatus === 'APPROVED'
                           ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                           : cust.kycStatus === 'PENDING'
@@ -243,6 +244,15 @@ export const CustomersPage: React.FC = () => {
                             : 'bg-rose-50 text-rose-800 border-rose-200'
                       }`}
                     >
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full ${
+                          cust.kycStatus === 'APPROVED'
+                            ? 'bg-emerald-500'
+                            : cust.kycStatus === 'PENDING'
+                              ? 'bg-amber-500'
+                              : 'bg-rose-500'
+                        }`}
+                      />
                       {cust.kycStatus}
                     </span>
                   </td>

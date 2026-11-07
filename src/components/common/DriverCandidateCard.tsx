@@ -24,7 +24,7 @@ export function DriverCandidateCard({
 }) {
   return (
     <label
-      className={`group block cursor-pointer rounded-2xl border p-4 transition-colors focus-within:ring-2 focus-within:ring-[#0F4C81]/30 ${selected ? 'border-[#0F4C81] bg-[#F0F6FC] ring-1 ring-[#0F4C81]/20' : 'border-slate-200 bg-white hover:border-[#0F4C81]/40 hover:bg-slate-50'}`}
+      className={`group block cursor-pointer rounded-2xl border p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md focus-within:ring-2 focus-within:ring-[#0F4C81]/30 ${selected ? 'border-[#0F4C81] bg-[#F0F6FC] ring-1 ring-[#0F4C81]/20 shadow-sm' : 'border-slate-200 bg-white hover:border-[#0F4C81]/40 hover:bg-slate-50/70'}`}
     >
       <div className="flex items-start gap-3">
         <span

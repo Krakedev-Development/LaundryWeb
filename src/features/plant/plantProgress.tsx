@@ -85,7 +85,7 @@ export function PlantProgress({
               className="relative min-w-0 flex-1"
             >
               <div
-                className={`h-1.5 rounded-full ${skipped ? 'bg-slate-200' : index < phase ? 'bg-emerald-600' : index === phase ? (held ? 'bg-amber-600' : 'bg-[#0F4C81]') : 'bg-slate-200'}`}
+                className={`h-2 rounded-full transition-all duration-300 ${skipped ? 'bg-slate-200' : index < phase ? 'bg-emerald-500 shadow-2xs' : index === phase ? (held ? 'bg-amber-500 animate-pulse' : 'bg-[#0F4C81] ring-2 ring-sky-500/20') : 'bg-slate-200'}`}
               />
               {!compact && (
                 <span
@@ -115,8 +115,11 @@ export function PlantProgress({
       </ol>
       {compact && (
         <p
-          className={`mt-2 text-xs font-medium ${held ? 'text-amber-800' : 'text-[#0F4C81]'}`}
+          className={`mt-2 inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[11px] font-semibold ${held ? 'border-amber-200 bg-amber-50 text-amber-800' : phase === 6 ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-sky-200 bg-sky-50 text-[#0F4C81]'}`}
         >
+          <span
+            className={`size-1.5 rounded-full ${held ? 'bg-amber-500' : phase === 6 ? 'bg-emerald-500' : 'bg-[#0F4C81]'}`}
+          />
           {held ? 'Retenido · ' : ''}
           {PLANT_PHASES[phase]}
         </p>

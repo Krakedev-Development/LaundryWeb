@@ -1,6 +1,7 @@
 // URL base de la API (p. ej. http://localhost:4000/api/v1). Se define por instalación.
-const raw = import.meta.env.VITE_API_URL as string | undefined;
-if (!raw) throw new Error('Falta configurar VITE_API_URL en el entorno.');
+const raw =
+  (import.meta.env.VITE_API_URL as string | undefined) ||
+  'http://localhost:4000/api/v1';
 
 export const apiUrl = raw.replace(/\/+$/, '');
 

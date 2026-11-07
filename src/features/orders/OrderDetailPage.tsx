@@ -414,7 +414,7 @@ export const OrderDetailPage: React.FC = () => {
             onClick={() => navigate('/operations/incidents')}
             className="font-bold underline hover:text-amber-950 shrink-0 ml-2"
           >
-            Ver incidencias →
+            <span className="inline-flex items-center gap-1">Ver incidencias <ArrowRight className="w-3.5 h-3.5" /></span>
           </button>
         </div>
       )}

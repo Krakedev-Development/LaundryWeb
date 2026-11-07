@@ -16,6 +16,7 @@ import {
   Phone,
   User,
   Send,
+  ArrowUpRight,
 } from 'lucide-react';
 
 export const DeliveriesPage: React.FC = () => {
@@ -265,7 +266,7 @@ export const DeliveriesPage: React.FC = () => {
                                 'Chofer en ruta hacia entrega',
                               )
                             }
-                            className="px-3 py-1.5 text-xs font-semibold text-white bg-orange-600 hover:bg-orange-700 rounded-lg shadow-xs cursor-pointer"
+                            className="px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs cursor-pointer transition-colors"
                           >
                             Despachar
                           </button>
@@ -296,9 +297,10 @@ export const DeliveriesPage: React.FC = () => {
                   onClick={() =>
                     navigate(`/operations/orders/${selectedOrder.id}`)
                   }
-                  className="text-xs text-sky-700 font-semibold hover:underline"
+                  className="text-xs text-sky-700 font-semibold hover:underline inline-flex items-center gap-1 cursor-pointer"
                 >
-                  Detalle 360° ↗
+                  <span>Detalle 360°</span>
+                  <ArrowUpRight className="w-3.5 h-3.5" />
                 </button>
               </div>
 

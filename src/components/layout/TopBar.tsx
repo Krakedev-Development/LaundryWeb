@@ -105,7 +105,7 @@ export function TopBar({
   ];
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center justify-between gap-3 border-b border-slate-200/80 bg-white/90 backdrop-blur-md px-4 sm:px-6 lg:px-8 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
       <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
         <button
           type="button"
@@ -124,19 +124,19 @@ export function TopBar({
             onOpenSearch();
           }}
           aria-label="Abrir búsqueda global"
-          className="sidebar-focus flex min-w-0 max-w-md flex-1 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-left text-xs text-slate-500 transition-colors hover:border-[#61BFC7]"
+          className="sidebar-focus group flex min-w-0 max-w-md flex-1 items-center gap-2.5 rounded-xl border border-slate-200/90 bg-slate-50/90 px-3.5 py-2 text-left text-xs text-slate-500 shadow-2xs transition-all duration-200 hover:border-sky-400/80 hover:bg-white hover:shadow-sm cursor-pointer"
         >
           <Search
-            className="size-4 shrink-0 text-[#143F73]"
+            className="size-4 shrink-0 text-[#0F4C81] transition-transform duration-200 group-hover:scale-105"
             aria-hidden="true"
           />
-          <span className="min-w-0 flex-1 truncate">
+          <span className="min-w-0 flex-1 truncate font-medium text-slate-600 group-hover:text-slate-900">
             <span className="hidden sm:inline">
               Buscar solicitudes, clientes o choferes
             </span>
             <span className="sm:hidden">Buscar…</span>
           </span>
-          <kbd className="hidden items-center gap-1 rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] text-slate-400 sm:inline-flex">
+          <kbd className="hidden items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-0.5 font-mono text-[10px] font-semibold text-slate-500 shadow-2xs group-hover:border-sky-200 group-hover:text-[#0F4C81] sm:inline-flex">
             <Command className="size-2.5" aria-hidden="true" />K
           </kbd>
         </button>
