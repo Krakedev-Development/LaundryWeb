@@ -1,7 +1,7 @@
 import '../../shared/ui/operations/operations.css';
 import { Dialog } from '../../shared/ui/Dialog';
 import { FacilityPinPreview } from './zones/FacilityPinPreview';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ZonesPanel } from './zones/ZonesPanel';
 import { useZones } from './zones/useZones';
 import { facilityZoneId } from '../../entities/zone/model/zone.rules';
@@ -9,6 +9,22 @@ import { useApp } from '../../context/AppContext';
 import { PageHeader } from '../../components/common/PageHeader';
 import { MetricCard } from '../../components/common/MetricCard';
 import { Facility } from '../../types';
+import { storageService } from '../../services/storage';
+import { ApiError } from '../../services/api/apiConfig';
+import {
+  createFacility as createFacilityApi,
+  getFacilities,
+  getZones,
+  mapFacilityResponseToFacility,
+  mapZoneResponseToZone,
+  updateFacility as updateFacilityApi,
+} from '../../services/api/geoApi';
+import {
+  ZONES_KEY,
+  encodeZones,
+  notifyZones,
+} from '../../services/zones/zoneStorage';
+import { zoneRepository } from '../../services/zones/zoneRepository';
 import {
   Building2,
   Boxes,
@@ -36,10 +52,10 @@ export const FacilitiesPage: React.FC = () => {
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
   const [address, setAddress] = useState('');
-  const [city, setCity] = useState('Metropolitana');
+  const [city, setCity] = useState('Guayaquil');
   const [zone, setZone] = useState('Zona Norte & Centro');
   const [capacityMaxKgDay, setCapacityMaxKgDay] = useState(0);
-  const [phone, setPhone] = useState('+51 1 555-0100');
+  const [phone, setPhone] = useState('+593 4 555-0100');
   const [managerName, setManagerName] = useState('Roberto Gómez');
   const [status, setStatus] = useState<'ACTIVE' | 'MAINTENANCE'>('ACTIVE');
 
@@ -49,6 +65,56 @@ export const FacilitiesPage: React.FC = () => {
     [close, setClose] = useState('18:00');
   const [lat, setLat] = useState(-2.1229),
     [lng, setLng] = useState(-79.8682);
+
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      try {
+        const [remoteZones, remoteFacilities] = await Promise.all([
+          getZones(),
+          getFacilities(),
+        ]);
+        if (!active) return;
+
+        const existingZones = zoneRepository.list();
+        const mappedZones = remoteZones.map((raw) =>
+          mapZoneResponseToZone(
+            raw,
+            existingZones.find((z) => z.id === raw.id),
+          ),
+        );
+
+        const existingFacilities = storageService.getOperationalFacilities();
+        const mappedFacilities = remoteFacilities.map((raw) =>
+          mapFacilityResponseToFacility(
+            raw,
+            mappedZones,
+            existingFacilities.find((f) => f.id === raw.id),
+          ),
+        );
+
+        // Link facilityId on zones where applicable
+        const linkedZones = mappedZones.map((z) => {
+          const matchingFacility = mappedFacilities.find(
+            (f) => f.zoneId === z.id || f.id === z.facilityId,
+          );
+          return matchingFacility
+            ? { ...z, facilityId: matchingFacility.id }
+            : z;
+        });
+
+        localStorage.setItem(ZONES_KEY, encodeZones(linkedZones));
+        notifyZones();
+        storageService.saveFacilities(mappedFacilities);
+      } catch {
+        // Fallback to local persisted facilities & zones when offline
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+
   // KPIs
   const totalFacilities = facilities.length;
   const totalCapacityKg = facilities.reduce(
@@ -75,7 +141,7 @@ export const FacilitiesPage: React.FC = () => {
     setName('');
     setCode('HUB-NUEVO');
     setAddress('');
-    setCity('');
+    setCity('Guayaquil');
     setZone('Zona Norte & Centro');
     setCapacityMaxKgDay(0);
     setPhone('');
@@ -105,38 +171,105 @@ export const FacilitiesPage: React.FC = () => {
     setIsDrawerOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
 
+    const resolvedZoneId =
+      zoneId ||
+      editingFacility?.zoneId ||
+      facilityZoneId(
+        {
+          ...(editingFacility ?? ({} as Facility)),
+          coordinates: { lat, lng },
+        },
+        zones,
+      ) ||
+      zones[0]?.id;
+
+    const openingHoursPayload = {
+      days,
+      open,
+      close,
+      code: code.trim(),
+      allowsCustomerPickup,
+    };
+
     try {
       if (editingFacility) {
-        updateFacility({
+        const updatedRemote = await updateFacilityApi(editingFacility.id, {
+          ...(resolvedZoneId ? { zoneId: resolvedZoneId } : {}),
+          name: name.trim(),
+          address: address.trim(),
+          city: city.trim() || 'Guayaquil',
+          taxId: code.trim() || undefined,
+          phone: phone.trim() || undefined,
+          managerName: managerName.trim() || undefined,
+          openingHours: openingHoursPayload,
+          latitude: lat,
+          longitude: lng,
+          dailyCapacity: capacityMaxKgDay,
+          active: status === 'ACTIVE',
+        });
+
+        const mapped = mapFacilityResponseToFacility(updatedRemote, zones, {
           ...editingFacility,
           name,
           code,
           address,
           city,
           zone,
-          zoneId,
+          zoneId: resolvedZoneId,
           capacityMaxKgDay,
           phone,
           managerName,
           status,
-          acceptsCustomerDropoff: false,
           allowsCustomerPickup,
           operatingSchedule: { days, open, close },
           coordinates: { lat, lng },
         });
+
+        const nextFacilities = facilities.map((f) =>
+          f.id === editingFacility.id || f.id === mapped.id ? mapped : f,
+        );
+        storageService.saveFacilities(nextFacilities);
+        showToast({
+          type: 'info',
+          title: 'Sede actualizada',
+          message: mapped.name,
+        });
       } else {
-        createFacility({
+        if (!resolvedZoneId) {
+          throw new Error(
+            'Debes seleccionar o crear una zona de cobertura para registrar la sede.',
+          );
+        }
+        const createdRemote = await createFacilityApi({
+          zoneId: resolvedZoneId,
+          name: name.trim(),
+          address: address.trim(),
+          city: city.trim() || 'Guayaquil',
+          taxId: code.trim() || undefined,
+          phone: phone.trim() || undefined,
+          managerName: managerName.trim() || undefined,
+          openingHours: openingHoursPayload,
+          latitude: lat,
+          longitude: lng,
+          dailyCapacity: capacityMaxKgDay,
+        });
+
+        const mapped = mapFacilityResponseToFacility(createdRemote, zones, {
+          id: createdRemote.id,
           name,
           code,
           address,
           city,
           zone,
-          zoneId,
+          zoneId: resolvedZoneId,
           capacityMaxKgDay,
+          currentLoadKgDay: 0,
+          activeOrders: 0,
+          assignedDriversCount: 0,
           phone,
           managerName,
           status,
@@ -145,10 +278,68 @@ export const FacilitiesPage: React.FC = () => {
           operatingSchedule: { days, open, close },
           coordinates: { lat, lng },
         });
+
+        storageService.saveFacilities([...facilities, mapped]);
+        showToast({
+          type: 'success',
+          title: 'Sede operativa registrada',
+          message: mapped.name,
+        });
       }
 
       setIsDrawerOpen(false);
     } catch (error) {
+      if (error instanceof ApiError && error.status === 0) {
+        try {
+          if (editingFacility) {
+            updateFacility({
+              ...editingFacility,
+              name,
+              code,
+              address,
+              city,
+              zone,
+              zoneId: resolvedZoneId,
+              capacityMaxKgDay,
+              phone,
+              managerName,
+              status,
+              acceptsCustomerDropoff: false,
+              allowsCustomerPickup,
+              operatingSchedule: { days, open, close },
+              coordinates: { lat, lng },
+            });
+          } else {
+            createFacility({
+              name,
+              code,
+              address,
+              city,
+              zone,
+              zoneId: resolvedZoneId,
+              capacityMaxKgDay,
+              phone,
+              managerName,
+              status,
+              acceptsCustomerDropoff: false,
+              allowsCustomerPickup,
+              operatingSchedule: { days, open, close },
+              coordinates: { lat, lng },
+            });
+          }
+          setIsDrawerOpen(false);
+          return;
+        } catch (localErr) {
+          showToast({
+            type: 'error',
+            title: 'No se pudo guardar la sede',
+            message:
+              localErr instanceof Error ? localErr.message : 'Revisa los datos.',
+          });
+          return;
+        }
+      }
+
       showToast({
         type: 'error',
         title: 'No se pudo guardar la sede',
