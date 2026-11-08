@@ -3,7 +3,7 @@ import { OrderBusinessPanel } from './OrderBusinessPanel';
 import { MODE_LABELS } from '../../services/BusinessService';
 import { operationalStage } from '../../services/fulfillment';
 import { OrderRouteMap } from '../../components/maps/OrderRouteMap';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { PageHeader } from '../../components/common/PageHeader';
@@ -28,23 +28,69 @@ import {
   Camera,
   Sparkles,
   HelpCircle,
+  LoaderCircle,
 } from 'lucide-react';
-import { OrderStatus, IncidentType, IncidentSeverity } from '../../types';
+import { OrderStatus, IncidentType, IncidentSeverity, Order } from '../../types';
+import {
+  getOrder,
+  mapBackendOrderToOrder,
+  transitionOrder,
+} from '../../services/api/ordersApi';
+import { ApiError } from '../../services/api/apiConfig';
+import { storageService } from '../../services/storage';
 
 export const OrderDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const {
     orders,
+    customers,
+    facilities,
+    drivers,
     currentUser,
     updateOrderStatus,
     moveToQuarantine,
     releaseFromQuarantine,
     createIncident,
     incidents,
+    showToast,
   } = useApp();
   const navigate = useNavigate();
 
-  const order = orders.find((o) => o.id === id);
+  const [liveOrder, setLiveOrder] = useState<Order | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const contextOrder = orders.find((o) => o.id === id || o.trackingNumber === id);
+  const order = liveOrder || contextOrder;
+
+  useEffect(() => {
+    if (!id) return;
+    let active = true;
+    setLoading(true);
+    void (async () => {
+      try {
+        const raw = await getOrder(id);
+        if (!active) return;
+        const mapped = mapBackendOrderToOrder(
+          raw,
+          contextOrder,
+          customers,
+          facilities,
+          drivers,
+        );
+        setLiveOrder(mapped);
+        const next = orders.map((o) => (o.id === mapped.id ? mapped : o));
+        if (!next.some((o) => o.id === mapped.id)) next.push(mapped);
+        storageService.saveOrders(next);
+      } catch {
+        // Fallback to contextOrder if offline or mock id
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [id]);
 
   // Modals state
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
@@ -63,6 +109,15 @@ export const OrderDetailPage: React.FC = () => {
   const [incType, setIncType] = useState<IncidentType>('MANCHA_PERSISTENTE');
   const [incSeverity, setIncSeverity] = useState<IncidentSeverity>('MEDIA');
   const [incDesc, setIncDesc] = useState('');
+
+  if (loading && !order) {
+    return (
+      <div className="flex flex-col items-center justify-center p-16 text-slate-500">
+        <LoaderCircle className="w-8 h-8 animate-spin text-[#0F4C81] mb-3" />
+        <p className="text-xs font-semibold">Cargando detalles de la solicitud...</p>
+      </div>
+    );
+  }
 
   if (!order) {
     return (
@@ -90,8 +145,39 @@ export const OrderDetailPage: React.FC = () => {
   );
 
   // Handle standard lifecycle transitions
-  const handleAdvanceStatus = (nextStatus: OrderStatus, noteText?: string) => {
-    updateOrderStatus(order.id, nextStatus, noteText);
+  const handleAdvanceStatus = async (nextStatus: OrderStatus, noteText?: string) => {
+    try {
+      const updated = await transitionOrder(order.id, {
+        to: nextStatus,
+        expectedVersion: order.version ?? order.workflowVersion ?? 1,
+        note: noteText,
+      });
+      const mapped = mapBackendOrderToOrder(
+        updated,
+        order,
+        customers,
+        facilities,
+        drivers,
+      );
+      setLiveOrder(mapped);
+      const next = orders.map((o) => (o.id === mapped.id ? mapped : o));
+      storageService.saveOrders(next);
+      showToast({
+        type: 'success',
+        title: 'Estado de solicitud actualizado',
+        message: `Orden ${order.id} ahora en estado: ${nextStatus}`,
+      });
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 0) {
+        updateOrderStatus(order.id, nextStatus, noteText);
+        return;
+      }
+      showToast({
+        type: 'error',
+        title: 'No se pudo actualizar el estado',
+        message: err instanceof Error ? err.message : 'Revisa los datos.',
+      });
+    }
   };
 
   const handleOpenAssign = (type: 'pickup' | 'delivery') => {

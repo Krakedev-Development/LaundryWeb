@@ -3,6 +3,7 @@ import { Order } from '../../../types';
 import { OrderListFilters } from './orderList.types';
 import { matchesOrderSearch } from './orderListSearch';
 import { matchesQuickTab } from './orderListTabs';
+
 export function filterOrderList(orders: Order[], filters: OrderListFilters) {
   const {
     mode,
@@ -17,7 +18,11 @@ export function filterOrderList(orders: Order[], filters: OrderListFilters) {
     if (mode !== 'ALL' && order.fulfillment?.mode !== mode) return false;
     if (!matchesOrderSearch(order, searchQuery)) return false;
     if (!matchesQuickTab(order, quickTab)) return false;
-    if (selectedStatus !== 'ALL' && operationalStage(order) !== selectedStatus)
+    if (
+      selectedStatus !== 'ALL' &&
+      operationalStage(order) !== selectedStatus &&
+      order.status !== selectedStatus
+    )
       return false;
     if (selectedPriority !== 'ALL' && order.priority !== selectedPriority)
       return false;
