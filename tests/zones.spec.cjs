@@ -1,4 +1,4 @@
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require('./support/fixtures.cjs');
 test.use({ viewport: { width: 1440, height: 1000 } });
 
 async function clickMap(dialog, x, y) {
@@ -45,6 +45,7 @@ test('polygon creation, two facility pins, cancel, reload and operational filter
       .nth(2)
       .fill(`Direccion real ${index}`);
     await form.getByLabel('Ciudad de la sede').fill('Samborondon');
+    await form.getByLabel('Capacidad diaria de la sede').fill('500');
     await form
       .getByRole('button', { name: 'Registrar Sede', exact: true })
       .click();

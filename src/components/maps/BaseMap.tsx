@@ -244,7 +244,7 @@ export function BaseMap({
               color: isDark ? '#38BDF8' : '#0F4C81',
               weight: 4.5,
               opacity: 0.9,
-              dashArray: route.simulated ? '8 6' : undefined,
+              dashArray: (route as any)?.simulated ? '8 6' : undefined,
             },
           },
         ).addTo(routeLayerRef.current);
@@ -364,7 +364,7 @@ export function BaseMap({
         />
       </div>
 
-      {route?.simulated && (
+      {(route as any)?.simulated && (
         <p className="text-xs text-slate-500">
           Estimación de demostración. La ruta por carretera se mostrará cuando
           esté disponible.

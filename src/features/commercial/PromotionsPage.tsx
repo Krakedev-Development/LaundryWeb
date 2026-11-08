@@ -1,23 +1,32 @@
 import { Modal } from '../../shared/ui/Modal';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useApp } from '../../context/AppContext';
+import { storageService } from '../../services/storage';
+import {
+  getPromotions,
+  createPromotion as createPromotionApi,
+  updatePromotion as updatePromotionApi,
+  mapPromotionResponseToPromotion,
+} from '../../services/api/catalogApi';
+import { ApiError } from '../../services/api/apiConfig';
 import { PageHeader } from '../../components/common/PageHeader';
 import { MetricCard } from '../../components/common/MetricCard';
 import { DiscountType, Promotion } from '../../types';
 import {
   Tag,
   Plus,
-  Percent,
   Calendar,
   AlertCircle,
   CheckCircle2,
+  Edit2,
   Lock,
 } from 'lucide-react';
 
 export const PromotionsPage: React.FC = () => {
-  const { promotions, createPromotion, catalog, currentUser } = useApp();
+  const { promotions, createPromotion, currentUser, showToast } = useApp();
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [editingPromo, setEditingPromo] = useState<Promotion | null>(null);
 
   // Form State
   const [name, setName] = useState('');
@@ -33,7 +42,28 @@ export const PromotionsPage: React.FC = () => {
   const [selectedServices, setSelectedServices] = useState<string[]>([
     'Todos los servicios',
   ]);
+  const [status, setStatus] = useState<Promotion['status']>('ACTIVE');
   const [formError, setFormError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    getPromotions()
+      .then((apiPromos) => {
+        if (cancelled) return;
+        const current = storageService.getPromotions();
+        const byId = new Map(current.map((p) => [p.id, p]));
+        const mapped = apiPromos.map((raw) =>
+          mapPromotionResponseToPromotion(raw, byId.get(raw.id)),
+        );
+        storageService.savePromotions(mapped);
+      })
+      .catch(() => {
+        // Keep local snapshot if offline during isolated tests
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // KPIs
   const totalCount = promotions.length;
@@ -44,6 +74,7 @@ export const PromotionsPage: React.FC = () => {
   const expiredCount = promotions.filter((p) => p.status === 'EXPIRED').length;
 
   const handleOpenCreate = () => {
+    setEditingPromo(null);
     setName('');
     setImageUrl(undefined);
     setCode('');
@@ -55,16 +86,38 @@ export const PromotionsPage: React.FC = () => {
     setStartDate(new Date().toISOString().split('T')[0]);
     setEndDate('2026-12-31');
     setSelectedServices(['Todos los servicios']);
+    setStatus('ACTIVE');
     setFormError('');
     setIsDrawerOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleOpenEdit = (promo: Promotion) => {
+    setEditingPromo(promo);
+    setName(promo.name);
+    setImageUrl(promo.imageUrl);
+    setCode(promo.code);
+    setDescription(promo.description);
+    setDiscountType(promo.discountType);
+    setDiscountValue(promo.discountValue);
+    setMinOrderAmount(promo.minOrderAmount);
+    setUsageLimit(promo.usageLimit);
+    setStartDate(promo.startDate);
+    setEndDate(promo.endDate);
+    setSelectedServices(
+      promo.applicableServices?.length
+        ? promo.applicableServices
+        : ['Todos los servicios'],
+    );
+    setStatus(promo.status);
+    setFormError('');
+    setIsDrawerOpen(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError('');
 
     // Business Rules per spec #37:
-    // No permitir: fecha final < fecha inicio, porcentaje > 100%, valor <= 0, sin servicios
     if (new Date(endDate) < new Date(startDate)) {
       setFormError(
         'La fecha de vencimiento no puede ser anterior a la fecha de inicio.',
@@ -86,23 +139,88 @@ export const PromotionsPage: React.FC = () => {
       return;
     }
 
-    const success = createPromotion({
+    const normalizedCode = code.toUpperCase().trim();
+    const localPromoDraft: Promotion = {
+      id: editingPromo?.id ?? 'TEMP',
       imageUrl,
-      name,
-      code: code.toUpperCase().trim(),
-      description,
+      name: name.trim(),
+      code: normalizedCode,
+      description: description.trim() || name.trim(),
       discountType,
       discountValue,
       minOrderAmount,
       usageLimit,
+      usageCount: editingPromo?.usageCount ?? 0,
       applicableServices: selectedServices,
       startDate,
       endDate,
-      status: 'ACTIVE',
-    });
+      status,
+    };
 
-    if (success) {
+    try {
+      if (editingPromo) {
+        const res = await updatePromotionApi(editingPromo.id, {
+          description: localPromoDraft.description,
+          discountValue,
+          minOrderAmount,
+          validFrom: startDate,
+          validUntil: endDate,
+          maxUses: usageLimit,
+          active: status !== 'PAUSED' && status !== 'EXPIRED',
+        });
+        const synced = mapPromotionResponseToPromotion(res, localPromoDraft);
+        const current = storageService.getPromotions();
+        storageService.savePromotions(
+          current.map((p) => (p.id === editingPromo.id ? synced : p)),
+        );
+        showToast({
+          type: 'info',
+          title: 'Promoción actualizada',
+          message: `Código: ${synced.code}`,
+        });
+      } else {
+        const res = await createPromotionApi({
+          code: normalizedCode,
+          description: localPromoDraft.description,
+          discountType,
+          discountValue,
+          minOrderAmount,
+          validFrom: startDate,
+          validUntil: endDate,
+          maxUses: usageLimit,
+        });
+        const synced = mapPromotionResponseToPromotion(res, localPromoDraft);
+        const current = storageService.getPromotions();
+        storageService.savePromotions([...current, synced]);
+        showToast({
+          type: 'success',
+          title: 'Promoción creada exitosamente',
+          message: `Código: ${synced.code} (${synced.discountValue}${synced.discountType === 'PERCENTAGE' ? '%' : '$'})`,
+        });
+      }
       setIsDrawerOpen(false);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 0) {
+        if (editingPromo) {
+          const current = storageService.getPromotions();
+          storageService.savePromotions(
+            current.map((p) =>
+              p.id === editingPromo.id ? localPromoDraft : p,
+            ),
+          );
+          setIsDrawerOpen(false);
+          return;
+        }
+        const { id: _id, usageCount: _uc, ...rest } = localPromoDraft;
+        const success = createPromotion(rest);
+        if (success) setIsDrawerOpen(false);
+        return;
+      }
+      setFormError(
+        err instanceof Error
+          ? err.message
+          : 'No se pudo guardar la promoción en el servidor.',
+      );
     }
   };
 
@@ -235,17 +353,28 @@ export const PromotionsPage: React.FC = () => {
                     </span>
                   </td>
                   <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                    <span
-                      className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-md border ${
-                        promo.status === 'ACTIVE'
-                          ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                          : promo.status === 'SCHEDULED'
-                            ? 'bg-sky-50 text-sky-800 border-sky-200'
-                            : 'bg-slate-100 text-slate-600 border-slate-200'
-                      }`}
-                    >
-                      {promo.status}
-                    </span>
+                    <div className="inline-flex items-center justify-end gap-2">
+                      <span
+                        className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-md border ${
+                          promo.status === 'ACTIVE'
+                            ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                            : promo.status === 'SCHEDULED'
+                              ? 'bg-sky-50 text-sky-800 border-sky-200'
+                              : 'bg-slate-100 text-slate-600 border-slate-200'
+                        }`}
+                      >
+                        {promo.status}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEdit(promo)}
+                        className="p-1.5 text-slate-500 hover:text-sky-800 hover:bg-sky-50 rounded-lg transition-colors cursor-pointer"
+                        title={`Editar promoción ${promo.code}`}
+                        aria-label={`Editar promoción ${promo.code}`}
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -254,10 +383,14 @@ export const PromotionsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Drawer Crear Promoción per spec #37 */}
+      {/* Drawer Crear / Editar Promoción per spec #37 */}
       {isDrawerOpen && (
         <Modal
-          title="Nueva promoción comercial"
+          title={
+            editingPromo
+              ? `Editar promoción: ${editingPromo.code}`
+              : 'Nueva promoción comercial'
+          }
           description="Define el descuento, la vigencia y las condiciones del cupón."
           onClose={() => setIsDrawerOpen(false)}
         >
@@ -328,6 +461,7 @@ export const PromotionsPage: React.FC = () => {
               <input
                 type="text"
                 required
+                readOnly={!!editingPromo}
                 value={code}
                 onChange={(e) => setCode(e.target.value.toUpperCase())}
                 placeholder="Ej: BIENVENIDA2026"
@@ -355,6 +489,7 @@ export const PromotionsPage: React.FC = () => {
                 </label>
                 <select
                   value={discountType}
+                  disabled={!!editingPromo}
                   onChange={(e) =>
                     setDiscountType(e.target.value as DiscountType)
                   }
@@ -447,7 +582,7 @@ export const PromotionsPage: React.FC = () => {
                 type="submit"
                 className="px-5 py-2.5 bg-[#0F4C81] hover:bg-[#0A3660] text-white font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
               >
-                Guardar Promoción
+                {editingPromo ? 'Guardar Cambios' : 'Guardar Promoción'}
               </button>
             </div>
           </form>

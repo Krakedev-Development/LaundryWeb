@@ -1,3 +1,5 @@
+> **Documento histórico.** Describe el prototipo anterior, que usaba datos y controles de demostración. Esos datos se retiraron: la Web arranca vacía, exige iniciar sesión contra la API (`VITE_API_URL`) y no incluye semillas, presets ni botón de restablecer. Los datos de prueba viven solo en `tests/fixtures`.
+
 # Diagramas de flujos y relaciones de LaundryWeb
 
 Estos diagramas describen la Web actual como demostración. Las flechas representan acciones o relaciones implementadas; no implican sincronización con LaundryApp, LaundryDriver ni un backend. Los controles rotulados «MVP» representan al cliente o al chofer desde la propia consola.

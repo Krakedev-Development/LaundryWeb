@@ -1,41 +1,58 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useApp } from '../../context/AppContext';
 import { Logo } from '../../components/common/Logo';
-import {
-  Lock,
-  Mail,
-  ArrowRight,
-  Sparkles,
-  ShieldCheck,
-  Leaf,
-} from 'lucide-react';
+import { Lock, Mail, ArrowRight, Sparkles, Leaf } from 'lucide-react';
+import { session, useSessionStatus } from '../../services/auth/session';
+
+// Misma regla que la API: 10 a 72 caracteres con letras y números.
+const PASSWORD_RULE = /^(?=.*[A-Za-z])(?=.*\d).{10,72}$/;
 
 export const LoginPage: React.FC = () => {
-  const { switchRole } = useApp();
   const navigate = useNavigate();
+  const status = useSessionStatus();
 
-  const [email, setEmail] = useState('admin@laundryweb.com');
-  const [password, setPassword] = useState('••••••••••••');
-  const [rememberMe, setRememberMe] = useState(true);
-  const [selectedDemoUser, setSelectedDemoUser] = useState<
-    'ADMIN' | 'SUPERVISOR'
-  >('ADMIN');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (status === 'signed-in') navigate('/dashboard', { replace: true });
+  }, [status, navigate]);
+
+  const run = async (action: () => Promise<void>) => {
+    setError('');
+    setBusy(true);
+    try {
+      await action();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'No se pudo iniciar sesión.',
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    switchRole(selectedDemoUser);
-    navigate('/dashboard');
+    void run(() => session.login(email.trim(), password));
   };
 
-  const handleSelectDemo = (role: 'ADMIN' | 'SUPERVISOR') => {
-    setSelectedDemoUser(role);
-    if (role === 'ADMIN') {
-      setEmail('admin@laundryweb.com');
-    } else {
-      setEmail('supervisor@laundryweb.com');
-    }
+  const handleChangePassword = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!PASSWORD_RULE.test(newPassword))
+      return setError(
+        'La nueva contraseña debe tener entre 10 y 72 caracteres, con letras y números.',
+      );
+    if (newPassword !== confirmPassword)
+      return setError('Las contraseñas no coinciden.');
+    void run(() => session.changePassword(password, newPassword));
   };
+
+  const changing = status === 'password-change-required';
 
   return (
     <div className="min-h-screen w-full flex bg-[#0A3660] items-center justify-center p-4 sm:p-8">
@@ -87,115 +104,129 @@ export const LoginPage: React.FC = () => {
         <div className="flex-1 p-8 sm:p-10 flex flex-col justify-center">
           <div className="mb-6">
             <h2 className="text-xl font-bold tracking-tight text-slate-900">
-              Acceso a la plataforma
+              {changing ? 'Define tu contraseña' : 'Acceso a la plataforma'}
             </h2>
             <p className="mt-1 text-xs text-slate-500">
-              Ingresa tus credenciales internas de operador.
+              {changing
+                ? 'Tu cuenta usa una contraseña temporal. Crea una nueva para continuar.'
+                : 'Ingresa tus credenciales internas de operador.'}
             </p>
           </div>
 
-          {/* Quick Demo Role Picker */}
-          <div className="mb-6 p-4 bg-slate-50 rounded-2xl border border-slate-200/80">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2.5">
-              Presets de demostración rápida:
+          {error && (
+            <p
+              role="alert"
+              className="mb-4 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-xs text-red-700"
+            >
+              {error}
             </p>
-            <div className="grid grid-cols-2 gap-2.5">
-              <button
-                type="button"
-                onClick={() => handleSelectDemo('ADMIN')}
-                className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all text-center cursor-pointer ${
-                  selectedDemoUser === 'ADMIN'
-                    ? 'bg-[#0F4C81] text-white shadow-xs'
-                    : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200/90'
-                }`}
-              >
-                Carlos Mendoza
-                <span className="block text-[10px] font-normal opacity-85">
-                  Administrador (Total)
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSelectDemo('SUPERVISOR')}
-                className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all text-center cursor-pointer ${
-                  selectedDemoUser === 'SUPERVISOR'
-                    ? 'bg-[#0F4C81] text-white shadow-xs'
-                    : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200/90'
-                }`}
-              >
-                Elena Rostova
-                <span className="block text-[10px] font-normal opacity-85">
-                  Supervisor (Operaciones)
-                </span>
-              </button>
-            </div>
-          </div>
+          )}
 
-          {/* Form */}
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Correo corporativo
-              </label>
-              <div className="relative">
-                <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full text-xs sm:text-sm pl-9 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-sky-500"
-                />
+          {!changing ? (
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div>
+                <label
+                  htmlFor="login-email"
+                  className="block text-xs font-semibold text-slate-700 mb-1"
+                >
+                  Correo corporativo
+                </label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    id="login-email"
+                    type="email"
+                    required
+                    autoComplete="username"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full text-xs sm:text-sm pl-9 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-sky-500"
+                  />
+                </div>
               </div>
-            </div>
 
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-xs font-semibold text-slate-700">
+              <div>
+                <label
+                  htmlFor="login-password"
+                  className="block text-xs font-semibold text-slate-700 mb-1"
+                >
                   Contraseña
                 </label>
-                <a
-                  href="#recuperar"
-                  onClick={(e) => e.preventDefault()}
-                  className="text-xs text-sky-800 font-medium hover:underline"
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    id="login-password"
+                    type="password"
+                    required
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full text-xs sm:text-sm pl-9 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-sky-500 font-mono"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={busy || status === 'checking'}
+                className="w-full py-3 px-4 bg-[#0F4C81] hover:bg-[#0A3660] disabled:opacity-60 text-white font-bold text-xs sm:text-sm rounded-xl shadow-xs transition-colors flex items-center justify-center gap-2 mt-4 cursor-pointer"
+              >
+                <span>{busy ? 'Ingresando…' : 'Iniciar sesión'}</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleChangePassword} className="space-y-4">
+              <div>
+                <label
+                  htmlFor="new-password"
+                  className="block text-xs font-semibold text-slate-700 mb-1"
                 >
-                  ¿Olvidaste tu contraseña?
-                </a>
+                  Nueva contraseña
+                </label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    id="new-password"
+                    type="password"
+                    required
+                    autoComplete="new-password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full text-xs sm:text-sm pl-9 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-sky-500 font-mono"
+                  />
+                </div>
               </div>
-              <div className="relative">
-                <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full text-xs sm:text-sm pl-9 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-sky-500 font-mono"
-                />
+              <div>
+                <label
+                  htmlFor="confirm-password"
+                  className="block text-xs font-semibold text-slate-700 mb-1"
+                >
+                  Confirma la contraseña
+                </label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    id="confirm-password"
+                    type="password"
+                    required
+                    autoComplete="new-password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full text-xs sm:text-sm pl-9 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-sky-500 font-mono"
+                  />
+                </div>
               </div>
-            </div>
-
-            <div className="flex items-center justify-between pt-1">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="rounded border-slate-300 text-sky-700 focus:ring-sky-500 w-4 h-4 cursor-pointer"
-                />
-                <span className="text-xs text-slate-600">
-                  Recordarme en este equipo
-                </span>
-              </label>
-            </div>
-
-            <button
-              type="submit"
-              className="w-full py-3 px-4 bg-[#0F4C81] hover:bg-[#0A3660] text-white font-bold text-xs sm:text-sm rounded-xl shadow-xs transition-colors flex items-center justify-center gap-2 mt-4 cursor-pointer"
-            >
-              <span>Iniciar sesión</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </form>
+              <button
+                type="submit"
+                disabled={busy}
+                className="w-full py-3 px-4 bg-[#0F4C81] hover:bg-[#0A3660] disabled:opacity-60 text-white font-bold text-xs sm:text-sm rounded-xl shadow-xs transition-colors flex items-center justify-center gap-2 mt-4 cursor-pointer"
+              >
+                <span>{busy ? 'Guardando…' : 'Guardar y continuar'}</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </form>
+          )}
         </div>
       </div>
     </div>

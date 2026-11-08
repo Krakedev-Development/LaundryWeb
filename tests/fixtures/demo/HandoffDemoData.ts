@@ -1,6 +1,6 @@
-import type { Driver, Facility, Order } from '../types';
-import { migrateOrder, type HandoffType } from './fulfillment';
-import type { HandoffService, HandoffState } from './HandoffService';
+import type { Driver, Facility, Order } from '../../../src/types';
+import { migrateOrder, type HandoffType } from '../../../src/services/fulfillment';
+import type { HandoffService, HandoffState } from '../../../src/services/HandoffService';
 
 /** MVP fixtures: add missing reception scenarios without resetting local progress. */
 export function prepareHandoffDemoData(

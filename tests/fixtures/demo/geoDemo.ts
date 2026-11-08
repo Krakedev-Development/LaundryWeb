@@ -1,4 +1,4 @@
-import type { Coordinates, GeoAddress, ServiceArea } from './geo.types';
+import type { Coordinates, GeoAddress, ServiceArea } from '../../../src/services/geo/geo.types';
 
 export const DEMO_CENTER: Coordinates = { lat: -2.124, lng: -79.869 };
 export const DEMO_FACILITIES = [

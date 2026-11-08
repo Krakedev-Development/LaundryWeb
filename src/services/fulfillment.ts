@@ -1,5 +1,5 @@
 import { normalizeHomePickup } from './fulfillmentPolicy';
-/** Portable local demo contract. Both apps use equivalent data, never runtime synchronization. */
+/** Contrato portable de cumplimiento compartido por las aplicaciones. */
 export type FulfillmentMode = 'HOME_HOME' | 'HOME_STORE';
 export const modeFor = (
   inbound: 'DRIVER' | 'CUSTOMER',

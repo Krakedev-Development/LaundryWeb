@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 
 export const SettingsPage: React.FC = () => {
-  const { settings, updateSettings, resetAll, currentUser, facilities } = useApp();
+  const { settings, updateSettings, currentUser, facilities } = useApp();
   const [formData, setFormData] = useState<SystemSettings>({ ...settings });
 
   // Role Guard per spec #4 & #44
@@ -46,15 +46,6 @@ export const SettingsPage: React.FC = () => {
       <PageHeader
         title="Configuración Global del Sistema"
         subtitle="Parámetros operativos de despacho, umbrales de SLA, logística y reglas de localización."
-        actions={
-          <button
-            onClick={resetAll}
-            className="px-4 py-2.5 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span>Restablecer Datos Demo</span>
-          </button>
-        }
       />
 
       <form onSubmit={handleSave} className="space-y-8">
@@ -78,7 +69,7 @@ export const SettingsPage: React.FC = () => {
                 min="1"
                 max="15"
                 value={formData.maxOrdersPerDriver}
-                onChange={(e) => handleChange('maxOrdersPerDriver', parseInt(e.target.value) || 5)}
+                onChange={(e) => handleChange('maxOrdersPerDriver', parseInt(e.target.value) || 0)}
                 className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono focus:outline-none focus:border-sky-500"
               />
               <p className="text-[11px] text-slate-500 mt-1">
@@ -123,7 +114,7 @@ export const SettingsPage: React.FC = () => {
               <input
                 type="number"
                 value={formData.slaPickupMinutes}
-                onChange={(e) => handleChange('slaPickupMinutes', parseInt(e.target.value) || 45)}
+                onChange={(e) => handleChange('slaPickupMinutes', parseInt(e.target.value) || 0)}
                 className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono focus:outline-none focus:border-sky-500"
               />
               <p className="text-[11px] text-slate-500 mt-1">
@@ -138,7 +129,7 @@ export const SettingsPage: React.FC = () => {
               <input
                 type="number"
                 value={formData.slaDeliveryHours}
-                onChange={(e) => handleChange('slaDeliveryHours', parseInt(e.target.value) || 24)}
+                onChange={(e) => handleChange('slaDeliveryHours', parseInt(e.target.value) || 0)}
                 className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono focus:outline-none focus:border-sky-500"
               />
               <p className="text-[11px] text-slate-500 mt-1">

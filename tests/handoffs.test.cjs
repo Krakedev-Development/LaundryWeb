@@ -57,7 +57,7 @@ function setup(mode = 'HOME_STORE') {
     confirmed: () => confirmations++,
   });
   migrateOrder(state.orders[0], mode);
-  service.initialize(state, state.orders[0], true);
+  service.initialize(state, state.orders[0]);
   if (mode === 'HOME_STORE') {
     Object.assign(state.orders[0].fulfillment.inbound, {
       driverId: 'DRIVER',

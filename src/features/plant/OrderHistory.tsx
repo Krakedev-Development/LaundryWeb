@@ -89,7 +89,7 @@ export function OrderHistory({
       entries.push({
         id: `payment-${item.id}`,
         at: item.at,
-        title: `Pago demo: $${item.amount.toFixed(2)}`,
+        title: `Pago: $${item.amount.toFixed(2)}`,
         detail: item.method,
         source: 'Pago',
       }),
@@ -111,7 +111,7 @@ export function OrderHistory({
           title:
             item.status === 'ACCEPTED' ? 'Ajuste aceptado' : 'Ajuste rechazado',
           actor: order.customerName,
-          source: 'Decisión demo',
+          source: 'Decisión del cliente',
         });
     });
   state.changes
@@ -134,7 +134,7 @@ export function OrderHistory({
         at: item.createdAt,
         title: `Cargo: $${item.amount.toFixed(2)}`,
         detail: `${item.reason} · ${item.status}${item.waivedReason ? ` · ${item.waivedReason}` : ''}`,
-        source: 'Cargo demo',
+        source: 'Cargo',
       }),
     );
   state.messages

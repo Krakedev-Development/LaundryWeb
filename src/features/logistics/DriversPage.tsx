@@ -43,9 +43,9 @@ export const DriversPage: React.FC = () => {
     'VAN',
   );
   const [vehiclePlate, setVehiclePlate] = useState('');
-  const [facilityId, setFacilityId] = useState(facilities[0]?.id || 'FAC-01');
+  const [facilityId, setFacilityId] = useState(facilities[0]?.id || '');
   const [zoneId, setZoneId] = useState('ZONA-NORTE');
-  const [maxOrders, setMaxOrders] = useState(5);
+  const [maxOrders, setMaxOrders] = useState(0);
   const [status, setStatus] = useState<DriverStatus>('AVAILABLE');
 
   // KPIs
@@ -63,9 +63,9 @@ export const DriversPage: React.FC = () => {
     setEmail('chofer@laundryweb.com');
     setVehicleType('VAN');
     setVehiclePlate('ABC-000');
-    setFacilityId(facilities[0]?.id || 'FAC-01');
+    setFacilityId(facilities[0]?.id || '');
     setZoneId('ZONA-NORTE');
-    setMaxOrders(5);
+    setMaxOrders(0);
     setStatus('AVAILABLE');
     setIsDrawerOpen(true);
   };
@@ -475,7 +475,7 @@ export const DriversPage: React.FC = () => {
                 <input
                   type="number"
                   value={maxOrders}
-                  onChange={(e) => setMaxOrders(parseInt(e.target.value) || 5)}
+                  onChange={(e) => setMaxOrders(parseInt(e.target.value) || 0)}
                   className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono focus:outline-none focus:border-sky-500"
                 />
               </div>

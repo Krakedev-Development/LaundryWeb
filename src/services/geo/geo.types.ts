@@ -15,7 +15,7 @@ export interface GeoAddress {
   country?: string;
   instructions?: string;
   providerPlaceId?: string;
-  persistence: 'permanent' | 'user' | 'demo' | 'temporary';
+  persistence: 'permanent' | 'user' | 'temporary';
 }
 export interface RouteSummary {
   distanceMeters: number;

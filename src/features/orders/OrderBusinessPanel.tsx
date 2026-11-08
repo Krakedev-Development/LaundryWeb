@@ -48,12 +48,6 @@ export function OrderBusinessPanel({ order }: { order: Order }) {
       });
     }
   };
-  const demo = () =>
-    storageService.demoBusinessActor({
-      id: order.customerId,
-      role: 'CLIENT',
-      name: order.customerName,
-    });
   const adjustments = state.adjustments.filter((a) => a.orderId === order.id),
     payments = state.payments.filter((p) => p.orderId === order.id),
     changes = state.changes.filter((c) => c.orderId === order.id);
@@ -254,26 +248,6 @@ export function OrderBusinessPanel({ order }: { order: Order }) {
                   ${a.amount.toFixed(2)} · {a.status}
                 </p>
                 <p>{a.customerMessage}</p>
-                {currentUser.role === 'ADMIN' && a.status === 'PENDING' && (
-                  <div className="flex gap-2 mt-2">
-                    <button
-                      className={buttonClass}
-                      onClick={() =>
-                        run(() => demo().decideAdjustment(a.id, true))
-                      }
-                    >
-                      MVP: cliente acepta
-                    </button>
-                    <button
-                      className="text-rose-700 underline"
-                      onClick={() =>
-                        run(() => demo().decideAdjustment(a.id, false))
-                      }
-                    >
-                      MVP: cliente rechaza
-                    </button>
-                  </div>
-                )}
               </div>
             ))}
           </div>
@@ -297,18 +271,6 @@ export function OrderBusinessPanel({ order }: { order: Order }) {
               </button>
             ),
           )}
-          {currentUser.role === 'ADMIN' &&
-            order.pricing.paymentStatus !== 'PAID' &&
-            order.pricing.amountKnown !== false && (
-              <button
-                className="rounded-xl border border-blue-200 px-4 py-2.5 text-sm font-semibold text-blue-800"
-                onClick={() =>
-                  run(() => demo().pay(order.id, crypto.randomUUID()))
-                }
-              >
-                MVP: simular pago del cliente
-              </button>
-            )}
         </div>
         <div className="grid md:grid-cols-2 gap-5">
           <div className="rounded-xl border border-slate-200 p-5 space-y-3">
@@ -324,83 +286,6 @@ export function OrderBusinessPanel({ order }: { order: Order }) {
               Salida: {order.fulfillment!.outbound.date || 'Al estar listo'} ·{' '}
               {order.fulfillment!.outbound.timeSlot}
             </p>
-            {currentUser.role === 'ADMIN' && (
-              <>
-                <p className="text-xs text-slate-500">
-                  Simulación del cliente en esta instalación del MVP.
-                </p>
-                <select
-                  className={inputClass}
-                  aria-label="Tramo a modificar"
-                  value={leg}
-                  onChange={(e) => {
-                    setLeg(e.target.value as typeof leg);
-                    setMethod(
-                      e.target.value === 'inbound'
-                        ? 'DRIVER'
-                        : order.fulfillment!.outbound.method,
-                    );
-                    setSlotId('');
-                  }}
-                >
-                  <option value="inbound">Entrada</option>
-                  <option value="outbound">Salida</option>
-                </select>
-                <select
-                  className={inputClass}
-                  value={method}
-                  aria-label="Método nuevo"
-                  onChange={(e) => {
-                    setMethod(e.target.value as typeof method);
-                    setSlotId('');
-                  }}
-                >
-                  <option value="DRIVER">Domicilio</option>
-                  {leg === 'outbound' && (
-                    <option value="CUSTOMER">Pick up · retiro en sede</option>
-                  )}
-                </select>
-                <select
-                  className={inputClass}
-                  aria-label="Franja nueva"
-                  value={slotId}
-                  onChange={(e) => setSlotId(e.target.value)}
-                >
-                  <option value="">Seleccionar franja</option>
-                  {slots.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.date} · {s.start}–{s.end} ·{' '}
-                      {s.capacity - s.reservedCount} cupos
-                    </option>
-                  ))}
-                </select>
-                <button
-                  className={buttonClass}
-                  onClick={() =>
-                    run(() =>
-                      demo().change(
-                        order.id,
-                        leg,
-                        slotId,
-                        method,
-                        leg === 'inbound'
-                          ? order.customerAddress
-                          : order.deliveryAddress,
-                        reason,
-                      ),
-                    )
-                  }
-                >
-                  MVP: solicitar cambio
-                </button>
-                <button
-                  className="ml-3 text-rose-700 text-sm"
-                  onClick={() => run(() => demo().cancel(order.id, reason))}
-                >
-                  MVP: cancelar
-                </button>
-              </>
-            )}
             <p className="text-xs text-slate-500">
               Cambios registrados: {changes.length}. Los cambios revocan los
               códigos anteriores sin usar.
@@ -449,7 +334,7 @@ export function OrderBusinessPanel({ order }: { order: Order }) {
             </h3>
             {payments.map((p) => (
               <p key={p.id} className="text-xs text-slate-600">
-                {p.at} · ${p.amount.toFixed(2)} · {p.method} · Demo local
+                {p.at} · ${p.amount.toFixed(2)} · {p.method}
               </p>
             ))}
             {state.routeStops

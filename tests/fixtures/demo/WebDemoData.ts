@@ -4,9 +4,9 @@ import type {
   Facility,
   Order,
   SystemSettings,
-} from '../../types';
-import { DEMO_FACILITIES, SERVICE_AREAS, demoCoordinate } from './demo';
-import { serviceAreaService } from './ServiceAreaService';
+} from '../../../src/types';
+import { DEMO_FACILITIES, SERVICE_AREAS, demoCoordinate } from './geoDemo';
+import { serviceAreaService } from '../../../src/services/geo/ServiceAreaService';
 export function prepareWebDemoData(
   data: {
     orders: Order[];

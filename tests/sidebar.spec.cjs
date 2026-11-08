@@ -1,4 +1,4 @@
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require('./support/fixtures.cjs');
 
 test.use({ viewport: { width: 1440, height: 900 } });
 test.setTimeout(45000);
@@ -190,7 +190,8 @@ test('nested routes select only the closest leaf and role changes filter the nav
   await sidebar
     .getByRole('button', { name: 'Cerrar sesión', exact: true })
     .click();
-  await page.getByRole('button', { name: /Elena Rostova/ }).click();
+  await page.locator('input[type="email"]').fill('supervisor@laundryweb.com');
+  await page.locator('input[type="password"]').fill('una-clave-valida-1');
   await page
     .getByRole('button', { name: 'Iniciar sesión', exact: true })
     .click();
@@ -278,7 +279,7 @@ test('navigation still works when saving the sidebar preference is denied', asyn
   expect(errors).toEqual([]);
 });
 
-test('profile appears only in the sidebar and the MVP header control restores demo data', async ({
+test('profile appears only in the sidebar and the header has no demo reset control', async ({
   page,
 }) => {
   await openOrders(page);
@@ -302,27 +303,9 @@ test('profile appears only in the sidebar and the MVP header control restores de
   await expect(
     page.getByRole('button', { name: 'Cerrar sesión', exact: true }),
   ).toHaveCount(1);
-  await page.evaluate(() => {
-    for (const key of ['lw_drivers', 'lw_workflow_v2']) {
-      const data = JSON.parse(localStorage.getItem(key));
-      const drivers = Array.isArray(data) ? data : data.drivers;
-      drivers[0].name = 'Conductor modificado';
-      localStorage.setItem(key, JSON.stringify(data));
-    }
-  });
-  await page.goto('/logistics/drivers');
   await expect(
-    page.locator('main').getByText('Conductor modificado', { exact: true }),
-  ).toBeVisible();
-  await header
-    .getByRole('button', { name: 'Restablecer datos demo', exact: true })
-    .click();
-  await expect(
-    page.locator('main').getByText('Conductor modificado', { exact: true }),
+    page.getByRole('button', { name: /Restablecer datos demo/ }),
   ).toHaveCount(0);
-  await expect(
-    page.locator('main').getByText('Carlos Ruiz', { exact: true }),
-  ).toBeVisible();
 });
 
 test('brand stays bounded throughout repeated expand and collapse transitions', async ({

@@ -96,7 +96,7 @@ export interface PaymentTransaction {
   amount: number;
   method: 'BILLETERA' | 'TARJETA' | 'TRANSFERENCIA' | 'EFECTIVO';
   at: string;
-  localDemo: true;
+  local: true;
 }
 export interface RouteStop {
   id: string;
@@ -616,7 +616,7 @@ export class BusinessService {
       : 'FINAL';
     o.policyReview =
       s.businessPolicy.taxRate === undefined
-        ? 'Tratamiento de IVA en revisión. Importes de demostración sin política tributaria definitiva.'
+        ? 'Tratamiento de IVA en revisión: sin política tributaria definida.'
         : undefined;
   }
   private promotion(code: string, s: BusinessState, orderId?: string) {
@@ -796,7 +796,7 @@ export class BusinessService {
         deliveryAddress: input.deliveryAddress,
         facilityId: f.id,
         facilityName: f.name,
-        zoneId: this.port.zoneFor?.(input.pickupAddress, f.id) ?? 'DEMO',
+        zoneId: this.port.zoneFor?.(input.pickupAddress, f.id) ?? '',
         zoneName: f.zone,
         priority: 'NORMAL',
         status: known ? 'PAYMENT_PENDING' : 'AWAITING_INTAKE',
@@ -891,7 +891,7 @@ export class BusinessService {
           'La salida no respeta el tiempo de procesamiento del servicio.',
         );
       this.recalculate(s, o);
-      this.port.handoffs.initialize(s, o, false, false);
+      this.port.handoffs.initialize(s, o, false);
       c.totalOrders++;
       this.update(s, o, 'Solicitud confirmada');
       this.notify(
@@ -899,7 +899,7 @@ export class BusinessService {
         o,
         'CREATED',
         known
-          ? 'Solicitud registrada. Completa el pago de demostración.'
+          ? 'Solicitud registrada. Completa el pago.'
           : 'Solicitud por peso registrada. El importe se calculará en planta.',
       );
       return o;
@@ -946,19 +946,19 @@ export class BusinessService {
         amount: due,
         method,
         at: this.now(),
-        localDemo: true,
+        local: true,
       });
       o.pricing.amountPaid = money((o.pricing.amountPaid ?? 0) + due);
       o.pricing.amountDue = 0;
       o.pricing.paymentMethod = method;
       o.pricing.paymentStatus = 'PAID';
       if (o.status === 'PAYMENT_PENDING') o.status = 'AWAITING_INTAKE';
-      this.update(s, o, 'Pago de demostración confirmado');
+      this.update(s, o, 'Pago confirmado');
       this.notify(
         s,
         o,
         'PAYMENT',
-        'Pago confirmado en esta instalación del MVP.',
+        'Pago confirmado.',
       );
       return o;
     });
@@ -1321,7 +1321,7 @@ export class BusinessService {
           });
         });
       o.fulfillment![leg].handoffIds = [];
-      this.port.handoffs.initialize(s, o, false, false);
+      this.port.handoffs.initialize(s, o, false);
       const entry = s.timeSlots.find(
           (x) => x.id === o.fulfillment!.inbound.timeSlotId,
         ),
@@ -1458,7 +1458,7 @@ export class BusinessService {
       s,
       o,
       'CHARGE',
-      'Se registró un cargo según la configuración local de demostración.',
+      'Se registró un cargo según la política vigente.',
     );
   }
   recordFailure(
@@ -1610,7 +1610,7 @@ export class BusinessService {
           ? 'PAYMENT_PENDING'
           : 'AWAITING_INTAKE';
       order.customerMessage = customerMessage;
-      this.port.handoffs.initialize(s, order, false, false);
+      this.port.handoffs.initialize(s, order, false);
       this.update(
         s,
         order,
@@ -1633,7 +1633,7 @@ export class BusinessService {
       charge.waivedReason = waive ? reason : undefined;
       this.audit(
         s,
-        waive ? 'Cargo exonerado' : 'Cargo pagado en demo',
+        waive ? 'Cargo exonerado' : 'Cargo pagado',
         charge.orderId,
         reason,
       );

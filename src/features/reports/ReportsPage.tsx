@@ -31,6 +31,45 @@ export const ReportsPage: React.FC = () => {
   const onTimeOrders = orders.filter((o) => o.slaStatus === 'ON_TIME').length;
   const slaRate = Math.round((onTimeOrders / (totalOrders || 1)) * 100);
   const openIncidents = incidents.filter((i) => i.status === 'OPEN' || i.status === 'IN_PROGRESS').length;
+  const pct = (part: number, whole: number) =>
+    whole ? Math.round((part / whole) * 100) : 0;
+  const successRate = pct(completedOrders, totalOrders);
+  const averageTicket = totalOrders ? totalRevenue / totalOrders : 0;
+  const incidentRate = pct(incidents.length, totalOrders);
+  const slaCount = (risk: string) => orders.filter((o) => o.slaStatus === risk).length;
+
+  // Serie de los últimos 7 días: solicitudes creadas y entregas completadas por día.
+  const dayKey = (iso?: string) => (iso ? iso.slice(0, 10) : '');
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const date = new Date(Date.now() - (6 - i) * 86400000);
+    return {
+      key: date.toISOString().slice(0, 10),
+      day: date.toLocaleDateString('es', { weekday: 'short', day: 'numeric' }),
+    };
+  });
+  const series = days.map((d) => ({
+    day: d.day,
+    orders: orders.filter((o) => dayKey(o.createdAt) === d.key).length,
+    delivered: orders.filter((o) => dayKey(o.delivery?.completedAt) === d.key).length,
+  }));
+  const seriesMax = Math.max(1, ...series.flatMap((d) => [d.orders, d.delivered]));
+  const createdIn = (from: number, to: number) =>
+    orders.filter((o) => {
+      const t = Date.parse(o.createdAt);
+      return t >= Date.now() - from * 86400000 && t < Date.now() - to * 86400000;
+    }).length;
+  const lastWeek = createdIn(7, 0);
+  const previousWeek = createdIn(14, 7);
+  const weekDelta = previousWeek
+    ? `${lastWeek >= previousWeek ? '+' : ''}${Math.round(((lastWeek - previousWeek) / previousWeek) * 100)}% vs sem anterior`
+    : 'Sin semana anterior para comparar';
+  const durations = orders
+    .filter((o) => o.delivery?.completedAt)
+    .map((o) => (Date.parse(o.delivery.completedAt!) - Date.parse(o.createdAt)) / 3600000)
+    .filter((h) => Number.isFinite(h) && h >= 0);
+  const averageHours = durations.length
+    ? (durations.reduce((a, b) => a + b, 0) / durations.length).toFixed(1)
+    : null;
 
   // Export handlers
   const handleExportCSV = () => {
@@ -137,7 +176,7 @@ export const ReportsPage: React.FC = () => {
         <MetricCard
           title="Completadas"
           value={completedOrders}
-          subtitle="Tasa éxito: 94%"
+          subtitle={`Tasa éxito: ${successRate}%`}
           variant="success"
           icon={<CheckCircle2 className="w-5 h-5 text-emerald-600" />}
         />
@@ -150,14 +189,14 @@ export const ReportsPage: React.FC = () => {
         <MetricCard
           title="Facturación Bruta"
           value={`$${totalRevenue.toFixed(2)}`}
-          subtitle="Ticket prom: $68.5"
+          subtitle={`Ticket prom: ${averageTicket.toFixed(2)}`}
           variant="aqua"
           icon={<DollarSign className="w-5 h-5 text-sky-600" />}
         />
         <MetricCard
           title="Incidencias"
           value={openIncidents}
-          subtitle="Tasa error: 1.8%"
+          subtitle={`Tasa de incidencias: ${incidentRate}%`}
           variant={openIncidents > 0 ? 'urgent' : 'default'}
           icon={<AlertTriangle className="w-5 h-5 text-rose-600" />}
         />
@@ -198,33 +237,25 @@ export const ReportsPage: React.FC = () => {
               <p className="text-xs text-slate-500 mt-0.5">Volumen procesado en los últimos 7 días</p>
             </div>
             <span className="text-[11px] font-mono text-emerald-800 bg-emerald-50 border border-emerald-200/80 px-2.5 py-1 rounded-md font-bold">
-              +14% vs sem anterior
+              {weekDelta}
             </span>
           </div>
 
           {/* Bar Chart Visualization */}
           <div className="h-48 pt-6 flex items-end justify-between gap-3 px-2">
-            {[
-              { day: 'Mié 23', orders: 28, delivered: 26 },
-              { day: 'Jue 24', orders: 35, delivered: 33 },
-              { day: 'Vie 25', orders: 42, delivered: 39 },
-              { day: 'Sáb 26', orders: 48, delivered: 44 },
-              { day: 'Dom 27', orders: 22, delivered: 20 },
-              { day: 'Lun 28', orders: 38, delivered: 35 },
-              { day: 'Hoy', orders: totalOrders, delivered: completedOrders },
-            ].map((d) => (
+            {series.map((d) => (
               <div key={d.day} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
                 <div className="w-full flex items-end justify-center gap-1.5 h-36">
                   {/* Orders bar */}
                   <div
                     className="w-4 bg-[#0F4C81] rounded-t-sm transition-all"
-                    style={{ height: `${(d.orders / 50) * 100}%` }}
+                    style={{ height: `${(d.orders / seriesMax) * 100}%` }}
                     title={`Solicitudes: ${d.orders}`}
                   />
                   {/* Delivered bar */}
                   <div
                     className="w-4 bg-sky-400 rounded-t-sm transition-all"
-                    style={{ height: `${(d.delivered / 50) * 100}%` }}
+                    style={{ height: `${(d.delivered / seriesMax) * 100}%` }}
                     title={`Entregadas: ${d.delivered}`}
                   />
                 </div>
@@ -260,9 +291,9 @@ export const ReportsPage: React.FC = () => {
           <div className="space-y-3.5 pt-3">
             {[
               { label: 'A tiempo (Dentro de ventana óptima)', count: onTimeOrders, pct: slaRate, color: 'bg-emerald-500' },
-              { label: 'Atención requerida (< 2 horas de límite)', count: 2, pct: 15, color: 'bg-amber-400' },
-              { label: 'En riesgo inminente (< 45 min)', count: 1, pct: 8, color: 'bg-orange-500' },
-              { label: 'Vencida / Fuera de ventana', count: 1, pct: 5, color: 'bg-rose-500' },
+              { label: 'Atención requerida', count: slaCount('ATTENTION'), pct: pct(slaCount('ATTENTION'), totalOrders), color: 'bg-amber-400' },
+              { label: 'En riesgo inminente', count: slaCount('AT_RISK'), pct: pct(slaCount('AT_RISK'), totalOrders), color: 'bg-orange-500' },
+              { label: 'Vencida / Fuera de ventana', count: slaCount('OVERDUE'), pct: pct(slaCount('OVERDUE'), totalOrders), color: 'bg-rose-500' },
             ].map((row) => (
               <div key={row.label}>
                 <div className="flex justify-between text-xs mb-1.5">
@@ -282,7 +313,9 @@ export const ReportsPage: React.FC = () => {
           </div>
 
           <p className="text-[11px] text-slate-500 pt-3 border-t border-slate-100">
-            El tiempo promedio entre la solicitud del cliente y la entrega final conforme es de <strong>22.4 horas</strong>.
+            {averageHours
+              ? <>El tiempo promedio entre la solicitud del cliente y la entrega final conforme es de <strong>{averageHours} horas</strong>.</>
+              : 'Aún no hay entregas completadas para calcular el tiempo promedio.'}
           </p>
         </div>
       </div>

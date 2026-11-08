@@ -7,7 +7,6 @@ import { PageHeader } from '../../components/common/PageHeader';
 import { BaseMap } from '../../components/maps/BaseMap';
 import { useDriverCandidates } from '../../components/maps/useDriverCandidates';
 import { routingService } from '../../services/geo';
-import { geoConfig } from '../../services/geo/geo.config';
 import type { RouteSummary } from '../../services/geo/geo.types';
 import {
   ArrowRight,
@@ -76,18 +75,6 @@ export function DispatchPage() {
       <PageHeader
         title="Despacho"
         subtitle="Selecciona una solicitud, compara choferes y confirma la asignación."
-        actions={
-          <button
-            className="sidebar-focus flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-[#0F4C81] shadow-xs hover:bg-slate-50"
-            onClick={() => {
-              const demo = storageService.createDemoOrder();
-              navigate('/operations/orders/' + demo.id);
-            }}
-          >
-            <Plus className="size-4" aria-hidden="true" />
-            Abrir solicitud de demostración
-          </button>
-        }
       />
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-xs">
         <div className="flex gap-1 rounded-xl bg-slate-100 p-1">
@@ -117,12 +104,6 @@ export function DispatchPage() {
           pendientes
         </span>
       </div>
-      {geoConfig.mode === 'demo' && (
-        <p className="flex items-center gap-2 rounded-xl border border-amber-200/70 bg-amber-50 px-4 py-3 text-xs text-amber-800">
-          <Info className="size-4 shrink-0" aria-hidden="true" />
-          Escenario local: tiempos y distancias simulados.
-        </p>
-      )}
       <div className="grid items-start gap-5 lg:grid-cols-[300px_minmax(0,1fr)]">
         <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
           <div className="flex items-center gap-2 border-b border-slate-200 bg-slate-50 px-4 py-4">

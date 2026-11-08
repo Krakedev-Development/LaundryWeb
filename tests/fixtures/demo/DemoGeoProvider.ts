@@ -1,4 +1,4 @@
-import { DEMO_ADDRESSES } from './demo';
+import { DEMO_ADDRESSES } from './geoDemo';
 import {
   toLngLat,
   type Coordinates,
@@ -6,7 +6,7 @@ import {
   type MatrixPoint,
   type RouteOptions,
   type RouteSummary,
-} from './geo.types';
+} from '../../../src/services/geo/geo.types';
 // Explicit estimates for the demo, never presented as road routes or live ETA.
 export class DemoGeoProvider implements GeoProvider {
   async searchAddress(query: string) {

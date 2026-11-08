@@ -1,11 +1,11 @@
-import type { CatalogItem, Facility, Order } from '../types';
-import { migrateOrder } from './fulfillment';
+import type { CatalogItem, Facility, Order } from '../../../src/types';
+import { migrateOrder } from '../../../src/services/fulfillment';
 import {
   ensureBusinessState,
   type BusinessState,
   type SlotContext,
-} from './BusinessService';
-import type { HandoffService } from './HandoffService';
+} from '../../../src/services/BusinessService';
+import type { HandoffService } from '../../../src/services/HandoffService';
 
 export function prepareBusinessDemoData(
   raw: BusinessState,

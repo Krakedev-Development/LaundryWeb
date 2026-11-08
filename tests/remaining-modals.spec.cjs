@@ -1,19 +1,5 @@
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require('./support/fixtures.cjs');
 
-test('two editable demo memberships are available without duplicate initialization', async ({
-  page,
-}) => {
-  await page.goto('/commercial/memberships');
-  for (let visit = 0; visit < 2; visit++) {
-    await expect(
-      page.getByRole('row').filter({ hasText: 'Plan Esencial' }),
-    ).toHaveCount(1);
-    await expect(
-      page.getByRole('row').filter({ hasText: 'Plan Familiar' }),
-    ).toHaveCount(1);
-    await page.reload();
-  }
-});
 
 for (const width of [1440, 390]) {
   test(`remaining forms open centrally and retain their controls at ${width}px`, async ({

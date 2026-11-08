@@ -103,7 +103,8 @@ export class MapboxGeoProvider implements GeoProvider {
   private blockedUntil = 0;
   constructor(
     private config: MapboxConfig,
-    private fetcher: typeof fetch = fetch,
+    // fetch debe invocarse sin el proveedor como receptor (si no, el navegador lanza "Illegal invocation").
+    private fetcher: typeof fetch = (...args) => fetch(...args),
   ) {}
   private async request<T>(
     path: string,

@@ -1,6 +1,20 @@
 import { Modal } from '../../shared/ui/Modal';
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
+import { storageService } from '../../services/storage';
+import {
+  fetchAllCatalogItems,
+  createGarment,
+  updateGarment,
+  createService,
+  updateService,
+  createExtra,
+  updateExtra,
+  mapGarmentToCatalogItem,
+  mapServiceToCatalogItem,
+  mapExtraToCatalogItem,
+} from '../../services/api/catalogApi';
+import { ApiError } from '../../services/api/apiConfig';
 import { PageHeader } from '../../components/common/PageHeader';
 import { MetricCard } from '../../components/common/MetricCard';
 import { CatalogItem } from '../../types';
@@ -9,15 +23,19 @@ import {
   Shirt,
   Sparkles,
   Plus,
-  Clock,
   DollarSign,
   Edit2,
   Lock,
 } from 'lucide-react';
 
 export const CatalogPage: React.FC = () => {
-  const { catalog, createCatalogItem, updateCatalogItem, currentUser } =
-    useApp();
+  const {
+    catalog,
+    createCatalogItem,
+    updateCatalogItem,
+    currentUser,
+    showToast,
+  } = useApp();
 
   const [activeTab, setActiveTab] = useState<
     'PRENDAS' | 'SERVICIOS' | 'EXTRAS'
@@ -29,7 +47,7 @@ export const CatalogPage: React.FC = () => {
   const [name, setName] = useState('');
   const [type, setType] = useState('Prenda Individual');
   const [description, setDescription] = useState('');
-  const [price, setPrice] = useState(10.0);
+  const [price, setPrice] = useState(0);
   const [pricingModel, setPricingModel] = useState<'FIXED' | 'PER_WEIGHT'>(
     'FIXED',
   );
@@ -37,10 +55,26 @@ export const CatalogPage: React.FC = () => {
   const [compatible, setCompatible] = useState(true);
   const [restrictions, setRestrictions] = useState('');
   const [selectable, setSelectable] = useState(true);
-  const [estimatedHours, setEstimatedHours] = useState(24);
-  const [minHours, setMinHours] = useState(12);
-  const [maxHours, setMaxHours] = useState(36);
+  const [estimatedHours, setEstimatedHours] = useState(0);
+  const [minHours, setMinHours] = useState(0);
+  const [maxHours, setMaxHours] = useState(0);
   const [status, setStatus] = useState<'ACTIVE' | 'INACTIVE'>('ACTIVE');
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchAllCatalogItems(storageService.getCatalog())
+      .then((items) => {
+        if (!cancelled) {
+          storageService.saveCatalog(items);
+        }
+      })
+      .catch(() => {
+        // Keep local catalog snapshot if offline during isolated tests
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // KPIs
   const prendasCount = catalog.filter((c) => c.category === 'PRENDAS').length;
@@ -69,10 +103,10 @@ export const CatalogPage: React.FC = () => {
           : 'Empaque Eco',
     );
     setDescription('');
-    setPrice(activeTab === 'EXTRAS' ? 3.0 : 15.0);
-    setEstimatedHours(activeTab === 'EXTRAS' ? 0 : 24);
-    setMinHours(activeTab === 'EXTRAS' ? 0 : 12);
-    setMaxHours(activeTab === 'EXTRAS' ? 0 : 36);
+    setPrice(0);
+    setEstimatedHours(0);
+    setMinHours(0);
+    setMaxHours(0);
     setStatus('ACTIVE');
     setIsDrawerOpen(true);
   };
@@ -99,49 +133,133 @@ export const CatalogPage: React.FC = () => {
     setIsDrawerOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
 
-    if (editingItem) {
-      updateCatalogItem({
-        ...editingItem,
-        pricingModel,
-        weightUnit: unit,
-        pricePerWeightUnit: pricingModel === 'PER_WEIGHT' ? price : undefined,
-        restrictions: restrictions.split('\n').filter(Boolean),
-        customerSelectable: selectable,
-        compatibleWithWeight: compatible,
-        name,
-        type,
-        description,
-        price,
-        estimatedHours,
-        minHours,
-        maxHours,
-        status,
-      });
-    } else {
-      createCatalogItem({
-        pricingModel,
-        weightUnit: unit,
-        pricePerWeightUnit: pricingModel === 'PER_WEIGHT' ? price : undefined,
-        restrictions: restrictions.split('\n').filter(Boolean),
-        customerSelectable: selectable,
-        compatibleWithWeight: compatible,
-        name,
-        category: activeTab,
-        type,
-        description,
-        price,
-        estimatedHours,
-        minHours,
-        maxHours,
-        status,
+    const draftMeta: Omit<CatalogItem, 'id'> = {
+      pricingModel,
+      weightUnit: unit,
+      pricePerWeightUnit: pricingModel === 'PER_WEIGHT' ? price : undefined,
+      restrictions: restrictions.split('\n').filter(Boolean),
+      customerSelectable: selectable,
+      compatibleWithWeight: compatible,
+      name: name.trim(),
+      category: editingItem ? editingItem.category : activeTab,
+      type,
+      description,
+      price,
+      estimatedHours,
+      minHours,
+      maxHours,
+      status,
+    };
+
+    try {
+      if (editingItem) {
+        const localUpdated: CatalogItem = { ...editingItem, ...draftMeta };
+        let syncedItem: CatalogItem;
+
+        if (editingItem.category === 'PRENDAS') {
+          const updated = await updateGarment(editingItem.id, {
+            name: draftMeta.name,
+            basePrice: price,
+            icon: type.trim() || undefined,
+            active: status === 'ACTIVE',
+          });
+          syncedItem = mapGarmentToCatalogItem(updated, localUpdated);
+        } else if (editingItem.category === 'SERVICIOS') {
+          const updated = await updateService(editingItem.id, {
+            name: draftMeta.name,
+            extraPrice: price,
+            active: status === 'ACTIVE',
+          });
+          syncedItem = mapServiceToCatalogItem(updated, localUpdated);
+        } else {
+          const updated = await updateExtra(editingItem.id, {
+            name: draftMeta.name,
+            description: description.trim() || undefined,
+            price,
+            active: status === 'ACTIVE',
+          });
+          syncedItem = mapExtraToCatalogItem(updated, localUpdated);
+        }
+
+        const currentCatalog = storageService.getCatalog();
+        const nextCatalog = currentCatalog.some((i) => i.id === editingItem.id)
+          ? currentCatalog.map((i) =>
+              i.id === editingItem.id ? syncedItem : i,
+            )
+          : [...currentCatalog, syncedItem];
+        storageService.saveCatalog(nextCatalog);
+        showToast({
+          type: 'info',
+          title: 'Ítem de catálogo actualizado',
+          message: syncedItem.name,
+        });
+      } else {
+        const tempLocal: CatalogItem = { id: 'TEMP', ...draftMeta };
+        let createdItem: CatalogItem;
+
+        if (activeTab === 'PRENDAS') {
+          let res = await createGarment({
+            name: draftMeta.name,
+            basePrice: price,
+            icon: type.trim() || undefined,
+          });
+          if (status === 'INACTIVE') {
+            res = await updateGarment(res.id, { active: false });
+          }
+          createdItem = mapGarmentToCatalogItem(res, tempLocal);
+        } else if (activeTab === 'SERVICIOS') {
+          let res = await createService({
+            name: draftMeta.name,
+            extraPrice: price,
+          });
+          if (status === 'INACTIVE') {
+            res = await updateService(res.id, { active: false });
+          }
+          createdItem = mapServiceToCatalogItem(res, tempLocal);
+        } else {
+          let res = await createExtra({
+            name: draftMeta.name,
+            description: description.trim() || undefined,
+            price,
+          });
+          if (status === 'INACTIVE') {
+            res = await updateExtra(res.id, { active: false });
+          }
+          createdItem = mapExtraToCatalogItem(res, tempLocal);
+        }
+
+        const currentCatalog = storageService.getCatalog();
+        storageService.saveCatalog([...currentCatalog, createdItem]);
+        showToast({
+          type: 'success',
+          title: 'Ítem agregado al catálogo',
+          message: createdItem.name,
+        });
+      }
+      setIsDrawerOpen(false);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 0) {
+        if (editingItem) {
+          updateCatalogItem({ ...editingItem, ...draftMeta });
+        } else {
+          createCatalogItem(draftMeta);
+        }
+        setIsDrawerOpen(false);
+        return;
+      }
+      showToast({
+        type: 'error',
+        title: 'Error al guardar en catálogo',
+        message:
+          err instanceof Error
+            ? err.message
+            : 'No se pudo sincronizar con el servidor.',
       });
     }
-
-    setIsDrawerOpen(false);
   };
 
   // Role Guard

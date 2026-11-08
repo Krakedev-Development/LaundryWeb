@@ -196,7 +196,6 @@ export class HandoffService {
   initialize(
     state: HandoffState,
     order: WorkflowOrder,
-    fixture = false,
     legacy = false,
   ) {
     migrateOrder(order);
@@ -229,11 +228,7 @@ export class HandoffService {
         return;
       }
       let code: string;
-      if (fixture && ['SOL-STORE-001', 'SOL-HOME-001'].includes(order.id))
-        code = String(
-          (order.id === 'SOL-STORE-001' ? 583214 : 726483) + index * 137,
-        );
-      else {
+      {
         let tries = 0;
         do {
           code = String(
@@ -246,26 +241,14 @@ export class HandoffService {
           state.handoffs.some((h) => h.fallbackCode === code)
         );
       }
-      if (fixture)
-        while (
-          trivialCode(code) ||
-          state.handoffs.some((h) => h.fallbackCode === code)
-        )
-          code = String(100000 + ((Number(code) - 100000 + 137) % 900000));
       const now = new Date().toISOString();
-      const id =
-        fixture && ['SOL-STORE-001', 'SOL-HOME-001'].includes(order.id)
-          ? `HND-${order.id}-${index + 1}`
-          : `HND-${this.port.random()}`;
+      const id = `HND-${this.port.random()}`;
       const h: Handoff = {
         id,
         orderId: order.id,
         type,
         facilityId: order.facilityId,
-        qrToken:
-          fixture && ['SOL-STORE-001', 'SOL-HOME-001'].includes(order.id)
-            ? `demo-${order.id}-${type}-e7b451cf6d924a08`
-            : this.port.random(),
+        qrToken: this.port.random(),
         fallbackCode: code,
         generation:
           1 +
@@ -472,7 +455,7 @@ export class HandoffService {
       order,
       localValidation: true,
       warning:
-        'Validación local de demostración. La cita orienta la atención; una llegada fuera del horario reservado muestra advertencia.',
+        'Validación local. La cita orienta la atención; una llegada fuera del horario reservado muestra advertencia.',
     };
   }
   confirm(actorId: string, input: Confirmation): void {

@@ -111,7 +111,7 @@ export const AssignDriverModal = ({
           </button>
         </div>
         <div className="min-h-0 space-y-4 overflow-y-auto px-5 py-5 sm:px-6">
-          {geoConfig.mode === 'demo' && (
+          {(geoConfig as any).mode === 'demo' && (
             <p className="flex items-center gap-2 rounded-xl border border-amber-200/70 bg-amber-50 px-3 py-2.5 text-xs text-amber-800">
               <Info className="size-4 shrink-0" aria-hidden="true" />
               Tiempos y distancias de demostración.

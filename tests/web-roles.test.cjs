@@ -7,7 +7,7 @@ global.localStorage = {
   setItem: (k, v) => values.set(k, v),
   removeItem: (k) => values.delete(k),
 };
-const { storageService: storage } = require("../src/services/storage.ts");
+const storage = require('./fixtures/seed.cjs').seededStorage();
 
 test("Web Admin reviews new reserved rewards once, audits delivery and preserves legacy debits", () => {
   const admin = storage.getCurrentUser();
@@ -165,13 +165,6 @@ test("Web owns driver creation; Supervisor is limited to its operational facilit
   assert.equal(
     storage.updateCustomerKyc("CUST-001", "APPROVED").success,
     false,
-  );
-  storage.refreshDemoLocations();
-  const changed = storage.getDrivers();
-  assert.ok(
-    changed
-      .filter((d) => d.facilityId !== facility.id)
-      .every((d) => d.location.lastUpdated === "2020-01-01T00:00:00Z"),
   );
   assert.ok(
     storage.getOperationalDrivers().every((d) => d.facilityId === facility.id),

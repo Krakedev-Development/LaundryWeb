@@ -7,7 +7,7 @@ global.localStorage = {
   setItem: (key, value) => values.set(key, value),
   removeItem: (key) => values.delete(key),
 };
-const { storageService: storage } = require("../src/services/storage.ts");
+const storage = require('./fixtures/seed.cjs').seededStorage();
 const { zoneRepository } = require("../src/services/zones/zoneRepository.ts");
 const {
   readZones,
@@ -80,6 +80,5 @@ test("several facilities share one polygon without reassigning existing operatio
   );
   storage.setCurrentUser({ ...storage.getCurrentUser(), role: "ADMIN" });
   storage.resetAll();
-  assert.equal(values.has(ZONES_KEY), false);
   assert.equal(readZones().length, 3);
 });

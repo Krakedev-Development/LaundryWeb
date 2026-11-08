@@ -1,5 +1,4 @@
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
-import { SERVICE_AREAS } from './demo';
 import { readCoverageAreas } from '../zones/zoneStorage';
 import {
   toLngLat,
@@ -10,7 +9,7 @@ import {
 
 export class ServiceAreaService {
   constructor(
-    private source: ServiceArea[] | (() => ServiceArea[]) = SERVICE_AREAS,
+    private source: ServiceArea[] | (() => ServiceArea[]) = [],
   ) {}
   get areas() {
     return typeof this.source === 'function' ? this.source() : this.source;

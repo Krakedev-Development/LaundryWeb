@@ -1,4 +1,4 @@
-import { prepareWebDemoData } from './geo/WebDemoData';
+import { prepareWebDemoData } from './WebDemoData';
 import {
   Customer,
   Driver,
@@ -13,7 +13,7 @@ import {
   AuditLog,
   SystemSettings,
   User,
-} from '../types';
+} from '../../../src/types';
 
 export const INITIAL_USERS: User[] = [
   {

@@ -1,17 +1,24 @@
 import { Modal } from '../../shared/ui/Modal';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { storageService } from '../../services/storage';
+import {
+  getRewards,
+  createReward as createRewardApi,
+  updateReward as updateRewardApi,
+  mapRewardResponseToReward,
+} from '../../services/api/catalogApi';
+import { ApiError } from '../../services/api/apiConfig';
 import { useApp } from '../../context/AppContext';
 import { PageHeader } from '../../components/common/PageHeader';
 import { MetricCard } from '../../components/common/MetricCard';
-import { Reward, RewardRedemption } from '../../types';
+import { Reward } from '../../types';
 import {
   Gift,
   Coins,
   CheckCircle2,
   Clock,
   Plus,
-  BookOpen,
+  Edit2,
   Lock,
 } from 'lucide-react';
 
@@ -23,7 +30,6 @@ export const RewardsPage: React.FC = () => {
     createReward,
     updateRedemptionStatus,
     currentUser,
-    customers,
     showToast,
   } = useApp();
 
@@ -31,18 +37,39 @@ export const RewardsPage: React.FC = () => {
     'REWARDS' | 'RULES' | 'REDEMPTIONS' | 'LEDGER'
   >('REWARDS');
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [editingReward, setEditingReward] = useState<Reward | null>(null);
 
-  // Form State for new reward
+  // Form State for reward
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [pointsCost, setPointsCost] = useState(500);
-  const [minPurchases, setMinPurchases] = useState(2);
-  const [minSpend, setMinSpend] = useState(50);
-  const [validityDays, setValidityDays] = useState(60);
+  const [pointsCost, setPointsCost] = useState(0);
+  const [minPurchases, setMinPurchases] = useState(0);
+  const [minSpend, setMinSpend] = useState(0);
+  const [validityDays, setValidityDays] = useState(0);
+  const [status, setStatus] = useState<Reward['status']>('ACTIVE');
 
   const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
-  const [demoCustomer, setDemoCustomer] = useState('');
-  const [demoReward, setDemoReward] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    getRewards()
+      .then((apiRewards) => {
+        if (cancelled) return;
+        const current = storageService.getRewards();
+        const byId = new Map(current.map((r) => [r.id, r]));
+        const mapped = apiRewards.map((raw) =>
+          mapRewardResponseToReward(raw, byId.get(raw.id)),
+        );
+        storageService.saveRewards(mapped);
+      })
+      .catch(() => {
+        // Keep local snapshot if offline during isolated tests
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // Role Guard
   if (currentUser.role !== 'ADMIN') {
     return (
@@ -74,21 +101,92 @@ export const RewardsPage: React.FC = () => {
     0,
   );
 
-  const handleCreateRewardSubmit = (e: React.FormEvent) => {
+  const handleOpenEditReward = (rew: Reward) => {
+    setEditingReward(rew);
+    setName(rew.name);
+    setDescription(rew.description);
+    setPointsCost(rew.pointsCost);
+    setMinPurchases(rew.minPurchases);
+    setMinSpend(rew.minSpend);
+    setValidityDays(rew.validityDays);
+    setStatus(rew.status);
+    setIsDrawerOpen(true);
+  };
+
+  const handleCreateRewardSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
 
-    createReward({
-      name,
-      description,
+    const draftLocal: Reward = {
+      id: editingReward?.id ?? 'TEMP',
+      name: name.trim(),
+      description: description.trim(),
       pointsCost,
       minPurchases,
       minSpend,
       validityDays,
-      status: 'ACTIVE',
-    });
+      status,
+    };
 
-    setIsDrawerOpen(false);
+    try {
+      if (editingReward) {
+        const res = await updateRewardApi(editingReward.id, {
+          title: draftLocal.name,
+          description: draftLocal.description || undefined,
+          category: 'GENERAL',
+          pointsCost: draftLocal.pointsCost,
+          active: draftLocal.status === 'ACTIVE',
+        });
+        const synced = mapRewardResponseToReward(res, draftLocal);
+        const current = storageService.getRewards();
+        storageService.saveRewards(
+          current.map((r) => (r.id === editingReward.id ? synced : r)),
+        );
+        showToast({
+          type: 'info',
+          title: 'Recompensa actualizada',
+          message: synced.name,
+        });
+      } else {
+        const res = await createRewardApi({
+          title: draftLocal.name,
+          description: draftLocal.description || undefined,
+          category: 'GENERAL',
+          pointsCost: draftLocal.pointsCost,
+        });
+        const synced = mapRewardResponseToReward(res, draftLocal);
+        const current = storageService.getRewards();
+        storageService.saveRewards([...current, synced]);
+        showToast({
+          type: 'success',
+          title: 'Recompensa creada en el catálogo de fidelización',
+          message: synced.name,
+        });
+      }
+      setIsDrawerOpen(false);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 0) {
+        if (editingReward) {
+          const current = storageService.getRewards();
+          storageService.saveRewards(
+            current.map((r) => (r.id === editingReward.id ? draftLocal : r)),
+          );
+        } else {
+          const { id: _id, ...rest } = draftLocal;
+          createReward(rest);
+        }
+        setIsDrawerOpen(false);
+        return;
+      }
+      showToast({
+        type: 'error',
+        title: 'Error al guardar recompensa',
+        message:
+          err instanceof Error
+            ? err.message
+            : 'No se pudo sincronizar con el servidor.',
+      });
+    }
   };
 
   return (
@@ -99,12 +197,14 @@ export const RewardsPage: React.FC = () => {
         actions={
           <button
             onClick={() => {
+              setEditingReward(null);
               setName('');
               setDescription('');
-              setPointsCost(500);
-              setMinPurchases(2);
-              setMinSpend(50);
-              setValidityDays(60);
+              setPointsCost(0);
+              setMinPurchases(0);
+              setMinSpend(0);
+              setValidityDays(0);
+              setStatus('ACTIVE');
               setIsDrawerOpen(true);
             }}
             className="px-4 py-2.5 text-xs font-bold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
@@ -205,15 +305,26 @@ export const RewardsPage: React.FC = () => {
                   <span className="font-mono text-xs font-bold text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded-md border border-amber-200">
                     {rew.pointsCost} puntos
                   </span>
-                  <span
-                    className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-md border ${
-                      rew.status === 'ACTIVE'
-                        ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                        : 'bg-slate-100 text-slate-600 border-slate-200'
-                    }`}
-                  >
-                    {rew.status}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-md border ${
+                        rew.status === 'ACTIVE'
+                          ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                          : 'bg-slate-100 text-slate-600 border-slate-200'
+                      }`}
+                    >
+                      {rew.status}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEditReward(rew)}
+                      className="p-1 text-slate-500 hover:text-sky-800 hover:bg-sky-50 rounded-lg transition-colors cursor-pointer"
+                      title={`Editar recompensa ${rew.name}`}
+                      aria-label={`Editar recompensa ${rew.name}`}
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
                 <h3 className="font-bold text-base text-slate-900">
                   {rew.name}
@@ -259,109 +370,16 @@ export const RewardsPage: React.FC = () => {
             finalización conforme de cada orden.
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pt-2">
-            <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200/80">
-              <span className="text-xs font-bold text-sky-800 block mb-1">
-                Ratio Estándar
-              </span>
-              <p className="text-xl font-bold font-mono text-slate-900">
-                $1 = 10 Puntos
-              </p>
-              <p className="text-xs text-slate-500 mt-2 leading-relaxed">
-                Aplica en todas las órdenes de lavado y tintorería para clientes
-                registrados.
-              </p>
-            </div>
-            <div className="p-5 rounded-2xl bg-emerald-50/60 border border-emerald-200/80">
-              <span className="text-xs font-bold text-emerald-800 block mb-1">
-                Membresía Eco Wash
-              </span>
-              <p className="text-xl font-bold font-mono text-emerald-900">
-                $1 = 15 Puntos
-              </p>
-              <p className="text-xs text-emerald-700 mt-2 leading-relaxed">
-                Multiplicador x1.5 para suscripciones sostenibles con detergente
-                biodegradables.
-              </p>
-            </div>
-            <div className="p-5 rounded-2xl bg-indigo-50/60 border border-indigo-200/80">
-              <span className="text-xs font-bold text-indigo-800 block mb-1">
-                Cuentas Corporativas
-              </span>
-              <p className="text-xl font-bold font-mono text-indigo-900">
-                $1 = 20 Puntos
-              </p>
-              <p className="text-xs text-indigo-700 mt-2 leading-relaxed">
-                Multiplicador x2 para hoteles, clínicas y restaurantes con
-                volumen garantizado.
-              </p>
-            </div>
-          </div>
+          <p className="rounded-2xl border border-slate-200/80 bg-slate-50 p-5 text-xs text-slate-600">
+            La tasa de puntos por unidad monetaria se define en la política de
+            negocio. Aún no hay una política publicada.
+          </p>
         </div>
       )}
 
       {/* Tab 3: Solicitudes de Canje */}
       {activeTab === 'REDEMPTIONS' && (
         <div className="bg-white rounded-2xl border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.03)] overflow-hidden">
-          <div className="border-b border-slate-200 bg-slate-50 p-4 space-y-3">
-            <p className="text-xs text-slate-600">
-              MVP: simular una solicitud local del cliente para revisar el
-              canje. Los puntos quedan reservados hasta la aprobación. No
-              sincroniza con la app.
-            </p>
-            <div className="flex flex-wrap gap-3">
-              <select
-                aria-label="Cliente del canje demo"
-                value={demoCustomer}
-                onChange={(e) => setDemoCustomer(e.target.value)}
-                className="rounded-lg border border-slate-200 bg-white p-2 text-xs"
-              >
-                <option value="">Seleccionar cliente</option>
-                {customers.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.fullName}
-                  </option>
-                ))}
-              </select>
-              <select
-                aria-label="Recompensa del canje demo"
-                value={demoReward}
-                onChange={(e) => setDemoReward(e.target.value)}
-                className="rounded-lg border border-slate-200 bg-white p-2 text-xs"
-              >
-                <option value="">Seleccionar recompensa</option>
-                {rewards
-                  .filter((r) => r.status === 'ACTIVE')
-                  .map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.name}
-                    </option>
-                  ))}
-              </select>
-              <button
-                disabled={!demoCustomer || !demoReward}
-                onClick={() => {
-                  try {
-                    storageService.requestDemoReward(demoCustomer, demoReward);
-                    showToast({
-                      type: 'success',
-                      title: 'Solicitud demo creada; puntos reservados',
-                    });
-                  } catch (error) {
-                    showToast({
-                      type: 'error',
-                      title: 'No se pudo solicitar el canje',
-                      message:
-                        error instanceof Error ? error.message : String(error),
-                    });
-                  }
-                }}
-                className="rounded-lg bg-[#0F4C81] px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
-              >
-                Simular solicitud · MVP
-              </button>
-            </div>
-          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-xs text-left">
               <thead className="bg-slate-50/80 text-slate-600 font-semibold border-b border-slate-200/80">
@@ -558,11 +576,15 @@ export const RewardsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Drawer Crear Recompensa */}
+      {/* Drawer Crear / Editar Recompensa */}
       {isDrawerOpen && (
         <Modal
-          title="Nueva recompensa"
-          description="Agrega un premio al catálogo de fidelización."
+          title={
+            editingReward
+              ? `Editar recompensa: ${editingReward.name}`
+              : 'Nueva recompensa'
+          }
+          description="Agrega o actualiza un premio en el catálogo de fidelización."
           onClose={() => setIsDrawerOpen(false)}
         >
           <form
@@ -648,12 +670,28 @@ export const RewardsPage: React.FC = () => {
                   aria-label="Vigencia en días"
                   value={validityDays}
                   onChange={(e) =>
-                    setValidityDays(parseInt(e.target.value) || 30)
+                    setValidityDays(parseInt(e.target.value) || 0)
                   }
                   className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs font-mono"
                 />
               </div>
             </div>
+
+            {editingReward && (
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Estado
+                </label>
+                <select
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value as Reward['status'])}
+                  className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs"
+                >
+                  <option value="ACTIVE">Activa</option>
+                  <option value="INACTIVE">Inactiva</option>
+                </select>
+              </div>
+            )}
 
             <div className="pt-4 border-t border-slate-100 flex justify-end gap-2">
               <button
@@ -667,7 +705,7 @@ export const RewardsPage: React.FC = () => {
                 type="submit"
                 className="px-5 py-2.5 bg-[#0F4C81] hover:bg-[#0A3660] text-white font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
               >
-                Crear Recompensa
+                {editingReward ? 'Guardar Cambios' : 'Crear Recompensa'}
               </button>
             </div>
           </form>

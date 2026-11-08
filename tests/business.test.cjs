@@ -7,7 +7,7 @@ global.localStorage = {
   setItem: (k, v) => values.set(k, v),
   removeItem: (k) => values.delete(k),
 };
-const { storageService: storage } = require('../src/services/storage.ts');
+const storage = require('./fixtures/seed.cjs').seededStorage();
 const {
   BusinessService,
   ensureBusinessState,
