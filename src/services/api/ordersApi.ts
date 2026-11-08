@@ -342,17 +342,48 @@ export function mapBackendOrderToOrder(
   const priority: OrderPriority = detail?.priority ? 'HIGH' : existing?.priority ?? 'NORMAL';
   const slaStatus: SLARisk = existing?.slaStatus ?? 'ON_TIME';
 
-  const orderNumberStr = String(raw.number ?? '').padStart(4, '0');
-  const trackingNumber = existing?.trackingNumber || `SOL-${orderNumberStr || raw.id.slice(0, 6)}`;
+  const orderNumberStr = raw.number ? String(raw.number).padStart(4, '0') : '';
+  const trackingNumber =
+    (raw as any).trackingNumber ||
+    (orderNumberStr ? `SOL-${orderNumberStr}` : existing?.trackingNumber || `SOL-${raw.id.slice(0, 6)}`);
+
+  const customerName =
+    (raw as any).customer?.user?.name ||
+    (raw as any).customerName ||
+    (detail as any)?.customerName ||
+    customer?.fullName ||
+    existing?.customerName ||
+    `Cliente #${orderNumberStr || raw.id.slice(0, 4)}`;
+
+  const customerEmail =
+    (raw as any).customer?.user?.email ||
+    (raw as any).customerEmail ||
+    (detail as any)?.customerEmail ||
+    customer?.email ||
+    existing?.customerEmail ||
+    '';
+
+  const customerPhone =
+    (raw as any).customer?.user?.phone ||
+    (raw as any).customerPhone ||
+    customer?.phone ||
+    existing?.customerPhone ||
+    '+593 99 999-9999';
+
+  const customerPlan =
+    (raw as any).customer?.membershipPlan?.name ||
+    customer?.membership ||
+    existing?.customerPlan ||
+    'ESTANDAR';
 
   return {
     id: raw.id,
     trackingNumber,
     customerId: resolvedCustomerId,
-    customerName: customer?.fullName || existing?.customerName || `Cliente SOL-${orderNumberStr || raw.id.slice(0, 4)}`,
-    customerPhone: customer?.phone || existing?.customerPhone || '+593 99 999-9999',
-    customerEmail: customer?.email || existing?.customerEmail || 'cliente@laundry.ec',
-    customerPlan: customer?.membership || existing?.customerPlan || 'ESTANDAR',
+    customerName,
+    customerPhone,
+    customerEmail,
+    customerPlan,
     customerAddress,
     deliveryAddress,
     facilityId: resolvedFacilityId,

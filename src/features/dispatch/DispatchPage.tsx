@@ -235,7 +235,7 @@ export function DispatchPage() {
               >
                 <span className="flex flex-wrap items-center justify-between gap-2">
                   <strong className="font-mono text-xs text-[#0F4C81]">
-                    {o.id}
+                    {o.trackingNumber || o.id}
                   </strong>
                   <PriorityBadge priority={o.priority} />
                 </span>
@@ -265,7 +265,7 @@ export function DispatchPage() {
             </div>
             {order && (
               <span className="rounded-lg bg-slate-100 px-2 py-1 font-mono text-[10px] text-slate-600">
-                {order.id}
+                {order.trackingNumber || order.id}
               </span>
             )}
           </div>

@@ -232,12 +232,12 @@ export const OrderDetailPage: React.FC = () => {
         Recepción y retiros: validar transferencia de este pedido
       </button>
       <PageHeader
-        title={`Solicitud ${order.id}`}
-        subtitle={`Tracking: ${order.trackingNumber} · Creada el ${order.createdAt}`}
+        title={`Solicitud ${order.trackingNumber || order.id}`}
+        subtitle={`Tracking: ${order.trackingNumber || order.id} · ID: ${order.id} · Creada el ${order.createdAt}`}
         breadcrumbs={[
           { label: 'Operaciones', path: '/operations/orders' },
           { label: 'Solicitudes', path: '/operations/orders' },
-          { label: order.id },
+          { label: order.trackingNumber || order.id },
         ]}
         badge={
           <div className="flex items-center gap-2">
