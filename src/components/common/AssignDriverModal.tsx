@@ -6,6 +6,12 @@ import type { Order } from '../../types';
 import { useDriverCandidates } from '../maps/useDriverCandidates';
 import { geoConfig } from '../../services/geo/geo.config';
 import { DriverCandidateCard } from './DriverCandidateCard';
+import {
+  assignDriver as assignDriverApi,
+  mapBackendOrderToOrder,
+} from '../../services/api/ordersApi';
+import { ApiError } from '../../services/api/apiConfig';
+import { storageService } from '../../services/storage';
 
 export const AssignDriverModal = ({
   order,
@@ -18,7 +24,9 @@ export const AssignDriverModal = ({
   isOpen: boolean;
   onClose: () => void;
 }) => {
-  const { drivers, assignDriver } = useApp();
+  const { drivers, assignDriver, customers, facilities, orders, showToast } =
+    useApp();
+  const [submitting, setSubmitting] = useState(false);
   const { candidates, loading, error } = useDriverCandidates(
     isOpen ? order : undefined,
     type,
@@ -69,6 +77,52 @@ export const AssignDriverModal = ({
   }, [isOpen]);
   if (!isOpen) return null;
   const selectedDriver = drivers.find((driver) => driver.id === selected);
+  const handleConfirm = async () => {
+    if (!selected) return;
+    setSubmitting(true);
+    const leg = type === 'pickup' ? 'INBOUND' : 'OUTBOUND';
+    const expectedVersion = order.version ?? order.workflowVersion ?? 1;
+
+    try {
+      const updated = await assignDriverApi(order.id, {
+        leg,
+        driverId: selected,
+        expectedVersion,
+      });
+      const mapped = mapBackendOrderToOrder(
+        updated,
+        order,
+        customers,
+        facilities,
+        drivers,
+      );
+      const next = orders.map((o) => (o.id === mapped.id ? mapped : o));
+      storageService.saveOrders(next);
+      showToast({
+        type: 'success',
+        title:
+          type === 'pickup'
+            ? 'Chofer de recogida asignado'
+            : 'Chofer de entrega asignado',
+        message: `La solicitud ${order.id} avanzó a ${mapped.status}.`,
+      });
+      onClose();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 0) {
+        if (assignDriver(order.id, selected, type, notes)) onClose();
+        return;
+      }
+      showToast({
+        type: 'error',
+        title: 'Error de asignación',
+        message:
+          err instanceof Error ? err.message : 'No se pudo asignar el chofer.',
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -208,15 +262,19 @@ export const AssignDriverModal = ({
             <button
               type="button"
               disabled={
-                !candidates.some((c) => c.driverId === selected) || loading
+                !candidates.some((c) => c.driverId === selected) ||
+                loading ||
+                submitting
               }
               className="sidebar-focus flex items-center gap-2 rounded-xl bg-[#0F4C81] px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-[#0A3660] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
-              onClick={() => {
-                if (assignDriver(order.id, selected, type, notes)) onClose();
-              }}
+              onClick={handleConfirm}
             >
-              <Check className="size-4" aria-hidden="true" />
-              Confirmar asignación
+              {submitting ? (
+                <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <Check className="size-4" aria-hidden="true" />
+              )}
+              {submitting ? 'Asignando…' : 'Confirmar asignación'}
             </button>
           </div>
         </div>

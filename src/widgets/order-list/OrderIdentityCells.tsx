@@ -1,13 +1,19 @@
 import { Order } from '../../types';
+
 export function OrderIdentityCells({ order }: { order: Order }) {
+  const displayCode =
+    order.trackingNumber || `ORD-${String(order.id).slice(0, 4).toUpperCase()}`;
   return (
     <>
       <td className="py-4 px-5 whitespace-nowrap">
-        <span className="font-bold text-sky-800 font-mono text-[13px]">
-          {order.id}
+        <span className="font-bold text-[#0F4C81] font-mono text-[14px]">
+          {displayCode}
         </span>
-        <span className="block text-[11px] text-slate-400 font-mono mt-0.5">
-          {order.trackingNumber}
+        <span
+          className="block text-[10px] text-slate-400 font-mono mt-0.5"
+          title={order.id}
+        >
+          ID: {order.id.slice(0, 8)}...
         </span>
       </td>
       <td className="py-4 px-5">
@@ -15,7 +21,7 @@ export function OrderIdentityCells({ order }: { order: Order }) {
           {order.customerName}
         </div>
         <div className="text-[11px] text-slate-500 truncate max-w-[180px] mt-0.5">
-          {order.customerAddress.neighborhood}
+          {order.customerEmail || order.customerAddress?.neighborhood || 'Guayaquil'}
         </div>
       </td>
       <td className="py-4 px-5 whitespace-nowrap">

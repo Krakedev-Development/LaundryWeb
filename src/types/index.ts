@@ -169,6 +169,7 @@ export interface Order {
   policyReview?: string;
   fulfillment?: Fulfillment;
   workflowVersion?: number;
+  version?: number;
   intakeHold?: IntakeHold;
   id: string; // e.g. SOL-4587
   trackingNumber: string;

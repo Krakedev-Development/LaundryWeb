@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { AssignDriverModal } from '../../components/common/AssignDriverModal';
 import { useOrderList } from '../../features/orders/model/useOrderList';
 import { OrdersListHeader } from '../../widgets/order-list/OrdersListHeader';
@@ -7,8 +8,42 @@ import { OrderQuickTabs } from '../../widgets/order-list/OrderQuickTabs';
 import { OrderSearchToolbar } from '../../widgets/order-list/OrderSearchToolbar';
 import { OrderAdvancedFilters } from '../../widgets/order-list/OrderAdvancedFilters';
 import { OrdersTable } from '../../widgets/order-list/OrdersTable';
+import { useApp } from '../../context/AppContext';
+import { fetchFullOrders } from '../../services/api/ordersApi';
+import { storageService } from '../../services/storage';
+
 export const OrdersListPage = () => {
   const model = useOrderList();
+  const { customers, facilities, drivers, orders } = useApp();
+  const [, setSyncing] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    setSyncing(true);
+    void (async () => {
+      try {
+        const remoteOrders = await fetchFullOrders(
+          { pageSize: 50 },
+          orders,
+          customers,
+          facilities,
+          drivers,
+        );
+        if (!active) return;
+        if (remoteOrders.length > 0) {
+          storageService.saveOrders(remoteOrders);
+        }
+      } catch {
+        // Fallback to local persisted orders when offline
+      } finally {
+        if (active) setSyncing(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+
   return (
     <div className="space-y-8">
       <OrdersListHeader />

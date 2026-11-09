@@ -16,25 +16,63 @@ import {
   MapPin,
   PackageCheck,
   Plus,
+  RotateCcw,
   Truck,
   UsersRound,
 } from 'lucide-react';
 import { DriverCandidateCard } from '../../components/common/DriverCandidateCard';
 import { PriorityBadge } from '../../components/common/PriorityBadge';
+import {
+  assignDriver as assignDriverApi,
+  fetchFullOrders,
+  mapBackendOrderToOrder,
+} from '../../services/api/ordersApi';
+import { ApiError } from '../../services/api/apiConfig';
+
 export function DispatchPage() {
   const navigate = useNavigate();
-  const { orders, drivers, assignDriver } = useApp();
+  const { orders, drivers, customers, facilities, assignDriver, showToast } =
+    useApp();
   const [type, setType] = useState<'pickup' | 'delivery'>('pickup'),
     [orderId, setOrderId] = useState(''),
     [driverId, setDriverId] = useState(''),
     [notes, setNotes] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
+  const [isAssigning, setIsAssigning] = useState(false);
+
+  const syncOrders = async () => {
+    try {
+      setRefreshing(true);
+      const remote = await fetchFullOrders(
+        { pageSize: 50 },
+        orders,
+        customers,
+        facilities,
+        drivers,
+      );
+      if (remote.length > 0) {
+        storageService.saveOrders(remote);
+      }
+    } catch {
+      // Keep offline orders
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    void syncOrders();
+  }, []);
+
   const queue = orders.filter((o) =>
     type === 'pickup'
-      ? !o.pickupNeedsScheduling && operationalStage(o) === 'PICKUP_PENDING'
-      : o.fulfillment?.outbound.method === 'DRIVER' &&
-        ['READY_FOR_DELIVERY', 'DELIVERY_SCHEDULED'].includes(
-          operationalStage(o),
-        ),
+      ? o.status === 'CONFIRMED' ||
+        (!o.pickupNeedsScheduling && operationalStage(o) === 'PICKUP_PENDING')
+      : o.status === 'READY_FOR_DELIVERY' ||
+        (o.fulfillment?.outbound.method === 'DRIVER' &&
+          ['READY_FOR_DELIVERY', 'DELIVERY_SCHEDULED'].includes(
+            operationalStage(o),
+          )),
   );
   const order = queue.find((o) => o.id === orderId) ?? queue[0];
   const { candidates, loading, error } = useDriverCandidates(order, type);
@@ -70,11 +108,73 @@ export function DispatchPage() {
       });
     return () => controller.abort();
   }, [driverId, order?.id, type]);
+
+  const handleAssignDriver = async () => {
+    if (!order || !driverId) return;
+    setIsAssigning(true);
+    const leg = type === 'pickup' ? 'INBOUND' : 'OUTBOUND';
+    const expectedVersion = order.version ?? order.workflowVersion ?? 1;
+
+    try {
+      const updated = await assignDriverApi(order.id, {
+        leg,
+        driverId,
+        expectedVersion,
+      });
+      const mapped = mapBackendOrderToOrder(
+        updated,
+        order,
+        customers,
+        facilities,
+        drivers,
+      );
+      const next = orders.map((o) => (o.id === mapped.id ? mapped : o));
+      storageService.saveOrders(next);
+      showToast({
+        type: 'success',
+        title:
+          type === 'pickup'
+            ? 'Chofer de recogida asignado'
+            : 'Chofer de entrega asignado',
+        message: `La solicitud ${order.id} avanzó a ${mapped.status}.`,
+      });
+      setDriverId('');
+      setNotes('');
+      await syncOrders();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 0) {
+        if (assignDriver(order.id, driverId, type, notes)) {
+          setDriverId('');
+          setNotes('');
+        }
+        return;
+      }
+      showToast({
+        type: 'error',
+        title: 'Error de asignación',
+        message:
+          err instanceof Error ? err.message : 'No se pudo asignar el chofer.',
+      });
+    } finally {
+      setIsAssigning(false);
+    }
+  };
   return (
     <div className="space-y-6">
       <PageHeader
         title="Despacho"
         subtitle="Selecciona una solicitud, compara choferes y confirma la asignación."
+        actions={
+          <button
+            onClick={() => void syncOrders()}
+            disabled={refreshing}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer disabled:opacity-60"
+            title="Refrescar estado táctico"
+          >
+            <RotateCcw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+            <span>Refrescar tablero</span>
+          </button>
+        }
       />
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-xs">
         <div className="flex gap-1 rounded-xl bg-slate-100 p-1">
@@ -135,7 +235,7 @@ export function DispatchPage() {
               >
                 <span className="flex flex-wrap items-center justify-between gap-2">
                   <strong className="font-mono text-xs text-[#0F4C81]">
-                    {o.id}
+                    {o.trackingNumber || o.id}
                   </strong>
                   <PriorityBadge priority={o.priority} />
                 </span>
@@ -165,7 +265,7 @@ export function DispatchPage() {
             </div>
             {order && (
               <span className="rounded-lg bg-slate-100 px-2 py-1 font-mono text-[10px] text-slate-600">
-                {order.id}
+                {order.trackingNumber || order.id}
               </span>
             )}
           </div>
@@ -281,16 +381,24 @@ export function DispatchPage() {
             </label>
             <button
               disabled={
-                loading || !candidates.some((c) => c.driverId === driverId)
+                loading ||
+                isAssigning ||
+                !candidates.some((c) => c.driverId === driverId)
               }
               className="sidebar-focus flex items-center gap-2 rounded-xl bg-[#0F4C81] px-5 py-2.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-[#0A3660] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
-              onClick={() => {
-                if (assignDriver(order.id, driverId, type, notes))
-                  setDriverId('');
-              }}
+              onClick={handleAssignDriver}
             >
-              Asignar chofer seleccionado
-              <ArrowRight className="size-4" aria-hidden="true" />
+              {isAssigning ? (
+                <>
+                  <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
+                  Asignando chofer…
+                </>
+              ) : (
+                <>
+                  Asignar chofer seleccionado
+                  <ArrowRight className="size-4" aria-hidden="true" />
+                </>
+              )}
             </button>
           </div>
         )}
