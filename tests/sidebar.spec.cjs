@@ -241,13 +241,13 @@ test('blue sidebar appearance, accessible notifications, keyboard search and sid
   await page.keyboard.press('Control+k');
   await expect(
     page.getByPlaceholder(
-      'Buscar por SOL-4587, cliente María Torres, INC-0187, chofer Carlos...',
+      'Buscar solicitudes, clientes, incidencias o choferes...',
     ),
   ).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(
     page.getByPlaceholder(
-      'Buscar por SOL-4587, cliente María Torres, INC-0187, chofer Carlos...',
+      'Buscar solicitudes, clientes, incidencias o choferes...',
     ),
   ).toHaveCount(0);
   await page

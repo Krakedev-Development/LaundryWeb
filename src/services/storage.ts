@@ -285,7 +285,20 @@ class StorageService {
     this.notify();
   }
 
+  // Versiones anteriores sembraban datos de demostración en el navegador. Al cambiar esta
+  // versión se descarta todo lo persistido localmente y se parte desde cero.
+  private purgeLegacyData() {
+    const MARKER = 'lw_data_version';
+    const CURRENT = 'clean-1';
+    if (localStorage.getItem(MARKER) === CURRENT) return;
+    Object.keys(localStorage)
+      .filter((k) => k.startsWith('lw_') && k !== MARKER)
+      .forEach((k) => localStorage.removeItem(k));
+    localStorage.setItem(MARKER, CURRENT);
+  }
+
   constructor() {
+    this.purgeLegacyData();
     this.initIfEmpty();
     this.initializeWorkflow();
   }

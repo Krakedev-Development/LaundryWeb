@@ -367,7 +367,7 @@ export const DriversPage: React.FC = () => {
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Ej: Carlos Ruiz"
+                placeholder="Nombre y apellido"
                 className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-sky-500"
               />
             </div>

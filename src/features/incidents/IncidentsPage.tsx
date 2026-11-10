@@ -252,7 +252,7 @@ export const IncidentsPage: React.FC = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar caso INC-0187, cliente, orden..."
+              placeholder="Buscar caso, cliente u orden..."
               className="w-full text-xs pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-sky-500"
             />
           </div>
