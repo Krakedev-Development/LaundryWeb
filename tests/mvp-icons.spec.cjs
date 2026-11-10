@@ -41,17 +41,14 @@ test('MVP uses icons even when stored records contain legacy image URLs', async 
       workflow.incidents || JSON.parse(localStorage.getItem('lw_incidents'));
     return incidents.find((item) => item.evidences.length > 0);
   });
-  for (const path of ['/dashboard', '/logistics/drivers', '/customers/kyc']) {
+  for (const path of ['/dashboard', '/logistics/drivers']) {
     await page.goto(path);
     await expect(page.locator('main [role="img"]').first()).toBeVisible();
     await expect(page.locator('main img')).toHaveCount(0);
   }
-  await expect(
-    page.getByRole('img', { name: 'Documento de identidad', exact: true }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole('img', { name: 'Selfie de verificación', exact: true }),
-  ).toBeVisible();
+  // La revisión KYC no trae datos de ejemplo: sin una solicitud elegida no muestra imágenes.
+  await page.goto('/customers/kyc');
+  await expect(page.locator('main img')).toHaveCount(0);
   await page.goto('/operations/incidents');
   await page
     .locator('tr')

@@ -1,29 +1,110 @@
-import { IconPlaceholder } from '../../components/common/IconPlaceholder';
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
+import {
+  AlertTriangle,
+  Check,
+  CheckCircle2,
+  Clock,
+  FileText,
+  Lock,
+  Search,
+  ShieldCheck,
+  User,
+  X,
+  XCircle,
+} from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { PageHeader } from '../../components/common/PageHeader';
 import { MetricCard } from '../../components/common/MetricCard';
-import { EmptyState } from '../../components/common/EmptyState';
+import { IconPlaceholder } from '../../components/common/IconPlaceholder';
 import {
-  ShieldCheck,
-  CheckCircle2,
-  XCircle,
-  Clock,
-  Search,
-  Check,
-  AlertTriangle,
-  Lock,
-  FileText,
-  User,
-  MapPin,
-  ExternalLink,
-} from 'lucide-react';
+  fetchKycDocumentUrl,
+  getKycDetail,
+  listKyc,
+  refreshPendingKyc,
+  reviewKyc,
+  type KycDetail,
+  type KycDocumentType,
+  type KycRequest,
+  type KycStatus,
+} from '../../services/api/kycApi';
+
+type Tab = Extract<KycStatus, 'PENDING' | 'APPROVED' | 'REJECTED'>;
+
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'PENDING', label: 'Pendientes' },
+  { id: 'APPROVED', label: 'Aprobadas' },
+  { id: 'REJECTED', label: 'Rechazadas' },
+];
+
+const STATUS_STYLE: Record<string, string> = {
+  PENDING: 'bg-amber-50 text-amber-800 border-amber-200',
+  APPROVED: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+  REJECTED: 'bg-rose-50 text-rose-800 border-rose-200',
+};
+const STATUS_LABEL: Record<string, string> = {
+  PENDING: 'Pendiente',
+  APPROVED: 'Aprobada',
+  REJECTED: 'Rechazada',
+};
+
+const DOCUMENTS: {
+  type: KycDocumentType;
+  title: string;
+  caption: string;
+  kind: 'selfie' | 'document';
+  Icon: typeof User;
+}[] = [
+  {
+    type: 'SELFIE',
+    title: 'Selfie de verificación facial',
+    caption: 'Rostro del cliente',
+    kind: 'selfie',
+    Icon: User,
+  },
+  {
+    type: 'ID_FRONT',
+    title: 'Cédula, lado frontal',
+    caption: 'Frente del documento',
+    kind: 'document',
+    Icon: FileText,
+  },
+  {
+    type: 'ID_BACK',
+    title: 'Cédula, lado posterior',
+    caption: 'Reverso del documento',
+    kind: 'document',
+    Icon: FileText,
+  },
+];
+
+const CHECKS = [
+  { key: 'legible', label: 'Las imágenes son legibles y sin reflejos' },
+  { key: 'vigente', label: 'La cédula está vigente' },
+  { key: 'selfieMatch', label: 'La selfie coincide con la foto de la cédula' },
+  {
+    key: 'numberMatch',
+    label: 'El número digitado coincide con el de la cédula',
+  },
+] as const;
+type CheckKey = (typeof CHECKS)[number]['key'];
+const NO_CHECKS: Record<CheckKey, boolean> = {
+  legible: false,
+  vigente: false,
+  selfieMatch: false,
+  numberMatch: false,
+};
+
+const formatDate = (iso?: string | null) =>
+  iso
+    ? new Date(iso).toLocaleString('es', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      })
+    : '-';
 
 export const KycPage: React.FC = () => {
-  const { customers, currentUser, updateCustomerKyc } = useApp();
-
-  // Role Guard per spec #4, #5 & #35
+  const { currentUser } = useApp();
   if (currentUser.role !== 'ADMIN') {
     return (
       <div className="p-12 text-center bg-white rounded-2xl border border-red-200 shadow-2xs max-w-lg mx-auto my-12">
@@ -41,264 +122,368 @@ export const KycPage: React.FC = () => {
       </div>
     );
   }
+  return <KycReview />;
+};
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string>(
-    customers.find((c) => c.kycStatus === 'PENDING')?.id ||
-      customers[0]?.id ||
-      '',
-  );
-
-  // Checklist state for active verification
-  const [checks, setChecks] = useState({
-    legible: true,
-    vigente: true,
-    selfieMatch: true,
-    datosConsistentes: true,
-    direccionCompleta: true,
-    sinAlertas: true,
+const KycReview: React.FC = () => {
+  const { showToast } = useApp();
+  const [tab, setTab] = useState<Tab>('PENDING');
+  const [lists, setLists] = useState<Record<Tab, KycRequest[]>>({
+    PENDING: [],
+    APPROVED: [],
+    REJECTED: [],
   });
-
-  // Rejection modal
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedId, setSelectedId] = useState('');
+  const [detail, setDetail] = useState<KycDetail | null>(null);
+  const [images, setImages] = useState<
+    Partial<Record<KycDocumentType, string | 'error'>>
+  >({});
+  const [enlarged, setEnlarged] = useState<KycDocumentType | null>(null);
+  const [checks, setChecks] = useState(NO_CHECKS);
+  const [busy, setBusy] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
 
-  const selectedCustomer =
-    customers.find((c) => c.id === selectedCustomerId) || customers[0];
+  const load = useCallback(async () => {
+    setLoadError('');
+    try {
+      const [PENDING, APPROVED, REJECTED] = await Promise.all([
+        listKyc('PENDING'),
+        listKyc('APPROVED'),
+        listKyc('REJECTED'),
+      ]);
+      setLists({ PENDING, APPROVED, REJECTED });
+    } catch (error) {
+      setLoadError(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo cargar la cola de verificaciones.',
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const pendingCustomers = customers.filter((c) => c.kycStatus === 'PENDING');
-  const approvedCount = customers.filter(
-    (c) => c.kycStatus === 'APPROVED',
-  ).length;
-  const rejectedCount = customers.filter(
-    (c) => c.kycStatus === 'REJECTED',
-  ).length;
+  useEffect(() => {
+    void load();
+  }, [load]);
 
-  const filteredPending = pendingCustomers.filter((c) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
+  // Al elegir una solicitud se carga su ficha y sus tres imágenes con la sesión.
+  useEffect(() => {
+    setDetail(null);
+    setImages({});
+    setEnlarged(null);
+    setChecks(NO_CHECKS);
+    if (!selectedId) return;
+    let cancelled = false;
+    const urls: string[] = [];
+    (async () => {
+      try {
+        const data = await getKycDetail(selectedId);
+        if (cancelled) return;
+        setDetail(data);
+        await Promise.all(
+          data.documents.map(async (doc) => {
+            try {
+              const url = await fetchKycDocumentUrl(selectedId, doc.type);
+              if (cancelled) return URL.revokeObjectURL(url);
+              urls.push(url);
+              setImages((prev) => ({ ...prev, [doc.type]: url }));
+            } catch {
+              if (!cancelled)
+                setImages((prev) => ({ ...prev, [doc.type]: 'error' }));
+            }
+          }),
+        );
+      } catch (error) {
+        if (!cancelled)
+          showToast({
+            type: 'error',
+            title: 'No se pudo abrir la verificación',
+            message: error instanceof Error ? error.message : undefined,
+          });
+      }
+    })();
+    return () => {
+      cancelled = true;
+      urls.forEach((url) => URL.revokeObjectURL(url));
+    };
+    // showToast cambia en cada render del contexto; solo importa el cliente elegido.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId]);
+
+  const visible = lists[tab].filter((c) => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return true;
     return (
-      c.fullName.toLowerCase().includes(q) ||
-      c.documentNumber.includes(q) ||
-      c.email.toLowerCase().includes(q)
+      c.user.name.toLowerCase().includes(q) ||
+      c.user.email.toLowerCase().includes(q) ||
+      (c.kycDocumentNumber ?? '').includes(q)
     );
   });
 
+  const reviewable = detail?.kycStatus === 'PENDING';
   const allChecksPassed = Object.values(checks).every(Boolean);
 
-  const handleApprove = () => {
-    if (!selectedCustomer) return;
-    updateCustomerKyc(selectedCustomer.id, 'APPROVED');
+  const finish = async (approve: boolean, reason?: string) => {
+    if (!detail) return;
+    setBusy(true);
+    try {
+      await reviewKyc(detail.id, approve, reason);
+      showToast({
+        type: approve ? 'success' : 'error',
+        title: approve ? 'Verificación aprobada' : 'Verificación rechazada',
+        message: approve
+          ? `${detail.user.name} ya puede operar en la aplicación.`
+          : 'Se notificó al cliente el motivo del rechazo.',
+      });
+      setIsRejecting(false);
+      setRejectionReason('');
+      setSelectedId('');
+      await Promise.all([load(), refreshPendingKyc()]);
+    } catch (error) {
+      showToast({
+        type: 'error',
+        title: 'No se pudo registrar la decisión',
+        message: error instanceof Error ? error.message : undefined,
+      });
+    } finally {
+      setBusy(false);
+    }
   };
 
   const handleRejectConfirm = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedCustomer || !rejectionReason.trim()) return;
-    updateCustomerKyc(selectedCustomer.id, 'REJECTED', rejectionReason);
-    setIsRejecting(false);
-    setRejectionReason('');
+    if (!rejectionReason.trim()) return;
+    void finish(false, rejectionReason.trim());
   };
 
   return (
     <div className="space-y-8">
       <PageHeader
         title="Validaciones KYC (Know Your Customer)"
-        subtitle="Verificación de identidad para clientes corporativos y órdenes de alto volumen."
+        subtitle="Revisión de la selfie y la cédula de los clientes registrados antes de habilitar su cuenta."
       />
 
-      {/* KPIs per spec #35 */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
         <MetricCard
           title="Pendientes de Revisión"
-          value={pendingCustomers.length}
+          value={lists.PENDING.length}
           subtitle="Cola de expedientes"
-          variant={pendingCustomers.length > 0 ? 'warning' : 'default'}
+          variant={lists.PENDING.length > 0 ? 'warning' : 'default'}
           icon={<Clock className="w-4 h-4" />}
         />
         <MetricCard
-          title="Aprobadas Hoy"
-          value={approvedCount}
-          subtitle="Verificaciones completas"
+          title="Aprobadas"
+          value={lists.APPROVED.length}
+          subtitle="Clientes habilitados"
           variant="success"
           icon={<CheckCircle2 className="w-4 h-4" />}
         />
         <MetricCard
           title="Rechazadas"
-          value={rejectedCount}
+          value={lists.REJECTED.length}
           subtitle="Con observaciones"
-          variant={rejectedCount > 0 ? 'urgent' : 'default'}
+          variant={lists.REJECTED.length > 0 ? 'urgent' : 'default'}
           icon={<XCircle className="w-4 h-4" />}
-        />
-        <MetricCard
-          title="Tiempo Promedio Revisión"
-          value="3.5 min"
-          subtitle="Meta: < 5 min"
-          variant="aqua"
-          icon={<ShieldCheck className="w-4 h-4" />}
         />
       </div>
 
-      {/* Main 2-Panel Layout per spec #35 */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Left Panel: Pending Queue (4 cols) */}
         <div className="lg:col-span-4 bg-white rounded-2xl border border-slate-200/80 p-5 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-              Solicitudes Pendientes ({pendingCustomers.length})
-            </h3>
-            <span className="text-[11px] text-slate-500 font-mono">
-              KYC Queue
-            </span>
+          <div
+            role="tablist"
+            aria-label="Estado de la verificación"
+            className="grid grid-cols-3 gap-1 p-1 bg-slate-100 rounded-xl"
+          >
+            {TABS.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                role="tab"
+                aria-selected={tab === item.id}
+                onClick={() => {
+                  setTab(item.id);
+                  setSelectedId('');
+                }}
+                className={`py-1.5 text-[11px] font-bold rounded-lg transition-colors cursor-pointer ${
+                  tab === item.id
+                    ? 'bg-white text-[#0F4C81] shadow-xs'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                {item.label} ({lists[item.id].length})
+              </button>
+            ))}
           </div>
 
-          {/* Search */}
           <div className="relative">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar por nombre o documento..."
+              placeholder="Buscar por nombre, correo o cédula..."
+              aria-label="Buscar verificación"
               className="w-full text-xs pl-10 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-sky-500"
             />
           </div>
 
-          {/* Queue List */}
           <div className="space-y-2 max-h-[560px] overflow-y-auto">
-            {filteredPending.length === 0 ? (
+            {loading ? (
+              <div className="py-8 text-center text-xs text-slate-400">
+                Cargando verificaciones...
+              </div>
+            ) : loadError ? (
+              <div
+                role="alert"
+                className="py-6 text-center text-xs text-rose-700 space-y-2"
+              >
+                <p>{loadError}</p>
+                <button
+                  type="button"
+                  onClick={() => void load()}
+                  className="px-3 py-1.5 font-bold text-[#0F4C81] border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer"
+                >
+                  Reintentar
+                </button>
+              </div>
+            ) : visible.length === 0 ? (
               <div className="py-8 text-center text-xs text-slate-400 italic">
-                No hay verificaciones pendientes en cola.
+                {tab === 'PENDING'
+                  ? 'No hay verificaciones pendientes en cola.'
+                  : 'No hay solicitudes en este estado.'}
               </div>
             ) : (
-              filteredPending.map((cust) => {
-                const isSelected = selectedCustomer?.id === cust.id;
-                return (
-                  <div
-                    key={cust.id}
-                    onClick={() => setSelectedCustomerId(cust.id)}
-                    className={`p-3.5 rounded-xl border transition-all cursor-pointer ${
-                      isSelected
-                        ? 'border-[#0F4C81] bg-sky-50/60 shadow-xs'
-                        : 'border-slate-200/80 hover:bg-slate-50'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-bold text-xs text-slate-900">
-                        {cust.fullName}
-                      </span>
-                      <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded">
-                        Pendiente
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-[11px] text-slate-500">
-                      <span className="font-mono">
-                        {cust.documentType} {cust.documentNumber}
-                      </span>
-                      <span>{cust.kycSubmittedAt || cust.createdAt}</span>
-                    </div>
+              visible.map((cust) => (
+                <button
+                  key={cust.id}
+                  type="button"
+                  onClick={() => setSelectedId(cust.id)}
+                  className={`w-full text-left p-3.5 rounded-xl border transition-all cursor-pointer ${
+                    selectedId === cust.id
+                      ? 'border-[#0F4C81] bg-sky-50/60 shadow-xs'
+                      : 'border-slate-200/80 hover:bg-slate-50'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1 gap-2">
+                    <span className="font-bold text-xs text-slate-900 truncate">
+                      {cust.user.name}
+                    </span>
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded border shrink-0 ${STATUS_STYLE[cust.kycStatus]}`}
+                    >
+                      {STATUS_LABEL[cust.kycStatus]}
+                    </span>
                   </div>
-                );
-              })
+                  <div className="flex items-center justify-between text-[11px] text-slate-500 gap-2">
+                    <span className="font-mono">
+                      Cédula {cust.kycDocumentNumber ?? '-'}
+                    </span>
+                    <span>{formatDate(cust.updatedAt)}</span>
+                  </div>
+                </button>
+              ))
             )}
           </div>
         </div>
 
-        {/* Right Panel: Workspace de Revisión per spec #35 (8 cols) */}
         <div className="lg:col-span-8 bg-white rounded-2xl border border-slate-200/80 p-6 sm:p-7 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-6">
-          {selectedCustomer ? (
+          {!selectedId ? (
+            <div className="py-16 text-center text-xs text-slate-400">
+              Selecciona una solicitud de la lista para comenzar la revisión.
+            </div>
+          ) : !detail ? (
+            <div className="py-16 text-center text-xs text-slate-400">
+              Cargando expediente...
+            </div>
+          ) : (
             <>
-              {/* Header */}
-              <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-                <div>
-                  <div className="flex items-center gap-2">
+              <div className="flex items-start justify-between gap-3 pb-4 border-b border-slate-100">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <h2 className="text-base font-bold text-slate-900">
-                      {selectedCustomer.fullName}
+                      {detail.user.name}
                     </h2>
                     <span
-                      className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-md border ${
-                        selectedCustomer.kycStatus === 'APPROVED'
-                          ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                          : selectedCustomer.kycStatus === 'PENDING'
-                            ? 'bg-amber-50 text-amber-800 border-amber-200'
-                            : 'bg-rose-50 text-rose-800 border-rose-200'
-                      }`}
+                      className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-md border ${STATUS_STYLE[detail.kycStatus]}`}
                     >
-                      {selectedCustomer.kycStatus}
+                      {STATUS_LABEL[detail.kycStatus]}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-500 font-mono mt-0.5">
-                    ID: {selectedCustomer.id} · Documento:{' '}
-                    {selectedCustomer.documentType}{' '}
-                    {selectedCustomer.documentNumber} · {selectedCustomer.email}
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Envío n.º {detail.kycSubmissions} · Actualizado{' '}
+                    {formatDate(detail.updatedAt)}
                   </p>
                 </div>
               </div>
 
-              {/* Documents & Selfie Inspector */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Document photo */}
-                <div className="rounded-xl border border-slate-200 overflow-hidden bg-slate-50">
-                  <div className="p-3 bg-slate-100 border-b border-slate-200 flex items-center justify-between text-xs font-semibold text-slate-700">
-                    <span className="flex items-center gap-1.5">
-                      <FileText className="w-3.5 h-3.5 text-sky-800" />
-                      Documento de Identidad Oficial
-                    </span>
-                    <span className="text-[10px] text-slate-500 font-mono">
-                      Frente / Anverso
-                    </span>
-                  </div>
-                  <div className="p-4 flex items-center justify-center min-h-[180px] bg-slate-100/50">
-                    <IconPlaceholder
-                      kind="document"
-                      label="Documento de identidad"
-                      caption="Documento de identidad"
-                      className="min-h-[180px] w-full rounded-lg"
-                    />
-                  </div>
-                </div>
-
-                {/* Selfie Photo */}
-                <div className="rounded-xl border border-slate-200 overflow-hidden bg-slate-50">
-                  <div className="p-3 bg-slate-100 border-b border-slate-200 flex items-center justify-between text-xs font-semibold text-slate-700">
-                    <span className="flex items-center gap-1.5">
-                      <User className="w-3.5 h-3.5 text-sky-800" />
-                      Biometría Facial (Selfie en vivo)
-                    </span>
-                    <span className="text-[10px] text-emerald-700 font-semibold">
-                      Liveness OK
-                    </span>
-                  </div>
-                  <div className="p-4 flex items-center justify-center min-h-[180px] bg-slate-100/50">
-                    <IconPlaceholder
-                      kind="selfie"
-                      label="Selfie de verificación"
-                      caption="Verificación facial"
-                      className="min-h-[180px] w-full rounded-lg"
-                    />
-                  </div>
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {DOCUMENTS.map((doc) => {
+                  const src = images[doc.type];
+                  return (
+                    <div
+                      key={doc.type}
+                      className="rounded-xl border border-slate-200 overflow-hidden bg-slate-50"
+                    >
+                      <div className="p-3 bg-slate-100 border-b border-slate-200 flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+                        <doc.Icon className="w-3.5 h-3.5 text-sky-800 shrink-0" />
+                        <span className="truncate">{doc.title}</span>
+                      </div>
+                      <div className="p-3 flex items-center justify-center min-h-[200px] bg-slate-100/50">
+                        {src && src !== 'error' ? (
+                          <button
+                            type="button"
+                            onClick={() => setEnlarged(doc.type)}
+                            aria-label={`Ampliar ${doc.title}`}
+                            className="w-full cursor-zoom-in"
+                          >
+                            <img
+                              src={src}
+                              alt={doc.title}
+                              className="w-full max-h-64 object-contain rounded-lg"
+                            />
+                          </button>
+                        ) : src === 'error' ? (
+                          <p role="alert" className="text-xs text-rose-700">
+                            No se pudo cargar la imagen.
+                          </p>
+                        ) : (
+                          <IconPlaceholder
+                            kind={doc.kind}
+                            label={doc.title}
+                            caption="Cargando imagen..."
+                            className="min-h-[180px] w-full rounded-lg"
+                          />
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
 
-              {/* Data comparison */}
               <div className="p-4 bg-slate-50 rounded-xl border border-slate-200/80 text-xs space-y-2">
                 <h4 className="font-bold text-slate-900 mb-2">
-                  Datos extraídos vs Declarados
+                  Datos declarados por el cliente
                 </h4>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div>
                     <span className="text-slate-400 block text-[10px]">
-                      Nombres y Apellidos
+                      Nombre
                     </span>
                     <span className="font-semibold text-slate-800">
-                      {selectedCustomer.fullName}
+                      {detail.user.name}
                     </span>
                   </div>
                   <div>
                     <span className="text-slate-400 block text-[10px]">
-                      N° Documento
+                      N.º de cédula
                     </span>
                     <span className="font-mono font-semibold text-slate-800">
-                      {selectedCustomer.documentNumber}
+                      {detail.kycDocumentNumber ?? '-'}
                     </span>
                   </div>
                   <div>
@@ -306,105 +491,112 @@ export const KycPage: React.FC = () => {
                       Teléfono
                     </span>
                     <span className="text-slate-800">
-                      {selectedCustomer.phone}
+                      {detail.user.phone ?? '-'}
                     </span>
                   </div>
                   <div>
                     <span className="text-slate-400 block text-[10px]">
-                      Dirección Domiciliaria
+                      Correo
                     </span>
                     <span className="text-slate-800 truncate block">
-                      {selectedCustomer.addresses[0]?.street} #
-                      {selectedCustomer.addresses[0]?.number}
+                      {detail.user.email}
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* 6-Point Verification Checklist per spec #35 */}
-              <div className="space-y-2">
-                <h4 className="font-bold text-xs text-slate-800 uppercase tracking-wider">
-                  Checklist Obligatorio de Verificación (6 Puntos)
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                  {[
-                    {
-                      key: 'legible',
-                      label: '1. Documento legible y sin reflejos',
-                    },
-                    {
-                      key: 'vigente',
-                      label: '2. Documento vigente (no expirado)',
-                    },
-                    {
-                      key: 'selfieMatch',
-                      label: '3. Selfie consistente con la foto oficial',
-                    },
-                    {
-                      key: 'datosConsistentes',
-                      label: '4. Datos consistentes con el registro',
-                    },
-                    {
-                      key: 'direccionCompleta',
-                      label: '5. Dirección domiciliaria completa',
-                    },
-                    {
-                      key: 'sinAlertas',
-                      label: '6. Sin alertas de fraude o suplantación',
-                    },
-                  ].map((item) => (
-                    <label
-                      key={item.key}
-                      className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center gap-2.5 cursor-pointer hover:bg-slate-100/70"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={(checks as any)[item.key]}
-                        onChange={(e) =>
-                          setChecks({ ...checks, [item.key]: e.target.checked })
-                        }
-                        className="rounded text-sky-700 focus:ring-sky-600 w-4 h-4 cursor-pointer"
-                      />
-                      <span className="font-medium text-slate-800">
-                        {item.label}
-                      </span>
-                    </label>
-                  ))}
+              {detail.kycStatus === 'REJECTED' && detail.kycRejectionReason && (
+                <div className="p-4 rounded-xl border border-rose-200 bg-rose-50 text-xs text-rose-800">
+                  <span className="font-bold block mb-0.5">
+                    Motivo del rechazo
+                  </span>
+                  {detail.kycRejectionReason}
                 </div>
-              </div>
+              )}
 
-              {/* Actions per spec #35 */}
-              <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsRejecting(true)}
-                  className="px-4 py-2.5 text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer"
-                >
-                  <XCircle className="w-4 h-4" />
-                  Rechazar KYC (Motivo obligatorio)
-                </button>
+              {reviewable && (
+                <>
+                  <div className="space-y-2">
+                    <h4 className="font-bold text-xs text-slate-800 uppercase tracking-wider">
+                      Checklist de verificación
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                      {CHECKS.map((item, index) => (
+                        <label
+                          key={item.key}
+                          className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center gap-2.5 cursor-pointer hover:bg-slate-100/70"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checks[item.key]}
+                            onChange={(e) =>
+                              setChecks({
+                                ...checks,
+                                [item.key]: e.target.checked,
+                              })
+                            }
+                            className="rounded text-sky-700 focus:ring-sky-600 w-4 h-4 cursor-pointer"
+                          />
+                          <span className="font-medium text-slate-800">
+                            {index + 1}. {item.label}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
 
-                <button
-                  type="button"
-                  disabled={!allChecksPassed}
-                  onClick={handleApprove}
-                  className="px-5 py-2.5 text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Check className="w-4 h-4" />
-                  Aprobar Validación KYC
-                </button>
-              </div>
+                  <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-3">
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => setIsRejecting(true)}
+                      className="px-4 py-2.5 text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-40"
+                    >
+                      <XCircle className="w-4 h-4" />
+                      Rechazar (motivo obligatorio)
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!allChecksPassed || busy}
+                      onClick={() => void finish(true)}
+                      className="px-5 py-2.5 text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Check className="w-4 h-4" />
+                      Aprobar verificación
+                    </button>
+                  </div>
+                </>
+              )}
             </>
-          ) : (
-            <div className="py-16 text-center text-xs text-slate-400">
-              Selecciona una solicitud de la lista izquierda para comenzar la
-              revisión.
-            </div>
           )}
         </div>
       </div>
 
-      {/* Mandatory Rejection Reason Modal per spec #35 */}
+      {enlarged && images[enlarged] && images[enlarged] !== 'error' && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Imagen ampliada"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80"
+          onClick={() => setEnlarged(null)}
+        >
+          <button
+            type="button"
+            aria-label="Cerrar imagen"
+            onClick={() => setEnlarged(null)}
+            className="absolute top-4 right-4 p-2 rounded-full bg-white text-slate-800 cursor-pointer"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          <img
+            src={images[enlarged] as string}
+            alt={DOCUMENTS.find((d) => d.type === enlarged)?.title}
+            className="max-h-full max-w-full object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
+
       {isRejecting && (
         <motion.div
           initial={{ opacity: 0 }}
@@ -413,6 +605,9 @@ export const KycPage: React.FC = () => {
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
         >
           <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Rechazar verificación"
             initial={{ opacity: 0, scale: 0.95, y: 8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{ type: 'spring', stiffness: 360, damping: 28 }}
@@ -421,42 +616,46 @@ export const KycPage: React.FC = () => {
             <div className="flex items-center gap-2.5 text-rose-700 mb-3">
               <AlertTriangle className="w-5 h-5" />
               <h3 className="text-base font-bold text-slate-900">
-                Rechazar Validación KYC
+                Rechazar verificación
               </h3>
             </div>
             <p className="text-xs text-slate-600 mb-4">
-              Por regla operacional de cumplimiento, debes especificar un motivo
-              claro que se notificará al cliente.
+              Indica un motivo claro: se enviará al cliente para que pueda
+              corregir y volver a enviar sus documentos.
             </p>
-
             <form onSubmit={handleRejectConfirm} className="space-y-4 text-xs">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">
-                  Motivo obligatorio del rechazo *
+                <label
+                  htmlFor="kyc-reject-reason"
+                  className="block font-semibold text-slate-700 mb-1"
+                >
+                  Motivo del rechazo *
                 </label>
                 <textarea
+                  id="kyc-reject-reason"
                   required
                   rows={3}
+                  maxLength={300}
                   value={rejectionReason}
                   onChange={(e) => setRejectionReason(e.target.value)}
-                  placeholder="Ej: Foto de documento borrosa o recortada en los bordes. Reenviar documento nítido."
+                  placeholder="Ej: La foto de la cédula está borrosa. Envía una imagen nítida de ambos lados."
                   className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-xs"
                 />
               </div>
-
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
                   onClick={() => setIsRejecting(false)}
-                  className="px-3 py-1.5 text-slate-600 hover:bg-slate-100 rounded-lg"
+                  className="px-3 py-1.5 text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 bg-rose-700 hover:bg-rose-800 text-white font-bold rounded-lg cursor-pointer"
+                  disabled={busy || !rejectionReason.trim()}
+                  className="px-4 py-1.5 bg-rose-700 hover:bg-rose-800 disabled:opacity-40 text-white font-bold rounded-lg cursor-pointer"
                 >
-                  Confirmar Rechazo
+                  Confirmar rechazo
                 </button>
               </div>
             </form>

@@ -3,10 +3,11 @@ const { test } = require('node:test'),
   assert = require('node:assert/strict');
 const web = require('../src/services/fulfillment.ts');
 const app = require('../../LaundryApp/src/domain/models.ts');
+const { transact } = require('../../LaundryApp/src/domain/repository.ts');
+// El producto arranca vacío: el estado con cliente y pedidos de prueba vive en los tests de la app.
 const {
-  initializeState,
-  transact,
-} = require('../../LaundryApp/src/domain/repository.ts');
+  initializeSeededState: initializeState,
+} = require('../../LaundryApp/tests/fixtures/seedState.ts');
 const {
   decodeState,
   PersistenceQueue,

@@ -3,6 +3,7 @@ import { operationalStage } from '../../services/fulfillment';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
+import { usePendingKyc } from '../../services/api/kycApi';
 import { PageHeader } from '../../components/common/PageHeader';
 import { MetricCard } from '../../components/common/MetricCard';
 import {
@@ -58,7 +59,7 @@ export const DashboardPage: React.FC = () => {
   const atRiskOrders = orders.filter(
     (o) => o.slaStatus === 'AT_RISK' || o.slaStatus === 'OVERDUE',
   );
-  const pendingKyc = customers.filter((c) => c.kycStatus === 'PENDING');
+  const pendingKyc = usePendingKyc(isAdmin);
 
   // Grouped operational stages for clear visual hierarchy
   const phasePickup = orders.filter((o) =>
@@ -474,7 +475,7 @@ export const DashboardPage: React.FC = () => {
                         {pendingKyc.length} validación(es) KYC pendientes
                       </p>
                       <p className="text-[11px] text-slate-500 mt-0.5">
-                        Cliente: {pendingKyc[0].fullName}
+                        Cliente: {pendingKyc[0].user.name}
                       </p>
                     </div>
                   </div>

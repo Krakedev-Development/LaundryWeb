@@ -11,6 +11,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { usePendingKyc } from '../../services/api/kycApi';
 import { SIDEBAR_ID } from './sidebar.constants';
 
 interface TopBarProps {
@@ -32,7 +33,8 @@ export function TopBar({
   mobileSidebarOpen,
   onOpenSearch,
 }: TopBarProps) {
-  const { currentUser, orders, incidents, customers } = useApp();
+  const { currentUser, orders, incidents } = useApp();
+  const pendingKyc = usePendingKyc(currentUser.role === 'ADMIN');
   const [showNotifications, setShowNotifications] = useState(false);
   const menus = useRef<HTMLDivElement>(null);
   const notificationButton = useRef<HTMLButtonElement>(null);
@@ -91,12 +93,10 @@ export function TopBar({
         tone: 'bg-amber-50 text-amber-700',
       })),
     ...(currentUser.role === 'ADMIN'
-      ? customers
-          .filter((customer) => customer.kycStatus === 'PENDING')
-          .map((customer) => ({
-            id: customer.id,
+      ? pendingKyc.map((request) => ({
+            id: request.id,
             title: 'Validación de identidad pendiente',
-            detail: customer.fullName,
+            detail: request.user.name,
             path: '/customers/kyc',
             Icon: ShieldCheck,
             tone: 'bg-sky-50 text-sky-700',
