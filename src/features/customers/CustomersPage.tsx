@@ -1,6 +1,7 @@
 import { Modal } from '../../shared/ui/Modal';
 import { operationalStage } from '../../services/fulfillment';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { listCustomers } from '../../services/api/customersApi';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { PageHeader } from '../../components/common/PageHeader';
@@ -23,9 +24,26 @@ import {
 } from 'lucide-react';
 
 export const CustomersPage: React.FC = () => {
-  const { customers, orders, pointsLedger, adjustCustomerPoints, currentUser } =
-    useApp();
+  const { orders, pointsLedger, adjustCustomerPoints, currentUser } = useApp();
   const navigate = useNavigate();
+
+  // Los clientes vienen del servidor: así aparecen apenas se registran y se aprueban.
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  useEffect(() => {
+    let active = true;
+    listCustomers()
+      .then((rows) => active && setCustomers(rows))
+      .catch((e: unknown) =>
+        active &&
+        setLoadError(
+          e instanceof Error ? e.message : 'No se pudo cargar el directorio.',
+        ),
+      );
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [membershipFilter, setMembershipFilter] = useState('ALL');
@@ -113,6 +131,12 @@ export const CustomersPage: React.FC = () => {
           ) : undefined
         }
       />
+
+      {loadError && (
+        <p role="alert" className="text-xs text-rose-700">
+          {loadError}
+        </p>
+      )}
 
       {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
