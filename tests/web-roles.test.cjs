@@ -14,7 +14,7 @@ test("Web Admin reviews new reserved rewards once, audits delivery and preserves
   storage.setCurrentUser({ ...admin, role: "ADMIN" });
   const reward = storage.createReward({
     name: "Recompensa de prueba",
-    description: "Demo",
+    description: "Sample",
     pointsCost: 200,
     minPurchases: 0,
     minSpend: 0,
@@ -23,7 +23,7 @@ test("Web Admin reviews new reserved rewards once, audits delivery and preserves
   });
   const customer = storage.getCustomers().find((c) => c.id === "CUST-001");
   const points = customer.points;
-  const red = storage.requestDemoReward(customer.id, reward.id);
+  const red = storage.requestSampleReward(customer.id, reward.id);
   assert.equal(
     storage.getCustomers().find((c) => c.id === customer.id).points,
     points,
@@ -56,7 +56,7 @@ test("Web Admin reviews new reserved rewards once, audits delivery and preserves
       .getAuditLogs()
       .some((a) => a.action === "REWARD_DELIVERED" && a.notes.includes(red.id)),
   );
-  const pending = storage.requestDemoReward(customer.id, reward.id);
+  const pending = storage.requestSampleReward(customer.id, reward.id);
   const before = storage
     .getCustomers()
     .find((c) => c.id === customer.id).points;
@@ -82,15 +82,15 @@ test("Web reserved rewards cannot overspend and failed persistence leaves review
   const c = storage.getCustomers().find((c) => c.id === "CUST-001");
   const reward = storage.createReward({
     name: "Saldo completo",
-    description: "Demo",
+    description: "Sample",
     pointsCost: c.points,
     minPurchases: 0,
     minSpend: 0,
     validityDays: 30,
     status: "ACTIVE",
   });
-  const red = storage.requestDemoReward(c.id, reward.id);
-  assert.throws(() => storage.requestDemoReward(c.id, reward.id), /reservados/);
+  const red = storage.requestSampleReward(c.id, reward.id);
+  assert.throws(() => storage.requestSampleReward(c.id, reward.id), /reservados/);
   const before = values.get("lw_workflow_v2");
   const write = localStorage.setItem;
   localStorage.setItem = () => {
@@ -116,9 +116,9 @@ test("Web owns driver creation; Supervisor is limited to its operational facilit
   const input = {
     ...storage.getDrivers()[0],
     name: "Nuevo chofer",
-    email: "nuevo@demo.laundry",
+    email: "nuevo@sample.laundry",
     phone: "0991234567",
-    vehiclePlate: "DEMO123",
+    vehiclePlate: "SAMPLE123",
     facilityId: facility.id,
     maxOrders: 5,
   };
@@ -138,7 +138,7 @@ test("Web owns driver creation; Supervisor is limited to its operational facilit
   assert.equal(driver.location.simulated, true);
   assert.ok(Number.isFinite(Date.parse(driver.location.lastUpdated)));
   assert.throws(
-    () => storage.createDriver({ ...input, email: "NUEVO@DEMO.LAUNDRY" }),
+    () => storage.createDriver({ ...input, email: "NUEVO@SAMPLE.LAUNDRY" }),
     /correo/,
   );
   const state = storage.getWorkflow();
@@ -159,7 +159,7 @@ test("Web owns driver creation; Supervisor is limited to its operational facilit
     /administrador/,
   );
   assert.throws(
-    () => storage.requestDemoReward("CUST-001", "REW-01"),
+    () => storage.requestSampleReward("CUST-001", "REW-01"),
     /Administrador/,
   );
   assert.equal(

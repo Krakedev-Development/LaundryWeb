@@ -1,4 +1,4 @@
-import { prepareWebDemoData } from './WebDemoData';
+import { prepareWebSampleData } from './WebSampleData';
 import {
   Customer,
   Driver,
@@ -1230,7 +1230,7 @@ export const INITIAL_ORDERS: Order[] = [
       {
         id: 'TL-51',
         status: 'PICKUP_PENDING',
-        label: 'Sin asignar chofer aún (demora logística)',
+        label: 'Sin asignar chofer aún (samplera logística)',
         timestamp: 'Hoy 10:46',
         userName: 'Sistema LaundryWeb',
         userRole: 'ADMIN',
@@ -2148,7 +2148,7 @@ export const INITIAL_AUDIT_LOGS: AuditLog[] = [
   },
 ];
 
-prepareWebDemoData(
+prepareWebSampleData(
   {
     orders: INITIAL_ORDERS,
     customers: INITIAL_CUSTOMERS,

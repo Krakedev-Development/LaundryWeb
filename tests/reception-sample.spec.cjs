@@ -1,6 +1,6 @@
 const { test, expect } = require('./support/fixtures.cjs');
 
-test('default and other demo sedes contain verifiable intake, pickup and driver reception scenarios', async ({
+test('default and other sample sedes contain verifiable intake, pickup and driver reception scenarios', async ({
   page,
 }) => {
   await page.goto('/operations/handoffs', { waitUntil: 'domcontentloaded' });
@@ -15,7 +15,7 @@ test('default and other demo sedes contain verifiable intake, pickup and driver 
       await page.getByRole('tab', { name: tab, exact: true }).click();
       await page
         .getByRole('button')
-        .filter({ hasText: `SOL-DEMO-${facilityId}-${suffix}` })
+        .filter({ hasText: `SOL-SAMPLE-${facilityId}-${suffix}` })
         .filter({ hasText: kind })
         .click();
       // El código lo conoce quien presenta; la prueba lo lee de los datos sembrados.
@@ -25,7 +25,7 @@ test('default and other demo sedes contain verifiable intake, pickup and driver 
             (h) =>
               h.orderId === orderId && h.type === type && h.status === 'ACTIVE',
           ).fallbackCode,
-        { orderId: `SOL-DEMO-${facilityId}-${suffix}`, type },
+        { orderId: `SOL-SAMPLE-${facilityId}-${suffix}`, type },
       );
       await page.getByLabel('Código de transferencia').fill(code);
       await page
@@ -41,7 +41,7 @@ test('default and other demo sedes contain verifiable intake, pickup and driver 
     .getByRole('tab', { name: 'Esperando retiro', exact: true })
     .click();
   await page.screenshot({
-    path: 'test-results/reception-demo-la-puntilla.png',
+    path: 'test-results/reception-sample-la-puntilla.png',
     fullPage: true,
   });
 });

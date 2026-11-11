@@ -8,6 +8,7 @@ interface DirectoryEntry {
   email: string;
   phone: string | null;
   kycStatus: 'NOT_SUBMITTED' | 'PENDING' | 'APPROVED' | 'REJECTED';
+  membershipPlan: { id: string; name: string } | null;
   kycDocumentType: string | null;
   kycDocumentNumber: string | null;
   kycRejectionReason: string | null;
@@ -17,8 +18,8 @@ interface DirectoryEntry {
   createdAt: string;
 }
 
-// Directorio real de clientes. Billetera, puntos y membresía aún no vienen del servidor,
-// por eso se muestran en cero / estándar hasta conectar esos módulos.
+// Directorio real de clientes aprobados. La billetera y los puntos aún no vienen del
+// servidor, por eso se muestran en cero hasta conectar esos módulos.
 export async function listCustomers(): Promise<Customer[]> {
   const rows = await apiRequest<DirectoryEntry[]>('/customers', {
     token: session.getToken(),
@@ -41,7 +42,7 @@ export async function listCustomers(): Promise<Customer[]> {
       city: '',
       reference: a.reference ?? undefined,
     })) as Customer['addresses'],
-    membership: 'ESTANDAR',
+    membership: c.membershipPlan?.name ?? null,
     walletBalance: 0,
     points: 0,
     activePromotionsCount: 0,

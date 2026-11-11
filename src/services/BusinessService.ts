@@ -791,7 +791,7 @@ export class BusinessService {
         customerName: c.fullName,
         customerPhone: c.phone,
         customerEmail: c.email,
-        customerPlan: c.membership,
+        customerPlan: c.membership ?? '',
         customerAddress: input.pickupAddress,
         deliveryAddress: input.deliveryAddress,
         facilityId: f.id,

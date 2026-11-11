@@ -49,14 +49,14 @@ test('assignment controls, keyboard dismissal and operation screens work at desk
   await page.getByRole('tab', { name: 'Transferencias chofer', exact: true }).click();
   await page
     .getByRole('button')
-    .filter({ hasText: 'SOL-DEMO-FAC-02-CHOFER' })
+    .filter({ hasText: 'SOL-SAMPLE-FAC-02-CHOFER' })
     .filter({ hasText: 'Ingreso del chofer en planta' })
     .click();
   // El código lo conoce quien presenta; la prueba lo lee de los datos sembrados.
   const code = await page.evaluate(() =>
     JSON.parse(localStorage.getItem('lw_workflow_v2')).handoffs.find(
       (h) =>
-        h.orderId === 'SOL-DEMO-FAC-02-CHOFER' &&
+        h.orderId === 'SOL-SAMPLE-FAC-02-CHOFER' &&
         h.type === 'DRIVER_TO_FACILITY' &&
         h.status === 'ACTIVE',
     ).fallbackCode,

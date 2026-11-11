@@ -223,7 +223,8 @@ export interface Customer {
   kycDocumentUrl?: string;
   kycSelfieUrl?: string;
   addresses: Address[];
-  membership: 'ESTANDAR' | 'PREMIUM_FRESH' | 'ECO_WASH' | 'CORPORATIVO';
+  // Plan elegido por el cliente; null si todavía no eligió ninguno.
+  membership: string | null;
   walletBalance: number;
   points: number;
   activePromotionsCount: number;

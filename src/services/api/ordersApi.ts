@@ -368,13 +368,13 @@ export function mapBackendOrderToOrder(
     (raw as any).customerPhone ||
     customer?.phone ||
     existing?.customerPhone ||
-    '+593 99 999-9999';
+    '';
 
   const customerPlan =
     (raw as any).customer?.membershipPlan?.name ||
     customer?.membership ||
     existing?.customerPlan ||
-    'ESTANDAR';
+    '';
 
   return {
     id: raw.id,
@@ -428,7 +428,7 @@ export function mapBackendOrderToOrder(
       driverName: deliveryDriver?.name ?? existing?.delivery?.driverName,
       vehiclePlate: deliveryDriver?.vehiclePlate ?? existing?.delivery?.vehiclePlate,
       recipientName: customer?.fullName || existing?.delivery?.recipientName || 'Cliente',
-      recipientPhone: customer?.phone || existing?.delivery?.recipientPhone || '+593 99 999-9999',
+      recipientPhone: customer?.phone || existing?.delivery?.recipientPhone || '',
       notes: outboundLeg?.addressText,
     },
     incidentsCount: existing?.incidentsCount ?? 0,

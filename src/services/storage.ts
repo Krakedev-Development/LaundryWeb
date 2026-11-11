@@ -285,7 +285,7 @@ class StorageService {
     this.notify();
   }
 
-  // Versiones anteriores sembraban datos de demostración en el navegador. Al cambiar esta
+  // Versiones anteriores sembraban datos de ejemplo en el navegador. Al cambiar esta
   // versión se descarta todo lo persistido localmente y se parte desde cero.
   private purgeLegacyData() {
     const MARKER = 'lw_data_version';

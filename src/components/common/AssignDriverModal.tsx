@@ -1,10 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Check, Info, LoaderCircle, Truck, UserRound, X } from 'lucide-react';
+import { Check, LoaderCircle, Truck, UserRound, X } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import type { Order } from '../../types';
 import { useDriverCandidates } from '../maps/useDriverCandidates';
-import { geoConfig } from '../../services/geo/geo.config';
 import { DriverCandidateCard } from './DriverCandidateCard';
 import {
   assignDriver as assignDriverApi,
@@ -165,12 +164,6 @@ export const AssignDriverModal = ({
           </button>
         </div>
         <div className="min-h-0 space-y-4 overflow-y-auto px-5 py-5 sm:px-6">
-          {(geoConfig as any).mode === 'demo' && (
-            <p className="flex items-center gap-2 rounded-xl border border-amber-200/70 bg-amber-50 px-3 py-2.5 text-xs text-amber-800">
-              <Info className="size-4 shrink-0" aria-hidden="true" />
-              Tiempos y distancias de demostración.
-            </p>
-          )}
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-bold uppercase tracking-wide text-slate-600">
               Choferes disponibles

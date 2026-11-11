@@ -14,7 +14,7 @@ Consulta la [guía del nuevo flujo y transferencias QR](FULFILLMENT-MVP.md) para
 
 ## Documentación funcional
 
-- [Flujos del prototipo anterior (histórico)](docs/FLUJOS-WEB-DEMO.md).
+- [Flujos del prototipo anterior (histórico)](docs/FLUJOS-WEB.md).
 - [Diagramas de flujos y relaciones](docs/DIAGRAMAS-FLUJOS-WEB.md).
 - [Revisión de la lógica de negocio](docs/REVISION-LOGICA-NEGOCIO.md).
 - [Propuesta de organización de módulos](docs/PROPUESTA-ORGANIZACION-MODULOS.md).

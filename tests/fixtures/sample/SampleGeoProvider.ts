@@ -1,4 +1,4 @@
-import { DEMO_ADDRESSES } from './geoDemo';
+import { SAMPLE_ADDRESSES } from './geoSample';
 import {
   toLngLat,
   type Coordinates,
@@ -7,10 +7,10 @@ import {
   type RouteOptions,
   type RouteSummary,
 } from '../../../src/services/geo/geo.types';
-// Explicit estimates for the demo, never presented as road routes or live ETA.
-export class DemoGeoProvider implements GeoProvider {
+// Explicit estimates for the sample, never presented as road routes or live ETA.
+export class SampleGeoProvider implements GeoProvider {
   async searchAddress(query: string) {
-    return DEMO_ADDRESSES.filter((a) =>
+    return SAMPLE_ADDRESSES.filter((a) =>
       `${a.label} ${a.formattedAddress}`
         .toLocaleLowerCase()
         .includes(query.toLocaleLowerCase()),

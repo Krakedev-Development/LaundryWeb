@@ -166,3 +166,46 @@ test.describe('Supervisor', () => {
     expect(calls.documents).toEqual([]);
   });
 });
+
+const directoryEntry = (id, name, plan) => ({
+  id,
+  name,
+  email: `${name.split(' ')[0].toLowerCase()}@correo.test`,
+  phone: '+593991234567',
+  kycStatus: 'APPROVED',
+  membershipPlan: plan,
+  kycDocumentType: 'CEDULA',
+  kycDocumentNumber: '0912345675',
+  kycRejectionReason: null,
+  kycReviewedAt: '2026-11-10T14:00:00.000Z',
+  addresses: [],
+  totalOrders: 0,
+  createdAt: '2026-11-10T13:00:00.000Z',
+});
+
+test('el directorio muestra solo lo que entrega el servidor y no inventa membresías', async ({ page }) => {
+  await page.route('**/api/v1/customers', (route) =>
+    route.request().method() === 'OPTIONS'
+      ? route.fulfill({ status: 204, headers: { ...cors, 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' } })
+      : route.fulfill({
+          status: 200,
+          headers: cors,
+          contentType: 'application/json',
+          body: JSON.stringify([
+            directoryEntry('c-eva', 'Eva Soto', null),
+            directoryEntry('c-leo', 'Leo Cruz', { id: 'p-1', name: 'Plan Mensual' }),
+          ]),
+        }),
+  );
+  await page.goto('/customers', { waitUntil: 'domcontentloaded' });
+  const rows = page.locator('tbody tr');
+  await expect(rows).toHaveCount(2);
+  await expect(rows.filter({ hasText: 'Eva Soto' })).toContainText('Sin membresía');
+  await expect(rows.filter({ hasText: 'Leo Cruz' })).toContainText('Plan Mensual');
+  await expect(page.getByText('María Torres')).toHaveCount(0);
+  await expect(page.getByText(/ESTANDAR|PREMIUM/i)).toHaveCount(0);
+
+  await page.locator('select').selectOption('NONE');
+  await expect(rows).toHaveCount(1);
+  await expect(rows.first()).toContainText('Eva Soto');
+});

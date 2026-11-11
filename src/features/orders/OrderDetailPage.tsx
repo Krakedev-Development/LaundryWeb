@@ -646,7 +646,9 @@ export const OrderDetailPage: React.FC = () => {
                     {order.customerName}
                   </span>
                   <span className="ml-2 text-[10px] font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
-                    Plan {order.customerPlan}
+                    {order.customerPlan
+                      ? `Plan ${order.customerPlan}`
+                      : 'Sin membresía'}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-slate-600">

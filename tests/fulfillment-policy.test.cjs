@@ -48,7 +48,7 @@ test('persisted pending customer drop-off releases its booking, revokes its QR a
   values.set('lw_workflow_v2', JSON.stringify(state));
   const migratedStorage = Object.assign(
     new storage.constructor(),
-    require('./fixtures/seed.cjs').demoMethods,
+    require('./fixtures/seed.cjs').sampleMethods,
   );
   const next = migratedStorage.getWorkflow(),
     migrated = next.orders.find((o) => o.id === order.id);
@@ -79,14 +79,14 @@ test('persisted pending customer drop-off releases its booking, revokes its QR a
   assert.throws(() =>
     migratedStorage.handoffService.verifyAdministrativeOverride(
       code.id,
-      'DEMO-ADMIN-FAC-02',
+      'SAMPLE-ADMIN-FAC-02',
       'Intento de ingresar en sede',
     ),
   );
   assert.throws(() =>
     migratedStorage.handoffService.regenerate(
       code.id,
-      'DEMO-ADMIN-FAC-02',
+      'SAMPLE-ADMIN-FAC-02',
       'Intento de regenerar ingreso',
     ),
   );
@@ -96,7 +96,7 @@ test('persisted pending customer drop-off releases its booking, revokes its QR a
     .availableSlots(order.facilityId, 'DRIVER_PICKUP')
     .find((s) => s.date === previous.date);
   assert.ok(slot);
-  const client = migratedStorage.demoBusinessActor({
+  const client = migratedStorage.sampleBusinessActor({
     id: order.customerId,
     role: 'CLIENT',
     name: order.customerName,
@@ -118,7 +118,7 @@ test('persisted pending customer drop-off releases its booking, revokes its QR a
     true,
   );
   migratedStorage
-    .demoBusinessActor({
+    .sampleBusinessActor({
       id: order.customerId,
       role: 'CLIENT',
       name: order.customerName,
@@ -143,7 +143,7 @@ test('persisted pending customer drop-off releases its booking, revokes its QR a
 
 test('an already recorded local reception keeps receipts, counts, status and history, without fabricated driver custody', () => {
   const state = structuredClone(storage.getWorkflow());
-  const order = state.orders.find((o) => o.id === 'SOL-DEMO-FAC-02-RETIRO');
+  const order = state.orders.find((o) => o.id === 'SOL-SAMPLE-FAC-02-RETIRO');
   Object.assign(order.fulfillment.inbound, {
     method: 'CUSTOMER',
     status: 'COMPLETED',

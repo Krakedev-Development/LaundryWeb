@@ -12,9 +12,9 @@ function build() {
     removeItem: (k) => values.delete(k),
   };
   try {
-    const { seededStorage, demo } = require('../fixtures/seed.cjs');
+    const { seededStorage, sample } = require('../fixtures/seed.cjs');
     seededStorage();
-    return { entries: Object.fromEntries(values), users: demo.INITIAL_USERS };
+    return { entries: Object.fromEntries(values), users: sample.INITIAL_USERS };
   } finally {
     global.localStorage = previous;
   }
