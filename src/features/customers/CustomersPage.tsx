@@ -128,17 +128,6 @@ export const CustomersPage: React.FC = () => {
       <PageHeader
         title="Directorio de Clientes"
         subtitle="Gestión de relaciones con clientes, cuentas corporativas, billetera y fidelización."
-        actions={
-          currentUser.role === 'ADMIN' ? (
-            <button
-              onClick={() => navigate('/customers/kyc')}
-              className="px-4 py-2.5 text-xs font-bold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
-            >
-              <ShieldCheck className="w-4 h-4" />
-              <span>Validaciones KYC Pendientes</span>
-            </button>
-          ) : undefined
-        }
       />
 
       {loadError && (
@@ -205,6 +194,15 @@ export const CustomersPage: React.FC = () => {
                 </option>
               ))}
             </select>
+            {currentUser.role === 'ADMIN' && (
+              <button
+                onClick={() => navigate('/customers/kyc')}
+                className="px-4 py-2.5 text-xs font-bold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer whitespace-nowrap"
+              >
+                <ShieldCheck className="w-4 h-4" />
+                <span>Validaciones KYC Pendientes</span>
+              </button>
+            )}
           </div>
         </div>
 
