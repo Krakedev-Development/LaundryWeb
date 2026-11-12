@@ -1,6 +1,32 @@
+const { randomUUID } = require('node:crypto');
 const { test, expect } = require('./support/fixtures.cjs');
 
+// Servidor simulado de membresías con estado: la prueba no depende de un backend real.
+const cors = { 'access-control-allow-origin': '*' };
+async function mockMemberships(page) {
+  const plans = [];
+  const json = (route, status, body) =>
+    route.fulfill({ status, headers: cors, contentType: 'application/json', body: JSON.stringify(body) });
+  await page.route(/\/api\/v1\/catalog\/memberships(\/[^/?]+)?(\?.*)?$/, (route) => {
+    const req = route.request();
+    if (req.method() === 'OPTIONS')
+      return route.fulfill({ status: 204, headers: { ...cors, 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' } });
+    if (req.method() === 'GET') return json(route, 200, plans);
+    const body = req.postDataJSON();
+    if (req.method() === 'POST') {
+      const plan = { id: randomUUID(), active: true, ...body };
+      plans.push(plan);
+      return json(route, 201, plan);
+    }
+    const id = new URL(req.url()).pathname.split('/').pop();
+    const plan = plans.find((p) => p.id === id);
+    Object.assign(plan, body);
+    return json(route, 200, plan);
+  });
+}
+
 test('membership creation and editing survive a reload', async ({ page }) => {
+  await mockMemberships(page);
   await page.goto('/commercial/memberships');
   await page
     .getByRole('button', { name: 'Crear membresía', exact: true })

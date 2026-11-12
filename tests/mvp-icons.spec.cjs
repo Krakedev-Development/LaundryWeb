@@ -44,7 +44,8 @@ test('MVP uses icons even when stored records contain legacy image URLs', async 
   for (const path of ['/dashboard', '/logistics/drivers']) {
     await page.goto(path);
     await expect(page.locator('main [role="img"]').first()).toBeVisible();
-    await expect(page.locator('main img')).toHaveCount(0);
+    // Las teselas del mapa son cartografía, no fotos de personas ni documentos.
+    await expect(page.locator('main img:not(.leaflet-tile)')).toHaveCount(0);
   }
   // La revisión KYC no trae datos de ejemplo: sin una solicitud elegida no muestra imágenes.
   await page.goto('/customers/kyc');
@@ -63,6 +64,6 @@ test('MVP uses icons even when stored records contain legacy image URLs', async 
   await expect(
     page.getByRole('img', { name: incident.evidences[0].caption, exact: true }),
   ).toBeVisible();
-  await expect(page.locator('main img')).toHaveCount(0);
+  await expect(page.locator('main img:not(.leaflet-tile)')).toHaveCount(0);
   expect(photoRequests).toEqual([]);
 });
