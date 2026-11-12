@@ -241,13 +241,13 @@ test('blue sidebar appearance, accessible notifications, keyboard search and sid
   await page.keyboard.press('Control+k');
   await expect(
     page.getByPlaceholder(
-      'Buscar por SOL-4587, cliente María Torres, INC-0187, chofer Carlos...',
+      'Buscar solicitudes, clientes, incidencias o choferes...',
     ),
   ).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(
     page.getByPlaceholder(
-      'Buscar por SOL-4587, cliente María Torres, INC-0187, chofer Carlos...',
+      'Buscar solicitudes, clientes, incidencias o choferes...',
     ),
   ).toHaveCount(0);
   await page
@@ -279,7 +279,7 @@ test('navigation still works when saving the sidebar preference is denied', asyn
   expect(errors).toEqual([]);
 });
 
-test('profile appears only in the sidebar and the header has no demo reset control', async ({
+test('profile appears only in the sidebar and the header has no sample reset control', async ({
   page,
 }) => {
   await openOrders(page);
@@ -304,7 +304,7 @@ test('profile appears only in the sidebar and the header has no demo reset contr
     page.getByRole('button', { name: 'Cerrar sesión', exact: true }),
   ).toHaveCount(1);
   await expect(
-    page.getByRole('button', { name: /Restablecer datos demo/ }),
+    page.getByRole('button', { name: /Restablecer datos sample/ }),
   ).toHaveCount(0);
 });
 

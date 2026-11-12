@@ -12,7 +12,7 @@ const {
 } = require('@zxing/library');
 test('the displayed QR encoder generates a barcode decodable by the browser scanner engine', () => {
   const value =
-    'laundry://handoff/HND-SOL-STORE-001-1?t=demo-SOL-STORE-001-CUSTOMER_TO_FACILITY-e7b451cf6d924a08';
+    'laundry://handoff/HND-SOL-STORE-001-1?t=sample-SOL-STORE-001-CUSTOMER_TO_FACILITY-e7b451cf6d924a08';
   const svg = renderToStaticMarkup(
     React.createElement(QRCode, { value, size: 190 }),
   );

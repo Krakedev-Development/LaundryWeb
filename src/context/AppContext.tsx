@@ -84,11 +84,6 @@ interface AppContextType {
     notes?: string,
   ) => boolean;
   addIncidentNote: (id: string, text: string) => void;
-  updateCustomerKyc: (
-    id: string,
-    status: KycStatus,
-    reason?: string,
-  ) => boolean;
   adjustCustomerPoints: (
     id: string,
     pointsDelta: number,
@@ -383,29 +378,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     });
   };
 
-  const updateCustomerKyc = (
-    id: string,
-    status: KycStatus,
-    reason?: string,
-  ) => {
-    const res = storageService.updateCustomerKyc(id, status, reason);
-    if (res.success) {
-      showToast({
-        type: status === 'APPROVED' ? 'success' : 'error',
-        title: `Validación KYC ${status === 'APPROVED' ? 'Aprobada' : 'Rechazada'}`,
-        message: reason || 'Expediente del cliente actualizado.',
-      });
-      return true;
-    } else {
-      showToast({
-        type: 'error',
-        title: 'Error de validación KYC',
-        message: res.error,
-      });
-      return false;
-    }
-  };
-
   const adjustCustomerPoints = (
     id: string,
     pointsDelta: number,
@@ -581,7 +553,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         createIncident,
         updateIncidentStatus,
         addIncidentNote,
-        updateCustomerKyc,
         adjustCustomerPoints,
         createDriver,
         updateDriver,

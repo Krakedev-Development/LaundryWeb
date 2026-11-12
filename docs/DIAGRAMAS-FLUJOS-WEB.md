@@ -503,7 +503,7 @@ Esencial incluye 10 kg, 2 recogidas y 5 % por $29,90 al mes; Familiar incluye 25
 
 ## Referencias
 
-- [Explicación completa de los flujos y límites actuales](FLUJOS-WEB-DEMO.md)
+- [Explicación completa de los flujos y límites actuales](FLUJOS-WEB.md)
 - [Modalidades y custodia](../FULFILLMENT-MVP.md)
 - [Zonas y sedes](../LOGISTICS-ZONES-MVP.md)
 - [Geografía y simulación](../GEO-MVP.md)

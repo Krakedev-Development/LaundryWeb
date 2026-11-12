@@ -3,7 +3,7 @@ import { migrateOrder, type HandoffType } from '../../../src/services/fulfillmen
 import type { HandoffService, HandoffState } from '../../../src/services/HandoffService';
 
 /** MVP fixtures: add missing reception scenarios without resetting local progress. */
-export function prepareHandoffDemoData(
+export function prepareHandoffSampleData(
   state: HandoffState & { orders: Order[]; drivers: Driver[] },
   facilities: Facility[],
   service: HandoffService,
@@ -13,7 +13,7 @@ export function prepareHandoffDemoData(
     if (!template) continue;
     for (const scenario of ['RETIRO', 'CHOFER'] as const) {
       if (scenario === 'RETIRO' && !facility.allowsCustomerPickup) continue;
-      const id = `SOL-DEMO-${facility.id}-${scenario}`;
+      const id = `SOL-SAMPLE-${facility.id}-${scenario}`;
       if (state.orders.some((o) => o.id === id)) continue;
       const driver =
         scenario === 'CHOFER'
@@ -109,19 +109,19 @@ export function prepareHandoffDemoData(
         const count = order.items.reduce((n, item) => n + item.quantity, 0);
         prior.status = 'USED';
         prior.usedAt = now;
-        prior.usedByUserId = driver?.id ?? `DEMO-ADMIN-${facility.id}`;
+        prior.usedByUserId = driver?.id ?? `SAMPLE-ADMIN-${facility.id}`;
         prior.receipt = {
           count,
           declaredCount: count,
           localValidation: true,
-          notes: 'Recepción simulada para el escenario de demostración.',
+          notes: 'Recepción simulada para el escenario de muestra.',
         };
         state.handoffAudits.push({
-          id: `AUD-DEMO-${id}-${priorType}`,
+          id: `AUD-SAMPLE-${id}-${priorType}`,
           handoffId: prior.id,
           orderId: id,
-          action: 'DEMO_CUSTODY_PREPARED',
-          actorId: 'DEMO-SEED',
+          action: 'SAMPLE_CUSTODY_PREPARED',
+          actorId: 'SAMPLE-SEED',
           actorRole: 'SYSTEM',
           at: now,
           reason:
@@ -130,11 +130,11 @@ export function prepareHandoffDemoData(
         });
       }
       order.timeline.push({
-        id: `TL-DEMO-${id}`,
+        id: `TL-SAMPLE-${id}`,
         status: order.status,
-        label: `Escenario de demostración: ${scenario === 'RETIRO' ? 'listo para retiro' : 'chofer esperando recepción en planta'}`,
+        label: `Escenario de muestra: ${scenario === 'RETIRO' ? 'listo para retiro' : 'chofer esperando recepción en planta'}`,
         timestamp: now,
-        userName: 'Demo local',
+        userName: 'Sample local',
         userRole: 'SYSTEM',
       });
     }

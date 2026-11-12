@@ -14,10 +14,10 @@ test('el personal no puede verificar por el chofer ni ve códigos de custodia', 
   await page.getByRole('tab', { name: 'Transferencias chofer', exact: true }).click();
   await page
     .getByRole('button')
-    .filter({ hasText: 'SOL-DEMO-FAC-02-CHOFER' })
+    .filter({ hasText: 'SOL-SAMPLE-FAC-02-CHOFER' })
     .filter({ hasText: 'Ingreso del chofer en planta' })
     .click();
-  // Ningún control de demostración, ni código preparado, ni representación del chofer.
+  // Ningún control de muestra, ni código preparado, ni representación del chofer.
   await expect(page.getByText(/Demo:|Control demo|modo demo/i)).toHaveCount(0);
   await expect(page.getByRole('checkbox', { name: /representar/i })).toHaveCount(0);
   await expect(page.getByRole('button', { name: /cargar código/i })).toHaveCount(0);

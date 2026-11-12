@@ -6,7 +6,7 @@ test("Expo app renders local fixtures, weight QR and four-mode wizard without ge
   page.on("pageerror", (e) => errors.push(e.message));
   await page.setViewportSize({ width: 430, height: 932 });
   await page.goto("http://127.0.0.1:8083");
-  await page.getByText("Cliente demo", { exact: true }).click();
+  await page.getByText("Cliente sample", { exact: true }).click();
   await page.getByText("Entrar", { exact: true }).click();
   await expect(
     page.getByText("Tu próxima acción", { exact: true }),
@@ -44,8 +44,8 @@ const appState = (page) =>
   page.evaluate(() =>
     JSON.parse(localStorage.getItem("laundry_app_business_v3")),
   );
-async function loginDemo(page, role) {
-  await visible(page, role + " demo").click();
+async function loginSample(page, role) {
+  await visible(page, role + " sample").click();
   await visible(page, "Entrar").click();
 }
 test("Expo login has only mobile profiles; legacy staff session returns to login and preserves local orders", async ({
@@ -70,13 +70,13 @@ test("Expo login has only mobile profiles; legacy staff session returns to login
     ),
   );
   await page.goto("/");
-  await expect(visible(page, "Cliente demo")).toBeVisible();
-  await expect(visible(page, "Chofer demo")).toBeVisible();
+  await expect(visible(page, "Cliente sample")).toBeVisible();
+  await expect(visible(page, "Chofer sample")).toBeVisible();
   await expect(visible(page, "Administrador demo")).toHaveCount(0);
   await expect(visible(page, "Supervisor demo")).toHaveCount(0);
-  await loginDemo(page, "Cliente");
+  await loginSample(page, "Cliente");
   await page.getByRole("tab", { name: /Pedidos/ }).click();
-  await visible(page, "APP-DEMO-ADJUSTMENT").click();
+  await visible(page, "APP-SAMPLE-ADJUSTMENT").click();
   await expect(
     page.getByRole("button", { name: "Aceptar ajuste", exact: true }),
   ).toBeVisible();
@@ -87,13 +87,13 @@ test("Expo login has only mobile profiles; legacy staff session returns to login
     .getByRole("button", { name: "Aceptar ajuste", exact: true })
     .click();
   await page
-    .getByRole("button", { name: "Pagar con tarjeta · Demo", exact: true })
+    .getByRole("button", { name: "Pagar con tarjeta · Sample", exact: true })
     .click();
   await expect
     .poll(
       async () =>
         (await appState(page)).orders.find(
-          (o) => o.id === "APP-DEMO-ADJUSTMENT",
+          (o) => o.id === "APP-SAMPLE-ADJUSTMENT",
         ).pricing.paymentStatus,
     )
     .toBe("PAID");
@@ -105,16 +105,16 @@ test("Expo driver has prepared pickups, deliveries and map with no staff control
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/");
-  await loginDemo(page, "Chofer");
+  await loginSample(page, "Chofer");
   await expect(visible(page, "Mi ruta y solicitudes")).toBeVisible();
-  await visible(page, "APP-DEMO-PICKUP").click();
+  await visible(page, "APP-SAMPLE-PICKUP").click();
   await page.getByRole("button", { name: "Iniciar ruta", exact: true }).click();
   await page
     .getByRole("button", { name: "Marcar llegada", exact: true })
     .click();
   const state = await appState(page),
     h = state.handoffs.find(
-      (h) => h.orderId === "APP-DEMO-PICKUP" && h.type === "CUSTOMER_TO_DRIVER",
+      (h) => h.orderId === "APP-SAMPLE-PICKUP" && h.type === "CUSTOMER_TO_DRIVER",
     );
   await page.getByLabel("Código de transferencia").fill(h.fallbackCode);
   await page
@@ -126,7 +126,7 @@ test("Expo driver has prepared pickups, deliveries and map with no staff control
   await expect
     .poll(
       async () =>
-        (await appState(page)).orders.find((o) => o.id === "APP-DEMO-PICKUP")
+        (await appState(page)).orders.find((o) => o.id === "APP-SAMPLE-PICKUP")
           .fulfillment.inbound.milestone,
     )
     .toBe("COLLECTED");
@@ -147,7 +147,7 @@ test("Expo five-step fixed checkout creates one store order with an exact quote 
   page.on("pageerror", (error) => errors.push(error.message));
   await page.setViewportSize({ width: 430, height: 932 });
   await page.goto("/");
-  await loginDemo(page, "Cliente");
+  await loginSample(page, "Cliente");
   await visible(page, "Nueva solicitud").click();
   await visible(page, "Agregar prenda").click();
   await visible(page, "Agregar").click();
@@ -164,7 +164,7 @@ test("Expo five-step fixed checkout creates one store order with an exact quote 
   await expect(visible(page, "Total: $5.00")).toBeVisible();
   const before = (await appState(page)).orders.map((o) => o.id);
   await page
-    .getByRole("button", { name: "Confirmar y pagar · Demo", exact: true })
+    .getByRole("button", { name: "Confirmar y pagar · Sample", exact: true })
     .click();
   await expect(
     page.getByRole("button", { name: "Ver mapa del pedido", exact: true }),

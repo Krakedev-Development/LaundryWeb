@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { LoaderCircle } from 'lucide-react';
@@ -10,24 +10,12 @@ import {
   SIDEBAR_MINI_WIDTH,
 } from './sidebar.constants';
 import { ToastContainer } from '../common/ToastContainer';
-import { GlobalSearchModal } from '../common/GlobalSearchModal';
+import { PageTitleProvider } from '../../context/PageTitleContext';
 
 function Workspace() {
   const { collapsed, isLargeScreen, mobileOpen, openMobile } =
     useSidebarState();
-  const [searchOpen, setSearchOpen] = useState(false);
   const location = useLocation();
-
-  useEffect(() => {
-    const onShortcut = (event: KeyboardEvent) => {
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
-        event.preventDefault();
-        setSearchOpen((open) => !open);
-      }
-    };
-    window.addEventListener('keydown', onShortcut);
-    return () => window.removeEventListener('keydown', onShortcut);
-  }, []);
 
   const margin = isLargeScreen
     ? collapsed
@@ -53,7 +41,6 @@ function Workspace() {
         <TopBar
           onOpenMobileSidebar={openMobile}
           mobileSidebarOpen={mobileOpen}
-          onOpenSearch={() => setSearchOpen(true)}
         />
         <div className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
           <Suspense
@@ -89,10 +76,6 @@ function Workspace() {
           </Suspense>
         </div>
       </main>
-      <GlobalSearchModal
-        isOpen={searchOpen}
-        onClose={() => setSearchOpen(false)}
-      />
       <ToastContainer />
     </div>
   );
@@ -101,7 +84,9 @@ function Workspace() {
 export function MainLayout() {
   return (
     <SidebarProvider>
-      <Workspace />
+      <PageTitleProvider>
+        <Workspace />
+      </PageTitleProvider>
     </SidebarProvider>
   );
 }

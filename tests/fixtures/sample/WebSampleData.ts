@@ -5,9 +5,9 @@ import type {
   Order,
   SystemSettings,
 } from '../../../src/types';
-import { DEMO_FACILITIES, SERVICE_AREAS, demoCoordinate } from './geoDemo';
+import { SAMPLE_FACILITIES, SERVICE_AREAS, sampleCoordinate } from './geoSample';
 import { serviceAreaService } from '../../../src/services/geo/ServiceAreaService';
-export function prepareWebDemoData(
+export function prepareWebSampleData(
   data: {
     orders: Order[];
     customers: Customer[];
@@ -20,9 +20,9 @@ export function prepareWebDemoData(
   const old = (p: { lat: number; lng: number }) =>
     force || (p.lat < -10 && p.lng < -70);
   data.facilities.forEach((f) => {
-    const demo = DEMO_FACILITIES.find((v) => v.id === f.id);
-    if (demo && old(f.coordinates)) {
-      Object.assign(f, demo);
+    const sample = SAMPLE_FACILITIES.find((v) => v.id === f.id);
+    if (sample && old(f.coordinates)) {
+      Object.assign(f, sample);
       f.city = 'Samborondón';
       f.zone = SERVICE_AREAS.find((a) => a.facilityId === f.id)!.name;
     }
@@ -30,7 +30,7 @@ export function prepareWebDemoData(
   data.customers.forEach((c, i) =>
     c.addresses.forEach((a, j) => {
       if (old(a.coordinates)) {
-        a.coordinates = demoCoordinate(i + j, 'FAC-02');
+        a.coordinates = sampleCoordinate(i + j, 'FAC-02');
         a.street = 'Av. Samborondón';
         a.city = 'Samborondón';
         a.neighborhood = 'Sector central';
@@ -40,7 +40,7 @@ export function prepareWebDemoData(
   data.drivers.forEach((d, i) => {
     const migrateZone = force || !d.zoneId || old(d.location);
     if (old(d.location)) {
-      const coordinates = demoCoordinate(i, d.facilityId);
+      const coordinates = sampleCoordinate(i, d.facilityId);
       Object.assign(d.location, coordinates, {
         address: 'Av. Samborondón',
         simulated: true,
@@ -69,7 +69,7 @@ export function prepareWebDemoData(
     if (facility) o.facilityName = facility.name;
     [o.customerAddress, o.deliveryAddress].forEach((a, j) => {
       if (old(a.coordinates)) {
-        a.coordinates = demoCoordinate(i + j, o.facilityId);
+        a.coordinates = sampleCoordinate(i + j, o.facilityId);
         a.street = 'Av. Samborondón';
         a.city = 'Samborondón';
         a.neighborhood = facility?.zone ?? 'Samborondón';

@@ -122,7 +122,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
             autoFocus
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar por SOL-4587, cliente María Torres, INC-0187, chofer Carlos..."
+            placeholder="Buscar solicitudes, clientes, incidencias o choferes..."
             className="w-full text-sm bg-transparent border-none focus:outline-none text-white placeholder:text-slate-400 font-sans"
           />
           <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-mono font-semibold text-slate-300 bg-slate-800 border border-slate-700 rounded-md shadow-2xs">

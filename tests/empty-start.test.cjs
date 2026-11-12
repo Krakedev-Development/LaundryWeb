@@ -53,7 +53,7 @@ test('no existe usuario ni rol por defecto: sin sesión no hay operador', () => 
   assert.throws(() => storage.getCurrentUser(), /sesión/);
   assert.equal(storage.switchRole, undefined);
   assert.equal(storage.resetAll, undefined);
-  assert.equal(storage.createDemoOrder, undefined);
+  assert.equal(storage.createSampleOrder, undefined);
 });
 
 test('con sesión, las operaciones de configuración exigen el rol correcto', () => {

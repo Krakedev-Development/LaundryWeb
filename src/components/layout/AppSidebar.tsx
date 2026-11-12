@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { operationalStage } from '../../services/fulfillment';
+import { usePendingKyc } from '../../services/api/kycApi';
 import {
   SIDEBAR_EXPANDED_WIDTH,
   SIDEBAR_ID,
@@ -19,7 +20,8 @@ import { PrefetchNavLink } from './PrefetchNavLink';
 import './sidebar.css';
 
 export function AppSidebar() {
-  const { currentUser, orders, incidents, customers } = useApp();
+  const { currentUser, orders, incidents } = useApp();
+  const pendingKyc = usePendingKyc(currentUser.role === 'ADMIN', true);
   const { collapsed, isLargeScreen, mobileOpen, closeMobile } =
     useSidebarState();
   const { pathname } = useLocation();
@@ -38,8 +40,7 @@ export function AppSidebar() {
     incidents: incidents.filter((incident) =>
       ['OPEN', 'IN_PROGRESS'].includes(incident.status),
     ).length,
-    kyc: customers.filter((customer) => customer.kycStatus === 'PENDING')
-      .length,
+    kyc: pendingKyc.length,
   };
 
   useEffect(() => {

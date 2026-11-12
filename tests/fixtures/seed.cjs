@@ -3,26 +3,26 @@
 // el motor local de flujo, custodia y negocio.
 require('../ts-loader.cjs');
 
-const demo = require('./demo/mockData.ts');
-const { SERVICE_AREAS } = require('./demo/geoDemo.ts');
-const { prepareHandoffDemoData } = require('./demo/HandoffDemoData.ts');
-const { prepareBusinessDemoData } = require('./demo/BusinessDemoData.ts');
-const { demoMethods } = require('./demo/storageDemo.ts');
+const sample = require('./sample/mockData.ts');
+const { SERVICE_AREAS } = require('./sample/geoSample.ts');
+const { prepareHandoffSampleData } = require('./sample/HandoffSampleData.ts');
+const { prepareBusinessSampleData } = require('./sample/BusinessSampleData.ts');
+const { sampleMethods } = require('./sample/storageSample.ts');
 
 const KEYS = {
-  CURRENT_USER: ['lw_current_user', () => demo.INITIAL_USERS[0]],
-  ORDERS: ['lw_orders', () => demo.INITIAL_ORDERS],
-  CUSTOMERS: ['lw_customers', () => demo.INITIAL_CUSTOMERS],
-  DRIVERS: ['lw_drivers', () => demo.INITIAL_DRIVERS],
-  FACILITIES: ['lw_facilities', () => demo.INITIAL_FACILITIES],
-  INCIDENTS: ['lw_incidents', () => demo.INITIAL_INCIDENTS],
-  CATALOG: ['lw_catalog', () => demo.INITIAL_CATALOG],
-  PROMOTIONS: ['lw_promotions', () => demo.INITIAL_PROMOTIONS],
-  REWARDS: ['lw_rewards', () => demo.INITIAL_REWARDS],
-  REDEMPTIONS: ['lw_redemptions', () => demo.INITIAL_REDEMPTIONS],
-  POINTS_LEDGER: ['lw_points_ledger', () => demo.INITIAL_POINTS_LEDGER],
-  AUDIT_LOGS: ['lw_audit_logs', () => demo.INITIAL_AUDIT_LOGS],
-  SETTINGS: ['lw_settings', () => demo.INITIAL_SETTINGS],
+  CURRENT_USER: ['lw_current_user', () => sample.INITIAL_USERS[0]],
+  ORDERS: ['lw_orders', () => sample.INITIAL_ORDERS],
+  CUSTOMERS: ['lw_customers', () => sample.INITIAL_CUSTOMERS],
+  DRIVERS: ['lw_drivers', () => sample.INITIAL_DRIVERS],
+  FACILITIES: ['lw_facilities', () => sample.INITIAL_FACILITIES],
+  INCIDENTS: ['lw_incidents', () => sample.INITIAL_INCIDENTS],
+  CATALOG: ['lw_catalog', () => sample.INITIAL_CATALOG],
+  PROMOTIONS: ['lw_promotions', () => sample.INITIAL_PROMOTIONS],
+  REWARDS: ['lw_rewards', () => sample.INITIAL_REWARDS],
+  REDEMPTIONS: ['lw_redemptions', () => sample.INITIAL_REDEMPTIONS],
+  POINTS_LEDGER: ['lw_points_ledger', () => sample.INITIAL_POINTS_LEDGER],
+  AUDIT_LOGS: ['lw_audit_logs', () => sample.INITIAL_AUDIT_LOGS],
+  SETTINGS: ['lw_settings', () => sample.INITIAL_SETTINGS],
 };
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
@@ -110,9 +110,9 @@ function completeWorkflow(storage) {
           o.id + (leg === o.fulfillment.inbound ? '-pickup' : '-delivery');
     storage.handoffService.initialize(state, o, legacy);
   });
-  prepareHandoffDemoData(state, fac, storage.handoffService);
+  prepareHandoffSampleData(state, fac, storage.handoffService);
   const catalog = storage.getCatalog();
-  prepareBusinessDemoData(state, fac, storage.handoffService, catalog);
+  prepareBusinessSampleData(state, fac, storage.handoffService, catalog);
   global.localStorage.setItem('lw_facilities', JSON.stringify(fac));
   global.localStorage.setItem('lw_catalog', JSON.stringify(catalog));
   global.localStorage.setItem(storage.workflowKey, JSON.stringify(state));
@@ -125,9 +125,9 @@ function seededStorage() {
   const { notifyZones } = require('../../src/services/zones/zoneStorage.ts');
   completeWorkflow(storageService);
   // Utilidades de simulación y reinicio, disponibles solo en las pruebas.
-  Object.assign(storageService, demoMethods, {
+  Object.assign(storageService, sampleMethods, {
     switchRole(role) {
-      const target = demo.INITIAL_USERS.find((u) => u.role === role) || {
+      const target = sample.INITIAL_USERS.find((u) => u.role === role) || {
         ...this.getCurrentUser(),
         role,
         name: role === 'ADMIN' ? 'Carlos Mendoza' : 'Elena Rostova',
@@ -152,4 +152,4 @@ function seededStorage() {
   return storageService;
 }
 
-module.exports = { seededStorage, demo, demoMethods, SERVICE_AREAS };
+module.exports = { seededStorage, sample, sampleMethods, SERVICE_AREAS };

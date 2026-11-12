@@ -5,10 +5,10 @@ const {
   ServiceAreaService,
 } = require('../src/services/geo/ServiceAreaService.ts');
 const {
-  DEMO_CENTER,
-  DEMO_FACILITIES,
+  SAMPLE_CENTER,
+  SAMPLE_FACILITIES,
   SERVICE_AREAS,
-} = require('./fixtures/demo/geoDemo.ts');
+} = require('./fixtures/sample/geoSample.ts');
 const {
   MapboxGeoProvider,
 } = require('../src/services/geo/mapbox/MapboxGeoProvider.ts');
@@ -18,7 +18,7 @@ const {
   eligibilityReasons,
   isLocationStale,
 } = require('../src/services/geo/DispatchService.ts');
-const { DemoGeoProvider } = require('./fixtures/demo/DemoGeoProvider.ts');
+const { SampleGeoProvider } = require('./fixtures/sample/SampleGeoProvider.ts');
 const {
   RoutingService,
   routeCacheKey,
@@ -33,8 +33,8 @@ const json = (data, status = 200, headers = {}) =>
   new Response(JSON.stringify(data), { status, headers });
 test('coverage handles active zones, boundaries, holes and invalid coordinates', () => {
   const coverage = new ServiceAreaService(SERVICE_AREAS);
-  assert.equal(coverage.findArea(DEMO_CENTER).facilityId, 'FAC-02');
-  DEMO_FACILITIES.forEach((f) =>
+  assert.equal(coverage.findArea(SAMPLE_CENTER).facilityId, 'FAC-02');
+  SAMPLE_FACILITIES.forEach((f) =>
     assert.equal(coverage.findArea(f.coordinates).facilityId, f.id),
   );
   assert.equal(coverage.isCovered({ lat: 0, lng: 0 }), false);
@@ -73,14 +73,14 @@ test('coverage handles active zones, boundaries, holes and invalid coordinates',
 });
 const target = {
   id: 'order',
-  coordinates: DEMO_CENTER,
+  coordinates: SAMPLE_CENTER,
   facilityId: 'FAC-02',
   zoneId: 'ZONA-SUR',
 };
 const driver = (id, extra = {}) => ({
   id,
   status: 'AVAILABLE',
-  coordinates: DEMO_CENTER,
+  coordinates: SAMPLE_CENTER,
   updatedAt: new Date().toISOString(),
   facilityId: 'FAC-02',
   zoneId: 'ZONA-SUR',
@@ -97,7 +97,7 @@ test('eligibility excludes unavailable, full, stale and unauthorized drivers bef
     driver('other', { facilityId: 'FAC-01' }),
     driver('zone', { zoneId: 'OTHER' }),
   ];
-  const provider = new DemoGeoProvider();
+  const provider = new SampleGeoProvider();
   const original = provider.getMatrix.bind(provider);
   let origins;
   provider.getMatrix = (values, destinations) => {
@@ -199,11 +199,11 @@ test('Matrix batches traffic coordinates, uses asymmetric elements and Direction
   });
   const origins = Array.from({ length: 10 }, (_, i) => ({
     id: String(i),
-    coordinates: DEMO_CENTER,
+    coordinates: SAMPLE_CENTER,
   }));
   const results = await provider.getMatrix(
     origins,
-    [{ id: 'target', coordinates: DEMO_CENTER }],
+    [{ id: 'target', coordinates: SAMPLE_CENTER }],
     { profile: 'driving-traffic' },
   );
   assert.equal(results.length, 10);
@@ -218,10 +218,10 @@ test('unreachable pairs remain null and 429 blocks subsequent requests without r
   );
   const result = await noRoute.getMatrix(
     [
-      { id: 'a', coordinates: DEMO_CENTER },
-      { id: 'b', coordinates: DEMO_CENTER },
+      { id: 'a', coordinates: SAMPLE_CENTER },
+      { id: 'b', coordinates: SAMPLE_CENTER },
     ],
-    [{ id: 't', coordinates: DEMO_CENTER }],
+    [{ id: 't', coordinates: SAMPLE_CENTER }],
   );
   assert.ok(result.every((v) => !v.reachable && v.durationSeconds === null));
   let calls = 0;
@@ -230,11 +230,11 @@ test('unreachable pairs remain null and 429 blocks subsequent requests without r
     return json({}, 429, { 'retry-after': '30' });
   });
   await assert.rejects(
-    busy.getRoute(DEMO_CENTER, DEMO_CENTER),
+    busy.getRoute(SAMPLE_CENTER, SAMPLE_CENTER),
     (e) => e.code === 'RATE_LIMIT',
   );
   await assert.rejects(
-    busy.getRoute(DEMO_CENTER, DEMO_CENTER),
+    busy.getRoute(SAMPLE_CENTER, SAMPLE_CENTER),
     (e) => e.code === 'RATE_LIMIT',
   );
   assert.equal(calls, 1);
@@ -242,7 +242,7 @@ test('unreachable pairs remain null and 429 blocks subsequent requests without r
 test('route cache includes waypoints/profile, caches valid responses and expires', async (t) => {
   let time = 1000;
   t.mock.method(Date, 'now', () => time);
-  const provider = new DemoGeoProvider();
+  const provider = new SampleGeoProvider();
   let calls = 0;
   const original = provider.getRoute.bind(provider);
   provider.getRoute = (...args) => {
@@ -250,18 +250,18 @@ test('route cache includes waypoints/profile, caches valid responses and expires
     return original(...args);
   };
   const cache = new RoutingService(provider, 10);
-  await cache.getRoute(DEMO_CENTER, DEMO_CENTER);
-  await cache.getRoute(DEMO_CENTER, DEMO_CENTER);
+  await cache.getRoute(SAMPLE_CENTER, SAMPLE_CENTER);
+  await cache.getRoute(SAMPLE_CENTER, SAMPLE_CENTER);
   assert.equal(calls, 1);
-  await cache.getRoute(DEMO_CENTER, DEMO_CENTER, {
-    waypoints: [DEMO_FACILITIES[0].coordinates],
+  await cache.getRoute(SAMPLE_CENTER, SAMPLE_CENTER, {
+    waypoints: [SAMPLE_FACILITIES[0].coordinates],
   });
   assert.equal(calls, 2);
   assert.notEqual(
-    routeCacheKey(DEMO_CENTER, DEMO_CENTER),
-    routeCacheKey(DEMO_CENTER, DEMO_CENTER, { profile: 'driving-traffic' }),
+    routeCacheKey(SAMPLE_CENTER, SAMPLE_CENTER),
+    routeCacheKey(SAMPLE_CENTER, SAMPLE_CENTER, { profile: 'driving-traffic' }),
   );
   time += 20;
-  await cache.getRoute(DEMO_CENTER, DEMO_CENTER);
+  await cache.getRoute(SAMPLE_CENTER, SAMPLE_CENTER);
   assert.equal(calls, 3);
 });

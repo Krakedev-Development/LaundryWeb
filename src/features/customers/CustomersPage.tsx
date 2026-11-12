@@ -1,6 +1,7 @@
 import { Modal } from '../../shared/ui/Modal';
 import { operationalStage } from '../../services/fulfillment';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { listCustomers } from '../../services/api/customersApi';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { PageHeader } from '../../components/common/PageHeader';
@@ -23,13 +24,29 @@ import {
 } from 'lucide-react';
 
 export const CustomersPage: React.FC = () => {
-  const { customers, orders, pointsLedger, adjustCustomerPoints, currentUser } =
-    useApp();
+  const { orders, pointsLedger, adjustCustomerPoints, currentUser } = useApp();
   const navigate = useNavigate();
+
+  // Los clientes vienen del servidor: así aparecen apenas se registran y se aprueban.
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  useEffect(() => {
+    let active = true;
+    listCustomers()
+      .then((rows) => active && setCustomers(rows))
+      .catch((e: unknown) =>
+        active &&
+        setLoadError(
+          e instanceof Error ? e.message : 'No se pudo cargar el directorio.',
+        ),
+      );
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [membershipFilter, setMembershipFilter] = useState('ALL');
-  const [kycFilter, setKycFilter] = useState('ALL');
 
   // Customer 360 Drawer state
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(
@@ -51,7 +68,7 @@ export const CustomersPage: React.FC = () => {
   // KPIs
   const totalCustomers = customers.length;
   const premiumMembers = customers.filter(
-    (c) => c.membership !== 'ESTANDAR',
+    (c) => !!c.membership,
   ).length;
   const totalWalletBalance = customers.reduce(
     (acc, c) => acc + c.walletBalance,
@@ -61,9 +78,12 @@ export const CustomersPage: React.FC = () => {
 
   const filteredCustomers = useMemo(() => {
     return customers.filter((c) => {
-      if (membershipFilter !== 'ALL' && c.membership !== membershipFilter)
+      if (
+        membershipFilter === 'NONE'
+          ? !!c.membership
+          : membershipFilter !== 'ALL' && c.membership !== membershipFilter
+      )
         return false;
-      if (kycFilter !== 'ALL' && c.kycStatus !== kycFilter) return false;
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matches =
@@ -75,7 +95,14 @@ export const CustomersPage: React.FC = () => {
       }
       return true;
     });
-  }, [customers, membershipFilter, kycFilter, searchQuery]);
+  }, [customers, membershipFilter, searchQuery]);
+
+  // Planes que realmente tienen los clientes: no hay una lista fija de membresías.
+  const planNames = useMemo(
+    () =>
+      [...new Set(customers.map((c) => c.membership).filter(Boolean))].sort() as string[],
+    [customers],
+  );
 
   // Customer orders
   const customerOrders = useMemo(() => {
@@ -101,18 +128,13 @@ export const CustomersPage: React.FC = () => {
       <PageHeader
         title="Directorio de Clientes"
         subtitle="Gestión de relaciones con clientes, cuentas corporativas, billetera y fidelización."
-        actions={
-          currentUser.role === 'ADMIN' ? (
-            <button
-              onClick={() => navigate('/customers/kyc')}
-              className="px-4 py-2.5 text-xs font-bold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
-            >
-              <ShieldCheck className="w-4 h-4" />
-              <span>Validaciones KYC Pendientes</span>
-            </button>
-          ) : undefined
-        }
       />
+
+      {loadError && (
+        <p role="alert" className="text-xs text-rose-700">
+          {loadError}
+        </p>
+      )}
 
       {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -125,7 +147,7 @@ export const CustomersPage: React.FC = () => {
         <MetricCard
           title="Suscripción Activa"
           value={premiumMembers}
-          subtitle="Planes Premium & Eco Wash"
+          subtitle="Clientes con un plan elegido"
           variant="aqua"
           icon={<Award className="w-5 h-5 text-sky-600" />}
         />
@@ -165,22 +187,22 @@ export const CustomersPage: React.FC = () => {
               className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:border-sky-500"
             >
               <option value="ALL">Todas las Membresías</option>
-              <option value="ESTANDAR">Estándar</option>
-              <option value="PREMIUM_FRESH">Premium Fresh</option>
-              <option value="ECO_WASH">Eco Wash Club</option>
-              <option value="CORPORATIVO">Corporativo</option>
+              <option value="NONE">Sin membresía</option>
+              {planNames.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
             </select>
-
-            <select
-              value={kycFilter}
-              onChange={(e) => setKycFilter(e.target.value)}
-              className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:border-sky-500"
-            >
-              <option value="ALL">Todos los Estados KYC</option>
-              <option value="APPROVED">KYC Aprobado</option>
-              <option value="PENDING">KYC Pendiente</option>
-              <option value="REJECTED">KYC Rechazado</option>
-            </select>
+            {currentUser.role === 'ADMIN' && (
+              <button
+                onClick={() => navigate('/customers/kyc')}
+                className="px-4 py-2.5 text-xs font-bold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer whitespace-nowrap"
+              >
+                <ShieldCheck className="w-4 h-4" />
+                <span>Validaciones KYC Pendientes</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -231,7 +253,7 @@ export const CustomersPage: React.FC = () => {
                   <td className="py-3.5 px-4 whitespace-nowrap">
                     <span className="inline-flex items-center gap-1.5 font-semibold text-[11px] text-indigo-800 bg-indigo-50 px-2.5 py-0.5 rounded-lg border border-indigo-200/80">
                       <Award className="w-3 h-3 text-indigo-600" />
-                      {cust.membership.replace('_', ' ')}
+                      {cust.membership ?? 'Sin membresía'}
                     </span>
                   </td>
                   <td className="py-3.5 px-4 whitespace-nowrap">
@@ -297,7 +319,7 @@ export const CustomersPage: React.FC = () => {
                 Membresía
               </span>
               <span className="font-bold text-[#0F4C81]">
-                {selectedCustomer.membership.replace('_', ' ')}
+                {selectedCustomer.membership ?? 'Sin membresía'}
               </span>
             </div>
             <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200">

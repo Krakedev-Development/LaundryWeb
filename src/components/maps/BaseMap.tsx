@@ -366,7 +366,7 @@ export function BaseMap({
 
       {(route as any)?.simulated && (
         <p className="text-xs text-slate-500">
-          Estimación de demostración. La ruta por carretera se mostrará cuando
+          Estimación aproximada. La ruta por carretera se mostrará cuando
           esté disponible.
         </p>
       )}

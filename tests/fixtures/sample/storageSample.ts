@@ -4,8 +4,8 @@ import { serviceAreaService } from '../../../src/services/geo/ServiceAreaService
 import { INITIAL_ORDERS } from './mockData';
 
 // `this` es el servicio de almacenamiento.
-export const demoMethods: Record<string, (this: any, ...args: any[]) => any> = {
-  demoBusinessActor(this: any, actor: Actor) {
+export const sampleMethods: Record<string, (this: any, ...args: any[]) => any> = {
+  sampleBusinessActor(this: any, actor: Actor) {
     if (this.getCurrentUser().role !== 'ADMIN')
       throw new Error(
         'La simulación de cliente o chofer está reservada al Administrador del MVP.',
@@ -16,7 +16,7 @@ export const demoMethods: Record<string, (this: any, ...args: any[]) => any> = {
       (actor.role === 'DRIVER' &&
         !this.getDrivers().some((d) => d.id === actor.id))
     )
-      throw new Error('Cuenta demo no encontrada.');
+      throw new Error('Cuenta sample no encontrada.');
     return new BusinessService({
       read: () => this.getWorkflow(),
       transaction: (work) => {
@@ -41,17 +41,17 @@ export const demoMethods: Record<string, (this: any, ...args: any[]) => any> = {
     });
   },
 
-  createDemoOrder(this: any): Order {
+  createSampleOrder(this: any): Order {
     const orders = this.getOrders();
-    const existing = orders.find((o) => o.id === 'SOL-DEMO-001');
+    const existing = orders.find((o) => o.id === 'SOL-SAMPLE-001');
     if (existing) return existing;
     const template =
       INITIAL_ORDERS.find((o) => o.facilityId === 'FAC-02') ??
       INITIAL_ORDERS[0];
     const order: Order = JSON.parse(JSON.stringify(template));
     Object.assign(order, {
-      id: 'SOL-DEMO-001',
-      trackingNumber: 'DEMO-SAMBORONDON',
+      id: 'SOL-SAMPLE-001',
+      trackingNumber: 'SAMPLE-SAMBORONDON',
       status: 'PICKUP_PENDING',
       incidentsCount: 0,
       timeline: [],
@@ -72,7 +72,7 @@ export const demoMethods: Record<string, (this: any, ...args: any[]) => any> = {
     return order;
   },
 
-  requestDemoReward(this: any, 
+  requestSampleReward(this: any, 
     customerId: string,
     rewardId: string,
   ): RewardRedemption {
@@ -124,7 +124,7 @@ export const demoMethods: Record<string, (this: any, ...args: any[]) => any> = {
       id: crypto.randomUUID(),
       actorId: customerId,
       actorRole: 'CLIENT',
-      action: 'DEMO_REWARD_REQUESTED',
+      action: 'SAMPLE_REWARD_REQUESTED',
       reason:
         'Solicitud local simulada por Administrador; no sincroniza con LaundryApp.',
       at: redemption.date,

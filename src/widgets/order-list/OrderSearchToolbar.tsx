@@ -27,7 +27,7 @@ export function OrderSearchToolbar({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Buscar por N° solicitud (SOL-4587), cliente, tracking..."
+            placeholder="Buscar por N° solicitud, cliente o tracking..."
             className="w-full text-xs pl-10 pr-4 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all"
           />
         </div>

@@ -7,7 +7,7 @@ import {
 } from '../../../src/services/BusinessService';
 import type { HandoffService } from '../../../src/services/HandoffService';
 
-export function prepareBusinessDemoData(
+export function prepareBusinessSampleData(
   raw: BusinessState,
   facilities: Facility[],
   handoffs: HandoffService,
@@ -15,7 +15,7 @@ export function prepareBusinessDemoData(
   now = new Date(),
 ) {
   const s = ensureBusinessState(raw);
-  // Earlier demo snapshots copied unrelated extras and a coupon from a legacy order.
+  // Earlier sample snapshots copied unrelated extras and a coupon from a legacy order.
   // Repair only the unpriced weight fixture; never alter a recorded measurement or payment.
   const pendingWeight = s.orders.find(
     (o) =>
@@ -49,7 +49,7 @@ export function prepareBusinessDemoData(
       category: 'SERVICIOS',
       type: 'LAVADO_PESO',
       description:
-        'Tarifa de demostración. El peso real se registra en planta.',
+        'Tarifa de muestra. El peso real se registra en planta.',
       price: 0,
       pricingModel: 'PER_WEIGHT',
       pricePerWeightUnit: 1.6,

@@ -6,7 +6,7 @@ test.use({ signedIn: false });
 const submit = (page) =>
   page.getByRole('button', { name: 'Iniciar sesión', exact: true }).click();
 
-test('login arranca vacío, sin presets de demostración ni credenciales precargadas', async ({
+test('login arranca vacío, sin presets de muestra ni credenciales precargadas', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1672, height: 941 });

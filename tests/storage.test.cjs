@@ -9,7 +9,7 @@ global.localStorage = {
 };
 const storageService = require('./fixtures/seed.cjs').seededStorage();
 test('local Web lifecycle rechecks assignments, prevents double assignment and releases capacity', () => {
-  const order = storageService.createDemoOrder();
+  const order = storageService.createSampleOrder();
   const driver = storageService
     .getDrivers()
     .find(
