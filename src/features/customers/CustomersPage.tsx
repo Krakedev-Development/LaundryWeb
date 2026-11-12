@@ -84,8 +84,8 @@ export const CustomersPage: React.FC = () => {
           : membershipFilter !== 'ALL' && c.membership !== membershipFilter
       )
         return false;
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
+      const q = searchQuery.trim().toLowerCase();
+      if (q) {
         const matches =
           c.fullName.toLowerCase().includes(q) ||
           c.email.toLowerCase().includes(q) ||

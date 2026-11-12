@@ -80,53 +80,78 @@ async function mockKycApi(page, { failList = false } = {}) {
   return calls;
 }
 
+// Fila de la tabla de solicitudes y el botón que abre su expediente.
+const rowOf = (page, name) => page.locator('tbody tr').filter({ hasText: name });
+const openReview = (page, name) => rowOf(page, name).getByRole('button').click();
+const tab = (page, label, count) =>
+  page.getByRole('tab', { name: new RegExp(`^${label}\\s*${count}$`) });
+
 test('el administrador ve la cola, las tres imágenes y los datos declarados', async ({ page }) => {
   await mockKycApi(page);
   await page.goto('/customers/kyc', { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('button', { name: /Ana Pérez/ })).toBeVisible();
-  await expect(page.getByRole('button', { name: /Luis Mora/ })).toBeVisible();
-  await expect(page.getByRole('tab', { name: 'Pendientes (2)' })).toBeVisible();
-  await expect(page.getByRole('tab', { name: 'Aprobadas (1)' })).toBeVisible();
-  await expect(page.getByRole('tab', { name: 'Rechazadas (1)' })).toBeVisible();
+  await expect(rowOf(page, 'Ana Pérez')).toBeVisible();
+  await expect(rowOf(page, 'Luis Mora')).toBeVisible();
+  await expect(tab(page, 'Pendientes', 2)).toBeVisible();
+  await expect(tab(page, 'Aprobadas', 1)).toBeVisible();
+  await expect(tab(page, 'Rechazadas', 1)).toBeVisible();
 
-  await page.getByRole('button', { name: /Ana Pérez/ }).click();
+  await openReview(page, 'Ana Pérez');
+  const dialog = page.getByRole('dialog', { name: 'Revisión de Solicitud KYC' });
   for (const title of ['Selfie de verificación facial', 'Cédula, lado frontal', 'Cédula, lado posterior']) {
-    const image = page.getByRole('img', { name: title });
+    const image = dialog.getByAltText(title);
     await expect(image).toBeVisible();
     await expect(image).toHaveAttribute('src', /^blob:/);
   }
-  await expect(page.getByText('0912345675').first()).toBeVisible();
-  await expect(page.getByText('ana@correo.test')).toBeVisible();
+  await expect(dialog.getByText('0912345675').first()).toBeVisible();
+  await expect(dialog.getByText('ana@correo.test')).toBeVisible();
   // Nada inventado: no hay métricas fijas ni datos de otros módulos.
   await expect(page.getByText(/3\.5 min|Liveness OK/)).toHaveCount(0);
+});
+
+test('el buscador de la cola filtra por nombre, correo y cédula', async ({ page }) => {
+  await mockKycApi(page);
+  await page.goto('/customers/kyc', { waitUntil: 'domcontentloaded' });
+  const search = page.getByRole('textbox', { name: 'Buscar verificación' });
+  const rows = page.locator('tbody tr');
+  await expect(rows).toHaveCount(2);
+  await search.fill('luis');
+  await expect(rows).toHaveCount(1);
+  await expect(rows.first()).toContainText('Luis Mora');
+  await search.fill('ana@correo');
+  await expect(rows).toHaveCount(1);
+  await expect(rows.first()).toContainText('Ana Pérez');
+  await search.fill('0912345675');
+  await expect(rows).toHaveCount(2);
+  await search.fill('nadie');
+  await expect(page.getByText('No se encontraron resultados con ese criterio de búsqueda.')).toBeVisible();
 });
 
 test('aprobar exige completar el checklist y mueve al cliente a aprobadas', async ({ page }) => {
   const calls = await mockKycApi(page);
   await page.goto('/customers/kyc', { waitUntil: 'domcontentloaded' });
-  await page.getByRole('button', { name: /Ana Pérez/ }).click();
+  await openReview(page, 'Ana Pérez');
   const approve = page.getByRole('button', { name: 'Aprobar verificación' });
   await expect(approve).toBeDisabled();
   for (const check of await page.getByRole('checkbox').all()) await check.check();
   await expect(approve).toBeEnabled();
   await approve.click();
-  await expect(page.getByRole('tab', { name: 'Pendientes (1)' })).toBeVisible();
-  await expect(page.getByRole('tab', { name: 'Aprobadas (2)' })).toBeVisible();
+  await expect(tab(page, 'Pendientes', 1)).toBeVisible();
+  await expect(tab(page, 'Aprobadas', 2)).toBeVisible();
   expect(calls.reviews).toEqual([{ id: 'c-ana', approve: true }]);
 });
 
 test('rechazar exige un motivo y lo envía al servidor', async ({ page }) => {
   const calls = await mockKycApi(page);
   await page.goto('/customers/kyc', { waitUntil: 'domcontentloaded' });
-  await page.getByRole('button', { name: /Luis Mora/ }).click();
-  await page.getByRole('button', { name: /Rechazar \(motivo obligatorio\)/ }).click();
+  await openReview(page, 'Luis Mora');
+  await page.getByRole('button', { name: 'Rechazar', exact: true }).click();
   const confirm = page.getByRole('button', { name: 'Confirmar rechazo' });
   await expect(confirm).toBeDisabled();
   await page.getByLabel('Motivo del rechazo *').fill('   ');
   await expect(confirm).toBeDisabled();
   await page.getByLabel('Motivo del rechazo *').fill('La cédula está cortada');
   await confirm.click();
-  await expect(page.getByRole('tab', { name: 'Rechazadas (2)' })).toBeVisible();
+  await expect(tab(page, 'Rechazadas', 2)).toBeVisible();
   expect(calls.reviews).toEqual([
     { id: 'c-luis', approve: false, reason: 'La cédula está cortada' },
   ]);
@@ -136,8 +161,10 @@ test('una solicitud rechazada muestra su motivo y no ofrece decidir otra vez', a
   await mockKycApi(page);
   await page.goto('/customers/kyc', { waitUntil: 'domcontentloaded' });
   await page.getByRole('tab', { name: /Rechazadas/ }).click();
-  await page.getByRole('button', { name: /Rita Paz/ }).click();
-  await expect(page.getByText('Foto borrosa')).toBeVisible();
+  await expect(rowOf(page, 'Rita Paz')).toContainText('Foto borrosa');
+  await openReview(page, 'Rita Paz');
+  const dialog = page.getByRole('dialog', { name: 'Revisión de Solicitud KYC' });
+  await expect(dialog.getByText('Foto borrosa')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Aprobar verificación' })).toHaveCount(0);
 });
 
@@ -206,6 +233,16 @@ test('el directorio muestra solo lo que entrega el servidor y no inventa membres
   await expect(page.getByText(/ESTANDAR|PREMIUM/i)).toHaveCount(0);
 
   await page.locator('select').selectOption('NONE');
+  await expect(rows).toHaveCount(1);
+  await expect(rows.first()).toContainText('Eva Soto');
+
+  // El buscador filtra por nombre y correo, sin importar mayúsculas ni espacios.
+  await page.locator('select').selectOption('ALL');
+  const search = page.getByPlaceholder('Buscar por nombre, documento, correo o teléfono...');
+  await search.fill('  LEO ');
+  await expect(rows).toHaveCount(1);
+  await expect(rows.first()).toContainText('Leo Cruz');
+  await search.fill('eva@correo');
   await expect(rows).toHaveCount(1);
   await expect(rows.first()).toContainText('Eva Soto');
 });
