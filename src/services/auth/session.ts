@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import type { User, UserRole } from '../../types';
-import { apiRequest, ApiError } from '../api/apiConfig';
+import { apiRequest, ApiError, setTokenRefresher } from '../api/apiConfig';
 import { storageService } from '../storage';
 
 // Sesión contra la API. El token de acceso vive solo en memoria; el de renovación, en
@@ -72,6 +72,28 @@ function adopt(user: ApiUser) {
       : 'signed-in',
   );
 }
+
+// Renueva el token de acceso con el de renovación. Si ya no es válido, la sesión se
+// cierra para que el usuario vuelva a ingresar en lugar de fallar en silencio.
+async function renewAccessToken(): Promise<string | null> {
+  const refreshToken = sessionStorage.getItem(REFRESH_KEY);
+  if (!refreshToken) return null;
+  try {
+    const tokens = await apiRequest<Tokens>('/auth/refresh', {
+      method: 'POST',
+      body: JSON.stringify({ refreshToken }),
+    });
+    store(tokens);
+    return tokens.accessToken;
+  } catch (error) {
+    if (error instanceof ApiError && error.status !== 0) {
+      clear();
+      setStatus('signed-out');
+    }
+    return null;
+  }
+}
+setTokenRefresher(renewAccessToken);
 
 export const session = {
   getStatus: () => status,

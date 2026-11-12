@@ -14,7 +14,7 @@ export function ZoneEditor({
 }: {
   initial?: Zone;
   zones: Zone[];
-  onSave(zone: Zone): void;
+  onSave(zone: Zone): Promise<unknown>;
   onClose(): void;
 }) {
   const {
@@ -29,11 +29,12 @@ export function ZoneEditor({
     error,
     closePolygon,
     save,
+    saving,
     preview,
   } = useZoneDraft(initial, zones, onSave, onClose);
   return (
     <Dialog title={initial ? 'Editar zona' : 'Crear zona'} onClose={onClose}>
-      <form onSubmit={save} className="space-y-5">
+      <form onSubmit={(event) => void save(event)} className="space-y-5">
         <div className="grid items-end gap-4 sm:grid-cols-[1fr_auto]">
           <label className="ops-label">
             Nombre de la zona
@@ -99,8 +100,12 @@ export function ZoneEditor({
           <button type="button" onClick={onClose} className="ops-button">
             Cancelar
           </button>
-          <button type="submit" className="ops-button ops-button-primary">
-            Guardar zona
+          <button
+            type="submit"
+            disabled={saving}
+            className="ops-button ops-button-primary"
+          >
+            {saving ? 'Guardando...' : 'Guardar zona'}
           </button>
         </footer>
       </form>

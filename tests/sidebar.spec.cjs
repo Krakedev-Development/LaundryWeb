@@ -240,7 +240,9 @@ test('blue sidebar appearance, accessible notifications and sidebar logout remai
   await expect(bell).toHaveAttribute('aria-expanded', 'false');
   // El header no tiene buscador global: cada página tiene el suyo.
   await page.keyboard.press('Control+k');
-  await expect(page.getByRole('banner').getByRole('textbox')).toHaveCount(0);
+  const header = page.locator('main > header');
+  await expect(header).toBeVisible();
+  await expect(header.getByRole('textbox')).toHaveCount(0);
   await page
     .locator('#app-sidebar')
     .getByRole('button', { name: 'Cerrar sesión', exact: true })

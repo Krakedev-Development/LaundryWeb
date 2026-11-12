@@ -23,6 +23,7 @@ import {
   OperationalMapPage,
   ReportsPage,
   SettingsPage,
+  StaffPage,
 } from './components/layout/routePages';
 
 // Public page
@@ -96,6 +97,7 @@ export default function App() {
 
             {/* Management */}
             <Route path="reports" element={<ReportsPage />} />
+            <Route path="management/staff" element={<StaffPage />} />
             <Route path="settings" element={<SettingsPage />} />
 
             {/* Catch-all fallback */}

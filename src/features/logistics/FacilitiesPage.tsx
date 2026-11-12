@@ -10,7 +10,6 @@ import { PageHeader } from '../../components/common/PageHeader';
 import { MetricCard } from '../../components/common/MetricCard';
 import { Facility } from '../../types';
 import { storageService } from '../../services/storage';
-import { ApiError } from '../../services/api/apiConfig';
 import {
   createFacility as createFacilityApi,
   getFacilities,
@@ -37,9 +36,11 @@ import {
   MapPin,
 } from 'lucide-react';
 
+const UUID =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 export const FacilitiesPage: React.FC = () => {
-  const { facilities, createFacility, updateFacility, currentUser, showToast } =
-    useApp();
+  const { facilities, currentUser, showToast } = useApp();
   const isAdmin = currentUser.role === 'ADMIN';
   const { zones } = useZones();
   const [placing, setPlacing] = useState(false);
@@ -55,8 +56,8 @@ export const FacilitiesPage: React.FC = () => {
   const [city, setCity] = useState('Guayaquil');
   const [zone, setZone] = useState('Zona Norte & Centro');
   const [capacityMaxKgDay, setCapacityMaxKgDay] = useState(0);
-  const [phone, setPhone] = useState('+593 4 555-0100');
-  const [managerName, setManagerName] = useState('Roberto Gómez');
+  const [phone, setPhone] = useState('');
+  const [managerName, setManagerName] = useState('');
   const [status, setStatus] = useState<'ACTIVE' | 'MAINTENANCE'>('ACTIVE');
 
   const [allowsCustomerPickup, setAllowsCustomerPickup] = useState(true);
@@ -139,7 +140,7 @@ export const FacilitiesPage: React.FC = () => {
     setLat(-2.1229);
     setLng(-79.8682);
     setName('');
-    setCode('HUB-NUEVO');
+    setCode('');
     setAddress('');
     setCity('Guayaquil');
     setZone('Zona Norte & Centro');
@@ -186,6 +187,25 @@ export const FacilitiesPage: React.FC = () => {
         zones,
       ) ||
       zones[0]?.id;
+
+    // Solo zonas ya guardadas en el servidor tienen identificador definitivo.
+    if (resolvedZoneId && !UUID.test(resolvedZoneId)) {
+      showToast({
+        type: 'error',
+        title: 'No se pudo guardar la sede',
+        message:
+          'La zona aún no está guardada en el servidor. Guarda la zona y vuelve a intentarlo.',
+      });
+      return;
+    }
+    if (!Number.isInteger(capacityMaxKgDay) || capacityMaxKgDay < 1) {
+      showToast({
+        type: 'error',
+        title: 'No se pudo guardar la sede',
+        message: 'La capacidad diaria debe ser de al menos 1 kg.',
+      });
+      return;
+    }
 
     const openingHoursPayload = {
       days,
@@ -289,57 +309,8 @@ export const FacilitiesPage: React.FC = () => {
 
       setIsDrawerOpen(false);
     } catch (error) {
-      if (error instanceof ApiError && error.status === 0) {
-        try {
-          if (editingFacility) {
-            updateFacility({
-              ...editingFacility,
-              name,
-              code,
-              address,
-              city,
-              zone,
-              zoneId: resolvedZoneId,
-              capacityMaxKgDay,
-              phone,
-              managerName,
-              status,
-              acceptsCustomerDropoff: false,
-              allowsCustomerPickup,
-              operatingSchedule: { days, open, close },
-              coordinates: { lat, lng },
-            });
-          } else {
-            createFacility({
-              name,
-              code,
-              address,
-              city,
-              zone,
-              zoneId: resolvedZoneId,
-              capacityMaxKgDay,
-              phone,
-              managerName,
-              status,
-              acceptsCustomerDropoff: false,
-              allowsCustomerPickup,
-              operatingSchedule: { days, open, close },
-              coordinates: { lat, lng },
-            });
-          }
-          setIsDrawerOpen(false);
-          return;
-        } catch (localErr) {
-          showToast({
-            type: 'error',
-            title: 'No se pudo guardar la sede',
-            message:
-              localErr instanceof Error ? localErr.message : 'Revisa los datos.',
-          });
-          return;
-        }
-      }
-
+      // Sin respaldo local: una sede que solo existe en el navegador desaparecería al
+      // recargar. El formulario queda abierto para reintentar.
       showToast({
         type: 'error',
         title: 'No se pudo guardar la sede',
@@ -580,8 +551,11 @@ export const FacilitiesPage: React.FC = () => {
                 </label>
                 <input
                   type="number"
+                  required
+                  min={1}
+                  step={1}
                   aria-label="Capacidad diaria de la sede"
-                  value={capacityMaxKgDay}
+                  value={capacityMaxKgDay || ''}
                   onChange={(e) =>
                     setCapacityMaxKgDay(parseInt(e.target.value) || 0)
                   }

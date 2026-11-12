@@ -27,6 +27,7 @@ export function ZonesPanel({
   const { zones, error, save } = useZones();
   const [editor, setEditor] = useState<Zone | 'new' | null>(null);
   const [selected, setSelected] = useState('');
+  const [moveError, setMoveError] = useState('');
   const visible = zones.filter((zone) => !selected || zone.id === selected);
   const activeZone = selected
     ? zones.find((zone) => zone.id === selected)
@@ -63,9 +64,9 @@ export function ZonesPanel({
           </button>
         )}
       </div>
-      {error && (
+      {(error || moveError) && (
         <p role="alert" className="text-sm text-red-700">
-          {error}
+          {error || moveError}
         </p>
       )}
       <div className="ops-zones-layout">
@@ -105,14 +106,20 @@ export function ZonesPanel({
                     const nextVertices = activeVertices.map((vertex, i) =>
                       i === index ? point : vertex,
                     );
-                    try {
-                      save({
-                        ...activeZone,
-                        polygon: polygonFromVertices(nextVertices),
-                      });
-                    } catch {
-                      // Keep existing polygon if moved vertex invalidates geometry
-                    }
+                    // Si el servidor o las reglas rechazan el cambio, se conserva el
+                    // polígono guardado y se informa el motivo.
+                    save({
+                      ...activeZone,
+                      polygon: polygonFromVertices(nextVertices),
+                    })
+                      .then(() => setMoveError(''))
+                      .catch((reason: unknown) =>
+                      setMoveError(
+                        reason instanceof Error
+                          ? reason.message
+                          : 'No se pudo mover el vértice.',
+                      ),
+                    );
                   }
                 : undefined
             }
@@ -136,8 +143,8 @@ export function ZonesPanel({
           initial={editor === 'new' ? undefined : editor}
           zones={zones}
           onClose={() => setEditor(null)}
-          onSave={(zone) => {
-            const saved = save(zone);
+          onSave={async (zone) => {
+            const saved = await save(zone);
             setSelected(saved.id);
           }}
         />

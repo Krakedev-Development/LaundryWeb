@@ -74,6 +74,10 @@ const pageLoaders: Record<string, () => Promise<{ default: ComponentType }>> = {
     import('../../features/reports/ReportsPage').then((module) => ({
       default: module.ReportsPage,
     })),
+  '/management/staff': () =>
+    import('../../features/management/StaffPage').then((module) => ({
+      default: module.StaffPage,
+    })),
   '/settings': () =>
     import('../../features/settings/SettingsPage').then((module) => ({
       default: module.SettingsPage,
@@ -99,6 +103,7 @@ export const FacilitiesPage = lazy(pageLoaders['/logistics/facilities']);
 export const OperationalMapPage = lazy(pageLoaders['/logistics/map']);
 export const ReportsPage = lazy(pageLoaders['/reports']);
 export const SettingsPage = lazy(pageLoaders['/settings']);
+export const StaffPage = lazy(pageLoaders['/management/staff']);
 
 export function prefetchRoute(path: string) {
   // A failed speculative request must not interrupt navigation.

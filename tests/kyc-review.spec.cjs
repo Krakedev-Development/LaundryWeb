@@ -185,6 +185,27 @@ test('la insignia del menú cuenta las verificaciones pendientes reales', async 
 
 test.describe('Supervisor', () => {
   test.use({ role: 'SUPERVISOR' });
+  test('ve el directorio de clientes pero no el acceso a validaciones KYC', async ({ page }) => {
+    await page.route('**/api/v1/customers', (route) =>
+      route.request().method() === 'OPTIONS'
+        ? route.fulfill({ status: 204, headers: { ...cors, 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' } })
+        : route.fulfill({
+            status: 200,
+            headers: cors,
+            contentType: 'application/json',
+            body: JSON.stringify([directoryEntry('c-eva', 'Eva Soto', null)]),
+          }),
+    );
+    await page.goto('/customers', { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('tbody tr')).toHaveCount(1);
+    await expect(page.locator('tbody tr').first()).toContainText('Eva Soto');
+    await expect(page.getByRole('alert')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Validaciones KYC Pendientes' })).toHaveCount(0);
+    const sidebar = page.locator('#app-sidebar');
+    await expect(sidebar.getByRole('link', { name: 'Clientes', exact: true })).toBeVisible();
+    await expect(sidebar.getByRole('link', { name: /^Validaciones KYC/ })).toHaveCount(0);
+  });
+
   test('no accede a la revisión ni consulta documentos', async ({ page }) => {
     const calls = await mockKycApi(page);
     await page.goto('/customers/kyc', { waitUntil: 'domcontentloaded' });
