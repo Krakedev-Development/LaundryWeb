@@ -21,7 +21,7 @@ const member = (id, name, status, extra = {}) => ({
   ...extra,
 });
 
-async function mockStaffApi(page, { failList = false } = {}) {
+async function mockStaffApi(page, { failList = false, failActivity = false } = {}) {
   const state = {
     staff: [
       member('u-admin', 'Carla Admin', 'ACTIVE', { role: 'ADMIN', facility: null }),
@@ -31,7 +31,7 @@ async function mockStaffApi(page, { failList = false } = {}) {
       }),
     ],
   };
-  const calls = { created: [], status: [], resets: [] };
+  const calls = { created: [], status: [], resets: [], activity: [] };
   const json = (route, status, body) =>
     route.fulfill({ status, headers: cors, contentType: 'application/json', body: JSON.stringify(body) });
 
@@ -73,6 +73,46 @@ async function mockStaffApi(page, { failList = false } = {}) {
       const target = state.staff.find((m) => m.id === status[1]);
       target.status = body.status;
       return json(route, 200, { status: body.status });
+    }
+    const activity = path.match(/^\/users\/([^/]+)\/activity$/);
+    if (activity) {
+      const query = new URL(req.url()).searchParams;
+      const page = Number(query.get('page'));
+      const pageSize = Number(query.get('pageSize'));
+      calls.activity.push({ id: activity[1], from: query.get('from'), to: query.get('to'), page, pageSize });
+      if (failActivity) return json(route, 500, { message: 'Error interno del servidor.' });
+      const target = state.staff.find((m) => m.id === activity[1]);
+      const days = Math.round((Date.parse(query.get('to')) - Date.parse(query.get('from'))) / 86400000);
+      // 5 registros representativos seguidos de 18 ingresos: 23 en total, 3 páginas de 10.
+      const all =
+        days <= 7
+          ? []
+          : [
+              { id: 'a1', source: 'ORDER', action: 'ORDER_IN_PROCESS', entity: 'Order', entityId: 'o1', orderNumber: 12, detail: 'Pedido en proceso de lavado', createdAt: '2026-11-11T16:00:00.000Z' },
+              { id: 'a2', source: 'HANDOFF', action: 'HANDOFF_VERIFIED', entity: 'Order', entityId: 'o1', orderNumber: 12, detail: 'PICKUP', createdAt: '2026-11-11T15:45:00.000Z' },
+              { id: 'a3', source: 'AUDIT', action: 'SLOT_CREATED', entity: 'TimeSlot', entityId: 's1', orderNumber: null, detail: null, createdAt: '2026-11-11T15:40:00.000Z' },
+              { id: 'a4', source: 'AUDIT', action: 'LOGIN', entity: 'User', entityId: target.id, orderNumber: null, detail: null, createdAt: '2026-11-11T15:30:00.000Z' },
+              { id: 'a5', source: 'AUDIT', action: 'ALGO_NUEVO', entity: 'X', entityId: null, orderNumber: null, detail: null, createdAt: '2026-11-10T15:30:00.000Z' },
+              ...Array.from({ length: 18 }, (_, i) => ({
+                id: `l${i}`, source: 'AUDIT', action: 'LOGIN', entity: 'User', entityId: target.id, orderNumber: null, detail: null,
+                createdAt: new Date(Date.parse('2026-11-09T12:00:00.000Z') - i * 3600000).toISOString(),
+              })),
+            ];
+      return json(route, 200, {
+        user: target,
+        range: { from: query.get('from'), to: query.get('to') },
+        summary: {
+          logins: all.filter((i) => i.action === 'LOGIN').length,
+          actions: all.filter((i) => i.action !== 'LOGIN').length,
+          lastLoginAt: target.lastLoginAt,
+          lastActivityAt: all[0]?.createdAt ?? null,
+        },
+        items: all.slice((page - 1) * pageSize, page * pageSize),
+        page,
+        pageSize,
+        total: all.length,
+        totalPages: Math.max(1, Math.ceil(all.length / pageSize)),
+      });
     }
     const reset = path.match(/^\/users\/([^/]+)\/reset-password$/);
     if (reset) {
@@ -251,6 +291,68 @@ test('el formulario valida cada campo antes de enviar', async ({ page }) => {
   await expect(dialog).toHaveCount(0);
   expect(calls.created).toHaveLength(1);
   expect(calls.created[0]).toMatchObject({ phone: '0999999999', temporaryPassword: 'Sambo2026' });
+});
+
+test('la actividad del supervisor muestra resumen y acciones legibles por período', async ({ page }) => {
+  const calls = await mockStaffApi(page);
+  await page.goto('/management/staff', { waitUntil: 'domcontentloaded' });
+  await page.getByRole('button', { name: 'Ver actividad de Sara Ruiz' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Actividad de Sara Ruiz' });
+  await expect(dialog).toContainText('Sede Norte');
+  await expect(dialog).toContainText('Ingresos en el período');
+  const list = dialog.getByRole('list', { name: 'Actividad registrada' });
+  const items = list.getByRole('listitem');
+  const prev = dialog.getByRole('button', { name: 'Página anterior de la actividad' });
+  const next = dialog.getByRole('button', { name: 'Página siguiente de la actividad' });
+
+  // Página 1: como máximo 10 registros, con textos en lenguaje claro.
+  await expect(items).toHaveCount(10);
+  await expect(items.nth(0)).toContainText('Pedido en proceso de lavado');
+  await expect(items.nth(0)).toContainText('Solicitud SOL-0012');
+  await expect(items.nth(1)).toContainText('Verificó una entrega');
+  await expect(items.nth(2)).toContainText('Creó un horario');
+  await expect(items.nth(3)).toContainText('Inició sesión');
+  await expect(items.nth(4)).toContainText('Realizó una acción en el sistema');
+  await expect(dialog.getByText(/ORDER_IN_PROCESS|HANDOFF_VERIFIED|SLOT_CREATED|ALGO_NUEVO/)).toHaveCount(0);
+  await expect(dialog.getByText('1–10 de 23 registros')).toBeVisible();
+  await expect(dialog.getByText('Página 1 de 3')).toBeVisible();
+  await expect(prev).toBeDisabled();
+  expect(calls.activity[0]).toMatchObject({ id: 'u-sara', page: 1, pageSize: 10 });
+  const span = Date.parse(calls.activity[0].to) - Date.parse(calls.activity[0].from);
+  expect(Math.round(span / 86400000)).toBe(30);
+
+  // Páginas siguientes, con el mismo período fijo.
+  await next.click();
+  await expect(dialog.getByText('Página 2 de 3')).toBeVisible();
+  await expect(dialog.getByText('11–20 de 23 registros')).toBeVisible();
+  await expect(items).toHaveCount(10);
+  await next.click();
+  await expect(dialog.getByText('Página 3 de 3')).toBeVisible();
+  await expect(dialog.getByText('21–23 de 23 registros')).toBeVisible();
+  await expect(items).toHaveCount(3);
+  await expect(next).toBeDisabled();
+  expect(new Set(calls.activity.map((c) => `${c.from}|${c.to}`)).size).toBe(1);
+  await prev.click();
+  await expect(dialog.getByText('Página 2 de 3')).toBeVisible();
+
+  // Cambiar el período vuelve a la página 1 de ese período.
+  await dialog.getByRole('combobox', { name: 'Período de la actividad' }).selectOption('90');
+  await expect(dialog.getByText('Página 1 de 3')).toBeVisible();
+  const ninety = calls.activity.at(-1);
+  expect(ninety.page).toBe(1);
+  expect(Math.round((Date.parse(ninety.to) - Date.parse(ninety.from)) / 86400000)).toBe(90);
+  await dialog.getByRole('combobox', { name: 'Período de la actividad' }).selectOption('7');
+  await expect(dialog.getByText('Sin actividad registrada en este período.')).toBeVisible();
+});
+
+test('un error al cargar la actividad se informa y permite reintentar', async ({ page }) => {
+  const calls = await mockStaffApi(page, { failActivity: true });
+  await page.goto('/management/staff', { waitUntil: 'domcontentloaded' });
+  await page.getByRole('button', { name: 'Ver actividad de Leo Paz' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Actividad de Leo Paz' });
+  await expect(dialog.getByRole('alert')).toContainText('Error interno del servidor.');
+  await dialog.getByRole('button', { name: 'Reintentar' }).click();
+  await expect.poll(() => calls.activity.length).toBe(2);
 });
 
 test('un error al cargar se informa y permite reintentar', async ({ page }) => {

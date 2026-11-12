@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ArrowUpRight, ListFilter, Search } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { PageHeader } from '../../components/common/PageHeader';
+import { TablePagination, usePagination } from '../../shared/ui/TablePagination';
 import { SLABadge } from '../../components/common/PriorityBadge';
 import { isPlantOrder, plantPhase, PlantProgress } from './plantProgress';
 import { PlantOrderModal } from './PlantOrderModal';
@@ -38,6 +39,10 @@ export const PlantPage = () => {
           Number(['AT_RISK', 'OVERDUE'].includes(a.slaStatus)) ||
         a.createdAt.localeCompare(b.createdAt),
     );
+  const pagination = usePagination(
+    visible,
+    `${selectedFacility}|${phase}|${onlyRisk}|${query.trim()}`,
+  );
   const selected = orders.find((order) => order.id === selectedId);
   return (
     <div className="space-y-6">
@@ -124,7 +129,7 @@ export const PlantPage = () => {
               aria-label="Pedidos de planta"
               className="divide-y divide-slate-200 md:hidden"
             >
-              {visible.map((order) => (
+              {pagination.rows.map((order) => (
                 <li key={order.id} className="px-5 py-5">
                   <div className="flex items-start justify-between gap-3">
                     <button
@@ -170,7 +175,7 @@ export const PlantPage = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {visible.map((order) => (
+                  {pagination.rows.map((order) => (
                     <tr
                       key={order.id}
                       className="cursor-pointer hover:bg-sky-50/50"
@@ -231,6 +236,7 @@ export const PlantPage = () => {
                 </tbody>
               </table>
             </div>
+            <TablePagination pagination={pagination} label="pedidos de planta" />
           </>
         ) : (
           <div className="px-5 py-16 text-center">

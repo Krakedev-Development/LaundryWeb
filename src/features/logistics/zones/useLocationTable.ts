@@ -9,7 +9,7 @@ export function useLocationTable(points: MapPoint[]) {
   const [status, setStatus] = useState('');
   const [freshness, setFreshness] = useState('');
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(15);
   const filtered = useMemo(() => {
     const normalize = (value: string) =>
       value

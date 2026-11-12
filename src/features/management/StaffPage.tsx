@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
-import { KeyRound, Plus, Search, UserCheck, UserX, Users } from 'lucide-react';
+import { Activity, KeyRound, Plus, Search, UserCheck, UserX, Users } from 'lucide-react';
+import { StaffActivityModal } from './StaffActivityModal';
 import { useApp } from '../../context/AppContext';
 import { PageHeader } from '../../components/common/PageHeader';
 import { Modal } from '../../shared/ui/Modal';
+import { TablePagination, usePagination } from '../../shared/ui/TablePagination';
 import { getFacilities, type FacilityResponse } from '../../services/api/geoApi';
 import {
   createSupervisor,
@@ -85,6 +87,7 @@ export function StaffPage() {
   const [statusFilter, setStatusFilter] = useState<'ALL' | AccountStatus>('ALL');
   const [draft, setDraft] = useState<NewSupervisor | null>(null);
   const [pending, setPending] = useState<Pending>(null);
+  const [watching, setWatching] = useState<StaffMember | null>(null);
   const [text, setText] = useState('');
   const [formError, setFormError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -123,6 +126,7 @@ export function StaffPage() {
             .includes(q)),
     );
   }, [supervisors, query, statusFilter]);
+  const pagination = usePagination(visible, `${statusFilter}|${query.trim()}`);
 
   if (!isAdmin)
     return (
@@ -197,7 +201,7 @@ export function StaffPage() {
     <div className="space-y-6">
       <PageHeader
         title="Personal"
-        subtitle="Cuentas de supervisores por sede: alta, suspensión y contraseñas temporales."
+        subtitle="Cuentas de supervisores por sede: alta, suspensión, contraseñas temporales y actividad."
       />
 
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
@@ -265,7 +269,7 @@ export function StaffPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {visible.map((m) => (
+                {pagination.rows.map((m) => (
                   <tr key={m.id} className="hover:bg-slate-50">
                     <td className="px-5 py-4">
                       <p className="font-semibold text-slate-900">{m.name}</p>
@@ -285,6 +289,14 @@ export function StaffPage() {
                     </td>
                     <td className="px-5 py-4">
                       <div className="flex justify-end gap-1">
+                        <button
+                          className={`${ghost} text-slate-700`}
+                          aria-label={`Ver actividad de ${m.name}`}
+                          onClick={() => setWatching(m)}
+                        >
+                          <Activity size={15} />
+                          Actividad
+                        </button>
                         {m.status === 'SUSPENDED' ? (
                           <button
                             className={`${ghost} text-emerald-700`}
@@ -323,6 +335,7 @@ export function StaffPage() {
                 ))}
               </tbody>
             </table>
+            <TablePagination pagination={pagination} label="supervisores" />
           </div>
         ) : (
           <div className="px-6 py-16 text-center">
@@ -450,6 +463,10 @@ export function StaffPage() {
             </footer>
           </form>
         </Modal>
+      )}
+
+      {watching && (
+        <StaffActivityModal member={watching} onClose={() => setWatching(null)} />
       )}
 
       {pending && (

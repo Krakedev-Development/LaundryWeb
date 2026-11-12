@@ -1,5 +1,6 @@
 import { IconPlaceholder } from '../../components/common/IconPlaceholder';
 import { OrderBusinessPanel } from './OrderBusinessPanel';
+import { PaginatedTable } from '../../shared/ui/TablePagination';
 import { MODE_LABELS } from '../../services/BusinessService';
 import { operationalStage } from '../../services/fulfillment';
 import { OrderRouteMap } from '../../components/maps/OrderRouteMap';
@@ -701,6 +702,8 @@ export const OrderDetailPage: React.FC = () => {
             </h2>
 
             <div className="border border-slate-100 rounded-xl overflow-hidden mb-4">
+              <PaginatedTable items={order.items} label="prendas" hideWhenSinglePage>
+                {(itemRows) => (
               <table className="w-full text-xs text-left">
                 <thead className="bg-[#F7F9FC] text-slate-500 font-semibold border-b border-slate-100">
                   <tr>
@@ -712,7 +715,7 @@ export const OrderDetailPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {order.items.map((item) => (
+                  {itemRows.map((item) => (
                     <tr key={item.id}>
                       <td className="py-2.5 px-3">
                         <span className="font-bold text-slate-800">
@@ -740,6 +743,8 @@ export const OrderDetailPage: React.FC = () => {
                   ))}
                 </tbody>
               </table>
+                )}
+              </PaginatedTable>
             </div>
 
             {/* Extras & Total calculation */}

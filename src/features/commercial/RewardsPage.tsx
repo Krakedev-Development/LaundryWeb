@@ -10,6 +10,7 @@ import {
 import { ApiError } from '../../services/api/apiConfig';
 import { useApp } from '../../context/AppContext';
 import { PageHeader } from '../../components/common/PageHeader';
+import { TablePagination, usePagination } from '../../shared/ui/TablePagination';
 import { MetricCard } from '../../components/common/MetricCard';
 import { Reward } from '../../types';
 import {
@@ -69,6 +70,9 @@ export const RewardsPage: React.FC = () => {
       cancelled = true;
     };
   }, []);
+
+  const redemptionPages = usePagination(redemptions);
+  const ledgerPages = usePagination(pointsLedger);
 
   // Role Guard
   if (currentUser.role !== 'ADMIN') {
@@ -393,7 +397,7 @@ export const RewardsPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {redemptions.map((red) => (
+                {redemptionPages.rows.map((red) => (
                   <tr
                     key={red.id}
                     className="hover:bg-slate-50/70 transition-colors"
@@ -493,6 +497,7 @@ export const RewardsPage: React.FC = () => {
               </tbody>
             </table>
           </div>
+          <TablePagination pagination={redemptionPages} label="canjes" />
         </div>
       )}
 
@@ -527,7 +532,7 @@ export const RewardsPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {pointsLedger.map((entry) => (
+                {ledgerPages.rows.map((entry) => (
                   <tr
                     key={entry.id}
                     className="hover:bg-slate-50/70 transition-colors"
@@ -573,6 +578,7 @@ export const RewardsPage: React.FC = () => {
               </tbody>
             </table>
           </div>
+          <TablePagination pagination={ledgerPages} label="movimientos de puntos" />
         </div>
       )}
 

@@ -84,6 +84,46 @@ export function setAccountStatus(id: string, status: 'ACTIVE' | 'SUSPENDED', rea
   });
 }
 
+export interface ActivityItem {
+  id: string;
+  source: 'AUDIT' | 'ORDER' | 'HANDOFF';
+  action: string;
+  entity: string;
+  entityId: string | null;
+  orderNumber: number | null;
+  detail: string | null;
+  createdAt: string;
+}
+
+export interface StaffActivity {
+  user: Pick<StaffMember, 'id' | 'name' | 'email' | 'role' | 'status' | 'facility'>;
+  range: { from: string; to: string };
+  summary: {
+    logins: number;
+    actions: number;
+    lastLoginAt: string | null;
+    lastActivityAt: string | null;
+  };
+  items: ActivityItem[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}
+
+export const ACTIVITY_PAGE_SIZE = 10;
+
+// Una página de la actividad dentro del período [from, to].
+export function getActivity(id: string, range: { from: Date; to: Date }, page: number) {
+  const query = new URLSearchParams({
+    from: range.from.toISOString(),
+    to: range.to.toISOString(),
+    page: String(page),
+    pageSize: String(ACTIVITY_PAGE_SIZE),
+  });
+  return apiRequest<StaffActivity>(`/users/${id}/activity?${query}`, auth());
+}
+
 export function resetTemporaryPassword(id: string, temporaryPassword: string) {
   return apiRequest<{ status: AccountStatus }>(`/users/${id}/reset-password`, {
     ...auth(),

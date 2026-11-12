@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { PageHeader } from '../../components/common/PageHeader';
+import { TablePagination, usePagination } from '../../shared/ui/TablePagination';
 import { MetricCard } from '../../components/common/MetricCard';
 import { IconPlaceholder } from '../../components/common/IconPlaceholder';
 import {
@@ -232,6 +233,7 @@ const KycReview: React.FC = () => {
       (c.kycDocumentNumber ?? '').includes(q)
     );
   });
+  const pagination = usePagination(visible, `${tab}|${searchQuery.trim()}`);
 
   const reviewable = detail?.kycStatus === 'PENDING';
   const allChecksPassed = Object.values(checks).every(Boolean);
@@ -401,7 +403,7 @@ const KycReview: React.FC = () => {
                   </td>
                 </tr>
               ) : (
-                visible.map((cust) => (
+                pagination.rows.map((cust) => (
                   <tr
                     key={cust.id}
                     className="hover:bg-slate-50/80 transition-colors group"
@@ -474,6 +476,7 @@ const KycReview: React.FC = () => {
               )}
             </tbody>
           </table>
+          <TablePagination pagination={pagination} label="verificaciones" />
         </div>
       </div>
 

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { PaginatedTable } from '../../shared/ui/TablePagination';
 import { ArrowUpRight, History, Package, Workflow } from 'lucide-react';
 import type { Order } from '../../types';
 import { useApp } from '../../context/AppContext';
@@ -138,6 +139,8 @@ export function PlantOrderModal({
             )}
             <section>
               <h3 className="mb-3 font-semibold">Prendas del pedido</h3>
+              <PaginatedTable items={order.items} label="prendas del pedido" hideWhenSinglePage>
+                {(itemRows) => (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
                   <thead className="border-y border-slate-200 bg-slate-50 text-xs text-slate-600">
@@ -148,7 +151,7 @@ export function PlantOrderModal({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {order.items.map((item) => (
+                    {itemRows.map((item) => (
                       <tr key={item.id}>
                         <td className="px-3 py-3 font-medium">{item.name}</td>
                         <td className="px-3 py-3 tabular-nums">
@@ -162,6 +165,8 @@ export function PlantOrderModal({
                   </tbody>
                 </table>
               </div>
+                )}
+              </PaginatedTable>
             </section>
             <section>
               <h3 className="mb-3 font-semibold">Incidencias vinculadas</h3>

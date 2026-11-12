@@ -11,6 +11,7 @@ import {
 import { ApiError } from '../../services/api/apiConfig';
 import { PageHeader } from '../../components/common/PageHeader';
 import { Modal } from '../../shared/ui/Modal';
+import { TablePagination, usePagination } from '../../shared/ui/TablePagination';
 import {
   MEMBERSHIP_INTERVALS,
   validateMembershipPlan,
@@ -76,6 +77,15 @@ export function MembershipsPage() {
     };
   }, []);
 
+  const visible = plans.filter(
+    (plan) =>
+      (status === 'ALL' || plan.status === status) &&
+      `${plan.name} ${plan.description}`
+        .toLocaleLowerCase()
+        .includes(query.trim().toLocaleLowerCase()),
+  );
+  const pagination = usePagination(visible, `${status}|${query.trim()}`);
+
   if (currentUser.role !== 'ADMIN')
     return (
       <p
@@ -85,13 +95,6 @@ export function MembershipsPage() {
         La gestión de membresías está disponible para el Administrador.
       </p>
     );
-  const visible = plans.filter(
-    (plan) =>
-      (status === 'ALL' || plan.status === status) &&
-      `${plan.name} ${plan.description}`
-        .toLocaleLowerCase()
-        .includes(query.trim().toLocaleLowerCase()),
-  );
   const money = (price: number) =>
     `${settings.currencySymbol}${price.toFixed(2)}`;
   const open = (plan: MembershipPlan) => {
@@ -245,7 +248,7 @@ export function MembershipsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {visible.map((plan) => (
+                {pagination.rows.map((plan) => (
                   <tr key={plan.id} className="hover:bg-slate-50">
                     <td className="max-w-xs px-5 py-4">
                       <p className="font-semibold text-slate-900">
@@ -309,6 +312,7 @@ export function MembershipsPage() {
                 ))}
               </tbody>
             </table>
+            <TablePagination pagination={pagination} label="membresías" />
           </div>
         ) : (
           <div className="px-6 py-16 text-center">

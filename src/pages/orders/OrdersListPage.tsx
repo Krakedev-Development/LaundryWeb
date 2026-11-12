@@ -85,6 +85,15 @@ export const OrdersListPage = () => {
       <OrdersTable
         orders={model.orders}
         sortedOrders={model.sortedOrders}
+        filterKey={[
+          model.searchQuery.trim(),
+          model.mode,
+          model.selectedStatus,
+          model.selectedPriority,
+          model.selectedFacility,
+          model.selectedDriver,
+          model.quickTab,
+        ].join('|')}
         resetFilters={model.resetFilters}
         setAssigningOrder={model.setAssigningOrder}
       />

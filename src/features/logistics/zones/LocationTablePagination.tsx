@@ -15,22 +15,8 @@ export function LocationTablePagination({
           : '0'}{' '}
         de {table.total} resultados
       </p>
+      {/* Máximo 15 filas por página, igual que el resto de tablas. */}
       <div className="flex flex-wrap items-center gap-3">
-        <label className="flex items-center gap-2">
-          Filas por página
-          <select
-            aria-label="Filas por página"
-            className="ops-field !m-0 !w-20 !min-h-8 !py-1"
-            value={table.pageSize}
-            onChange={(event) => table.setPageSize(Number(event.target.value))}
-          >
-            {[10, 20, 50].map((size) => (
-              <option key={size} value={size}>
-                {size}
-              </option>
-            ))}
-          </select>
-        </label>
         <div className="flex items-center gap-2">
           <button
             type="button"

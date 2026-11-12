@@ -231,6 +231,35 @@ const directoryEntry = (id, name, plan) => ({
   createdAt: '2026-11-10T13:00:00.000Z',
 });
 
+test('las tablas muestran 15 filas por página y la búsqueda vuelve a la primera', async ({ page }) => {
+  const many = Array.from({ length: 20 }, (_, i) =>
+    directoryEntry(`c-${i}`, `Cliente ${String(i + 1).padStart(2, '0')} Prueba`, null),
+  );
+  await page.route('**/api/v1/customers', (route) =>
+    route.request().method() === 'OPTIONS'
+      ? route.fulfill({ status: 204, headers: { ...cors, 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' } })
+      : route.fulfill({ status: 200, headers: cors, contentType: 'application/json', body: JSON.stringify(many) }),
+  );
+  await page.goto('/customers', { waitUntil: 'domcontentloaded' });
+  const rows = page.locator('tbody tr');
+  const nav = page.getByRole('navigation', { name: 'Paginación de clientes' });
+  const next = page.getByRole('button', { name: 'Página siguiente de clientes' });
+  const prev = page.getByRole('button', { name: 'Página anterior de clientes' });
+  await expect(rows).toHaveCount(15);
+  await expect(nav).toContainText('1–15 de 20');
+  await expect(nav).toContainText('Página 1 de 2');
+  await expect(prev).toBeDisabled();
+  await next.click();
+  await expect(rows).toHaveCount(5);
+  await expect(nav).toContainText('16–20 de 20');
+  await expect(next).toBeDisabled();
+  await expect(rows.first()).toContainText('Cliente 16 Prueba');
+  // Buscar vuelve a la página 1 con los resultados filtrados.
+  await page.getByPlaceholder('Buscar por nombre, documento, correo o teléfono...').fill('Cliente 0');
+  await expect(rows).toHaveCount(9);
+  await expect(nav).toContainText('Página 1 de 1');
+});
+
 test('el directorio muestra solo lo que entrega el servidor y no inventa membresías', async ({ page }) => {
   await page.route('**/api/v1/customers', (route) =>
     route.request().method() === 'OPTIONS'

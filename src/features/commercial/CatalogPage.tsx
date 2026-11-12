@@ -16,6 +16,7 @@ import {
 } from '../../services/api/catalogApi';
 import { ApiError } from '../../services/api/apiConfig';
 import { PageHeader } from '../../components/common/PageHeader';
+import { TablePagination, usePagination } from '../../shared/ui/TablePagination';
 import { MetricCard } from '../../components/common/MetricCard';
 import { CatalogItem } from '../../types';
 import {
@@ -87,6 +88,7 @@ export const CatalogPage: React.FC = () => {
   const currentItems = useMemo(() => {
     return catalog.filter((c) => c.category === activeTab);
   }, [catalog, activeTab]);
+  const pagination = usePagination(currentItems, activeTab);
 
   const handleOpenCreate = () => {
     setEditingItem(null);
@@ -370,7 +372,7 @@ export const CatalogPage: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {currentItems.map((item) => (
+              {pagination.rows.map((item) => (
                 <tr
                   key={item.id}
                   className="hover:bg-slate-50/70 transition-colors"
@@ -424,6 +426,7 @@ export const CatalogPage: React.FC = () => {
             </tbody>
           </table>
         </div>
+        <TablePagination pagination={pagination} label="ítems del catálogo" />
       </div>
 
       {/* Drawer Crear / Editar per spec #36 */}
