@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import { OrderStatus, IncidentType, IncidentSeverity, Order } from '../../types';
 import {
+  confirmOrderPayment,
   getOrder,
   mapBackendOrderToOrder,
   transitionOrder,
@@ -58,6 +59,7 @@ export const OrderDetailPage: React.FC = () => {
 
   const [liveOrder, setLiveOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(false);
+  const [confirmingPayment, setConfirmingPayment] = useState(false);
 
   const contextOrder = orders.find((o) => o.id === id || o.trackingNumber === id);
   const order = liveOrder || contextOrder;
@@ -180,6 +182,49 @@ export const OrderDetailPage: React.FC = () => {
     }
   };
 
+  const handleConfirmPayment = async () => {
+    setConfirmingPayment(true);
+    try {
+      const updated = await confirmOrderPayment(
+        order.id,
+        order.version ?? order.workflowVersion ?? 1,
+        'Pago verificado y aprobado por consola administrativa',
+      );
+      const mapped = mapBackendOrderToOrder(
+        updated,
+        order,
+        customers,
+        facilities,
+        drivers,
+      );
+      setLiveOrder(mapped);
+      const next = orders.map((o) => (o.id === mapped.id ? mapped : o));
+      if (!next.some((o) => o.id === mapped.id)) next.push(mapped);
+      storageService.saveOrders(next);
+      showToast({
+        type: 'success',
+        title: 'Pago confirmado',
+        message: `La solicitud ${order.trackingNumber || order.id} pasó a ${mapped.status} y está lista para Despacho.`,
+      });
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 0) {
+        updateOrderStatus(
+          order.id,
+          'CONFIRMED',
+          'Pago confirmado localmente (modo offline)',
+        );
+        return;
+      }
+      showToast({
+        type: 'error',
+        title: 'No se pudo confirmar el pago',
+        message: err instanceof Error ? err.message : 'Intenta nuevamente.',
+      });
+    } finally {
+      setConfirmingPayment(false);
+    }
+  };
+
   const handleOpenAssign = (type: 'pickup' | 'delivery') => {
     setAssignType(type);
     setIsAssignModalOpen(true);
@@ -250,10 +295,29 @@ export const OrderDetailPage: React.FC = () => {
         }
         actions={
           <div className="flex items-center gap-2.5 flex-wrap">
+            {(order.status === 'PAYMENT_PENDING' ||
+              order.pricing?.paymentStatus === 'PENDING') && (
+              <button
+                onClick={() => void handleConfirmPayment()}
+                disabled={confirmingPayment}
+                className="px-4 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-60"
+              >
+                {confirmingPayment ? (
+                  <LoaderCircle className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                )}
+                <span>
+                  {confirmingPayment ? 'Confirmando pago...' : 'Confirmar pago'}
+                </span>
+              </button>
+            )}
+
             {/* Contextual lifecycle action button */}
             {order.fulfillment?.inbound.method === 'DRIVER' &&
               !order.pickupNeedsScheduling &&
-              operationalStage(order) === 'PICKUP_PENDING' && (
+              (operationalStage(order) === 'PICKUP_PENDING' ||
+                order.status === 'CONFIRMED') && (
                 <button
                   onClick={() => handleOpenAssign('pickup')}
                   className="px-4 py-2.5 text-xs font-bold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
