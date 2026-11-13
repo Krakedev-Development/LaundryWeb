@@ -138,6 +138,11 @@ export interface TransitionOrderPayload {
   note?: string;
 }
 
+export interface ConfirmPaymentPayload {
+  expectedVersion: number;
+  note?: string;
+}
+
 // ---------------------------------------------------------------- API Requests
 
 export async function listOrders(
@@ -198,6 +203,22 @@ export async function transitionOrder(
     method: 'POST',
     token: session.getToken(),
     body: JSON.stringify(payload),
+  });
+}
+
+export async function confirmOrderPayment(
+  orderId: string,
+  expectedVersion: number,
+  note?: string,
+): Promise<BackendOrderDetail> {
+  const body: ConfirmPaymentPayload = { expectedVersion };
+  if (note !== undefined && note.trim() !== '') {
+    body.note = note.trim();
+  }
+  return apiRequest<BackendOrderDetail>(`/orders/${orderId}/confirm-payment`, {
+    method: 'POST',
+    token: session.getToken(),
+    body: JSON.stringify(body),
   });
 }
 

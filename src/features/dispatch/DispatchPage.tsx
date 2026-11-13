@@ -27,7 +27,9 @@ import {
   fetchFullOrders,
   mapBackendOrderToOrder,
 } from '../../services/api/ordersApi';
+import { syncDrivers } from '../../services/api/driversApi';
 import { ApiError } from '../../services/api/apiConfig';
+import type { Driver, Order } from '../../types';
 
 export function DispatchPage() {
   const navigate = useNavigate();
@@ -40,28 +42,34 @@ export function DispatchPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [isAssigning, setIsAssigning] = useState(false);
 
-  const syncOrders = async () => {
+  const syncData = async () => {
     try {
       setRefreshing(true);
-      const remote = await fetchFullOrders(
-        { pageSize: 50 },
-        orders,
-        customers,
-        facilities,
-        drivers,
-      );
-      if (remote.length > 0) {
-        storageService.saveOrders(remote);
+      const [remoteOrders, remoteDrivers] = await Promise.all([
+        fetchFullOrders(
+          { pageSize: 50 },
+          orders,
+          customers,
+          facilities,
+          drivers,
+        ).catch(() => [] as Order[]),
+        syncDrivers(facilities, drivers).catch(() => [] as Driver[]),
+      ]);
+      if (remoteOrders.length > 0) {
+        storageService.saveOrders(remoteOrders);
+      }
+      if (remoteDrivers.length > 0) {
+        storageService.saveDrivers(remoteDrivers);
       }
     } catch {
-      // Keep offline orders
+      // Keep offline data
     } finally {
       setRefreshing(false);
     }
   };
 
   useEffect(() => {
-    void syncOrders();
+    void syncData();
   }, []);
 
   const queue = orders.filter((o) =>
@@ -140,7 +148,7 @@ export function DispatchPage() {
       });
       setDriverId('');
       setNotes('');
-      await syncOrders();
+      await syncData();
     } catch (err) {
       if (err instanceof ApiError && err.status === 0) {
         if (assignDriver(order.id, driverId, type, notes)) {
@@ -166,7 +174,7 @@ export function DispatchPage() {
         subtitle="Selecciona una solicitud, compara choferes y confirma la asignación."
         actions={
           <button
-            onClick={() => void syncOrders()}
+            onClick={() => void syncData()}
             disabled={refreshing}
             className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer disabled:opacity-60"
             title="Refrescar estado táctico"

@@ -9,6 +9,7 @@ import {
   assignDriver as assignDriverApi,
   mapBackendOrderToOrder,
 } from '../../services/api/ordersApi';
+import { syncDrivers } from '../../services/api/driversApi';
 import { ApiError } from '../../services/api/apiConfig';
 import { storageService } from '../../services/storage';
 
@@ -39,6 +40,13 @@ export const AssignDriverModal = ({
   useEffect(() => {
     setSelected('');
     setNotes('');
+    if (isOpen) {
+      void syncDrivers(facilities, drivers)
+        .then((synced) => {
+          if (synced.length > 0) storageService.saveDrivers(synced);
+        })
+        .catch(() => {});
+    }
   }, [order.id, type, isOpen]);
   useEffect(() => {
     if (!isOpen) return;
@@ -97,6 +105,11 @@ export const AssignDriverModal = ({
       );
       const next = orders.map((o) => (o.id === mapped.id ? mapped : o));
       storageService.saveOrders(next);
+      void syncDrivers(facilities, drivers)
+        .then((synced) => {
+          if (synced.length > 0) storageService.saveDrivers(synced);
+        })
+        .catch(() => {});
       showToast({
         type: 'success',
         title:
