@@ -41,6 +41,8 @@ const CATALOG: Record<string, string> = {
   MEMBERSHIPPLAN: 'una membresía',
   REWARD: 'una recompensa',
   PROMOTION: 'una promoción',
+  WEIGHTTIER: 'una bolsa del servicio por peso',
+  WEIGHTRESTRICTION: 'una restricción del servicio por peso',
 };
 
 export const formatOrderNumber = (n: number) => `SOL-${String(n).padStart(4, '0')}`;

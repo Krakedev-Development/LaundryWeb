@@ -18,6 +18,7 @@ import { PageHeader } from '../../components/common/PageHeader';
 import { TablePagination, usePagination } from '../../shared/ui/TablePagination';
 import { MetricCard } from '../../components/common/MetricCard';
 import { CatalogItem } from '../../types';
+import { WeightServicePanel } from './WeightServicePanel';
 import {
   FolderKanban,
   Shirt,
@@ -28,6 +29,9 @@ import {
   Lock,
 } from 'lucide-react';
 
+type CatalogTab = 'PRENDAS' | 'SERVICIOS' | 'EXTRAS' | 'PESO';
+type ItemCategory = Exclude<CatalogTab, 'PESO'>;
+
 export const CatalogPage: React.FC = () => {
   const {
     catalog,
@@ -35,9 +39,7 @@ export const CatalogPage: React.FC = () => {
     showToast,
   } = useApp();
 
-  const [activeTab, setActiveTab] = useState<
-    'PRENDAS' | 'SERVICIOS' | 'EXTRAS'
-  >('PRENDAS');
+  const [activeTab, setActiveTab] = useState<CatalogTab>('PRENDAS');
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<CatalogItem | null>(null);
 
@@ -144,7 +146,7 @@ export const CatalogPage: React.FC = () => {
       customerSelectable: selectable,
       compatibleWithWeight: compatible,
       name: name.trim(),
-      category: editingItem ? editingItem.category : activeTab,
+      category: editingItem ? editingItem.category : (activeTab as ItemCategory),
       type,
       description,
       price,
@@ -278,13 +280,15 @@ export const CatalogPage: React.FC = () => {
         title="Catálogo Comercial"
         subtitle="Administración de prendas, paquetes de lavado por kilos, servicios especializados y extras."
         actions={
-          <button
-            onClick={handleOpenCreate}
-            className="px-4 py-2.5 text-xs font-bold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Nuevo Ítem de {activeTab}</span>
-          </button>
+          activeTab === 'PESO' ? undefined : (
+            <button
+              onClick={handleOpenCreate}
+              className="px-4 py-2.5 text-xs font-bold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Nuevo Ítem de {activeTab}</span>
+            </button>
+          )
         }
       />
 
@@ -328,25 +332,32 @@ export const CatalogPage: React.FC = () => {
             count: serviciosCount,
           },
           { id: 'EXTRAS', label: 'Extras & Empaque', count: extrasCount },
+          { id: 'PESO', label: 'Servicio por Peso', count: null },
         ].map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
+            type="button"
+            aria-pressed={activeTab === tab.id}
+            onClick={() => setActiveTab(tab.id as CatalogTab)}
             className={`px-4 py-3 text-xs font-bold transition-all border-b-2 cursor-pointer ${
               activeTab === tab.id
                 ? 'border-[#0F4C81] text-[#0F4C81]'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
-            {tab.label}{' '}
-            <span className="opacity-75 font-mono text-[11px]">
-              ({tab.count})
-            </span>
+            {tab.label}
+            {tab.count !== null && (
+              <span className="opacity-75 font-mono text-[11px]">
+                {' '}({tab.count})
+              </span>
+            )}
           </button>
         ))}
       </div>
 
-      {/* Table */}
+      {activeTab === 'PESO' ? (
+        <WeightServicePanel />
+      ) : (
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.03)] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-xs text-left">
@@ -418,6 +429,7 @@ export const CatalogPage: React.FC = () => {
         </div>
         <TablePagination pagination={pagination} label="ítems del catálogo" />
       </div>
+      )}
 
       {/* Drawer Crear / Editar per spec #36 */}
       {isDrawerOpen && (
@@ -434,52 +446,6 @@ export const CatalogPage: React.FC = () => {
             onSubmit={handleSubmit}
             className="p-5 space-y-4 overflow-y-auto flex-1 text-xs"
           >
-            <label className="block">
-              Modelo de precio
-              <select
-                className="mt-2 w-full rounded-xl border border-slate-200 p-3"
-                value={pricingModel}
-                onChange={(e) =>
-                  setPricingModel(e.target.value as typeof pricingModel)
-                }
-              >
-                <option value="FIXED">Precio fijo por prenda</option>
-                <option value="PER_WEIGHT">Por peso recibido</option>
-              </select>
-            </label>
-            {pricingModel === 'PER_WEIGHT' && (
-              <label className="block">
-                Unidad
-                <select
-                  className="mt-2 w-full rounded-xl border border-slate-200 p-3"
-                  value={unit}
-                  onChange={(e) => setUnit(e.target.value as typeof unit)}
-                >
-                  <option value="LB">Libras (LB)</option>
-                  <option value="KG">Kilogramos (KG)</option>
-                </select>
-                <p className="mt-2 text-slate-500">
-                  El precio ingresado será la tarifa por unidad; el total
-                  permanece pendiente hasta el pesaje.
-                </p>
-              </label>
-            )}
-            <label className="flex gap-2">
-              <input
-                type="checkbox"
-                checked={compatible}
-                onChange={(e) => setCompatible(e.target.checked)}
-              />
-              Compatible con lavado por peso (prendas)
-            </label>
-            <label className="block">
-              Restricciones (una por línea)
-              <textarea
-                className="mt-2 w-full rounded-xl border border-slate-200 p-3"
-                value={restrictions}
-                onChange={(e) => setRestrictions(e.target.value)}
-              />
-            </label>
             <label className="flex gap-2">
               <input
                 type="checkbox"
