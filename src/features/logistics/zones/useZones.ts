@@ -63,44 +63,29 @@ export function useZones() {
     };
   }, []);
 
-  const save = (zone: Zone): Zone => {
-    const isNewLocalDraft =
-      zone.id.startsWith('ZONA-') &&
-      !zones.some((existing) => existing.id === zone.id);
-
-    const savedLocal = zoneRepository.save(zone);
-
-    void (async () => {
-      try {
-        const polygonPayload = geoJsonPolygonToLatLngArray(zone.polygon);
-        const savedRemote = isNewLocalDraft
-          ? await createZone({
-              name: zone.name,
-              polygon: polygonPayload,
-            })
-          : await updateZone(zone.id, {
-              name: zone.name,
-              polygon: polygonPayload,
-              active: zone.active,
-            });
-
-        const mapped = mapZoneResponseToZone(savedRemote, zone);
-        const current = zoneRepository
-          .list()
-          .map((item) =>
-            item.id === zone.id || item.id === mapped.id ? mapped : item,
-          );
-        if (!current.some((item) => item.id === mapped.id)) {
-          current.push(mapped);
-        }
-        localStorage.setItem(ZONES_KEY, encodeZones(current));
-        notifyZones();
-      } catch {
-        // Keep optimistic local zone if backend sync fails while offline
-      }
-    })();
-
-    return savedLocal;
+  // El servidor es la fuente de verdad: la zona se guarda primero allí y solo después,
+  // con su identificador real, en la copia local. Si el servidor la rechaza, el error
+  // llega a quien guarda y no queda una zona local que desaparezca al recargar.
+  const save = async (zone: Zone): Promise<Zone> => {
+    const isNew = !zones.some((existing) => existing.id === zone.id);
+    // Validaciones locales (nombre, polígono, sedes y solicitudes) antes de enviar.
+    zoneRepository.validate(zone);
+    const polygon = geoJsonPolygonToLatLngArray(zone.polygon);
+    const remote = isNew
+      ? await createZone({ name: zone.name.trim(), polygon })
+      : await updateZone(zone.id, {
+          name: zone.name.trim(),
+          polygon,
+          active: zone.active,
+        });
+    const mapped = mapZoneResponseToZone(remote, zone);
+    const current = zoneRepository.list().filter((item) => item.id !== zone.id);
+    const next = current.some((item) => item.id === mapped.id)
+      ? current.map((item) => (item.id === mapped.id ? mapped : item))
+      : [...current, mapped];
+    localStorage.setItem(ZONES_KEY, encodeZones(next));
+    notifyZones();
+    return mapped;
   };
 
   return { zones, error, save };

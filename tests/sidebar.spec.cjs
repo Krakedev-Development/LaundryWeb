@@ -211,7 +211,7 @@ test('nested routes select only the closest leaf and role changes filter the nav
   expect(errors).toEqual([]);
 });
 
-test('blue sidebar appearance, accessible notifications, keyboard search and sidebar logout remain functional', async ({
+test('blue sidebar appearance, accessible notifications and sidebar logout remain functional', async ({
   page,
 }) => {
   await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' });
@@ -238,18 +238,11 @@ test('blue sidebar appearance, accessible notifications, keyboard search and sid
   await page.keyboard.press('Escape');
   await expect(bell).toBeFocused();
   await expect(bell).toHaveAttribute('aria-expanded', 'false');
+  // El header no tiene buscador global: cada página tiene el suyo.
   await page.keyboard.press('Control+k');
-  await expect(
-    page.getByPlaceholder(
-      'Buscar solicitudes, clientes, incidencias o choferes...',
-    ),
-  ).toBeVisible();
-  await page.keyboard.press('Escape');
-  await expect(
-    page.getByPlaceholder(
-      'Buscar solicitudes, clientes, incidencias o choferes...',
-    ),
-  ).toHaveCount(0);
+  const header = page.locator('main > header');
+  await expect(header).toBeVisible();
+  await expect(header.getByRole('textbox')).toHaveCount(0);
   await page
     .locator('#app-sidebar')
     .getByRole('button', { name: 'Cerrar sesión', exact: true })

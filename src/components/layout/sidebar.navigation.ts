@@ -88,6 +88,7 @@ export const SIDEBAR_MODULES: readonly SidebarModule[] = [
     icon: ChartNoAxesCombined,
     items: [
       { label: 'Reportes', path: '/reports' },
+      { label: 'Personal', path: '/management/staff', adminOnly: true },
       { label: 'Configuración', path: '/settings', adminOnly: true },
     ],
   },

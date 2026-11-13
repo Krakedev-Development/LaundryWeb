@@ -25,6 +25,33 @@ export class LocalZoneRepository implements ZoneRepository {
   list() {
     return readZones(this.dependencies.storage ?? localStorageAdapter);
   }
+  // Comprueba la zona sin guardarla; lanza el mismo error que `save`.
+  validate(value: Zone) {
+    this.check(structuredClone({ ...value, name: value.name.trim() }), this.list());
+  }
+
+  private check(zone: Zone, zones: Zone[]) {
+    if (this.dependencies.actor().role !== 'ADMIN')
+      throw Error('Solo el Administrador puede configurar zonas.');
+    validateZone(zone);
+    const previous = zones.find((item) => item.id === zone.id);
+    if (
+      zones.some(
+        (item) =>
+          item.id !== zone.id &&
+          item.name.toLocaleLowerCase() === zone.name.toLocaleLowerCase(),
+      )
+    )
+      throw Error('Ya existe una zona con ese nombre.');
+    if (previous)
+      validateZoneChange(
+        { ...previous },
+        { ...zone, facilityId: previous.facilityId },
+        this.dependencies.facilities(),
+        this.dependencies.orders(),
+      );
+  }
+
   save(value: Zone) {
     if (this.dependencies.actor().role !== 'ADMIN')
       throw Error('Solo el Administrador puede configurar zonas.');

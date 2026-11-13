@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { PageHeader } from '../../components/common/PageHeader';
+import { TablePagination, usePagination } from '../../shared/ui/TablePagination';
 import { MetricCard } from '../../components/common/MetricCard';
 import { IconPlaceholder } from '../../components/common/IconPlaceholder';
 import {
@@ -232,6 +233,7 @@ const KycReview: React.FC = () => {
       (c.kycDocumentNumber ?? '').includes(q)
     );
   });
+  const pagination = usePagination(visible, `${tab}|${searchQuery.trim()}`);
 
   const reviewable = detail?.kycStatus === 'PENDING';
   const allChecksPassed = Object.values(checks).every(Boolean);
@@ -380,7 +382,7 @@ const KycReview: React.FC = () => {
               ) : loadError ? (
                 <tr>
                   <td colSpan={7} className="py-8 text-center text-rose-700">
-                    <p className="mb-2">{loadError}</p>
+                    <p role="alert" className="mb-2">{loadError}</p>
                     <button
                       type="button"
                       onClick={() => void load()}
@@ -401,7 +403,7 @@ const KycReview: React.FC = () => {
                   </td>
                 </tr>
               ) : (
-                visible.map((cust) => (
+                pagination.rows.map((cust) => (
                   <tr
                     key={cust.id}
                     className="hover:bg-slate-50/80 transition-colors group"
@@ -474,6 +476,7 @@ const KycReview: React.FC = () => {
               )}
             </tbody>
           </table>
+          <TablePagination pagination={pagination} label="verificaciones" />
         </div>
       </div>
 
@@ -492,6 +495,7 @@ const KycReview: React.FC = () => {
             <motion.div
               role="dialog"
               aria-modal="true"
+              aria-labelledby="kyc-review-title"
               initial={{ opacity: 0, scale: 0.96, y: 12 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 12 }}
@@ -505,7 +509,7 @@ const KycReview: React.FC = () => {
                     <ShieldCheck className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-slate-900 leading-tight">
+                    <h3 id="kyc-review-title" className="text-base font-bold text-slate-900 leading-tight">
                       Revisión de Solicitud KYC
                     </h3>
                     <p className="text-xs text-slate-500 mt-0.5">
@@ -655,6 +659,8 @@ const KycReview: React.FC = () => {
                               <button
                                 key={item.key}
                                 type="button"
+                                role="checkbox"
+                                aria-checked={!!isChecked}
                                 onClick={() =>
                                   setChecks({
                                     ...checks,

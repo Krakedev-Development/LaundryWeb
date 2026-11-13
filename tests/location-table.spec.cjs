@@ -14,11 +14,11 @@ test('location table combines filters, paginates, respects map layers and opens 
   });
   const table = region.getByRole('table', { name: 'Ubicaciones operativas' });
   const details = table.getByRole('button', { name: /^Ver detalle de/ });
-  await expect(details).toHaveCount(10);
+  await expect(details).toHaveCount(15);
   await region
     .getByRole('button', { name: 'Página siguiente de ubicaciones' })
     .click();
-  await expect(region.getByRole('status')).toContainText('11–20');
+  await expect(region.getByRole('status')).toContainText('16–');
   await region
     .getByLabel('Tipo de ubicación', { exact: true })
     .selectOption('facility');

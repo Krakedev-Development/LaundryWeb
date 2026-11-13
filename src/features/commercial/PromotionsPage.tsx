@@ -10,6 +10,7 @@ import {
 } from '../../services/api/catalogApi';
 import { ApiError } from '../../services/api/apiConfig';
 import { PageHeader } from '../../components/common/PageHeader';
+import { TablePagination, usePagination } from '../../shared/ui/TablePagination';
 import { MetricCard } from '../../components/common/MetricCard';
 import { DiscountType, Promotion } from '../../types';
 import {
@@ -67,6 +68,7 @@ export const PromotionsPage: React.FC = () => {
 
   // KPIs
   const totalCount = promotions.length;
+  const pagination = usePagination(promotions);
   const activeCount = promotions.filter((p) => p.status === 'ACTIVE').length;
   const scheduledCount = promotions.filter(
     (p) => p.status === 'SCHEDULED',
@@ -303,7 +305,7 @@ export const PromotionsPage: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {promotions.map((promo) => (
+              {pagination.rows.map((promo) => (
                 <tr
                   key={promo.id}
                   className="hover:bg-slate-50/70 transition-colors"
@@ -381,6 +383,7 @@ export const PromotionsPage: React.FC = () => {
             </tbody>
           </table>
         </div>
+        <TablePagination pagination={pagination} label="promociones" />
       </div>
 
       {/* Drawer Crear / Editar Promoción per spec #37 */}

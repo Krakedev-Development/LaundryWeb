@@ -3,6 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { PageHeader } from '../../components/common/PageHeader';
+import { TablePagination, usePagination } from '../../shared/ui/TablePagination';
 import { MetricCard } from '../../components/common/MetricCard';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { SLABadge } from '../../components/common/PriorityBadge';
@@ -80,6 +81,7 @@ export const DeliveriesPage: React.FC = () => {
       return true;
     });
   }, [deliveryOrders, statusFilter, driverFilter]);
+  const pagination = usePagination(filteredOrders, `${statusFilter}|${driverFilter}`);
 
   const handleSaveSchedule = (e: React.FormEvent) => {
     e.preventDefault();
@@ -197,7 +199,7 @@ export const DeliveriesPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredOrders.map((ord) => {
+                {pagination.rows.map((ord) => {
                   const isSelected = selectedOrder?.id === ord.id;
                   return (
                     <tr
@@ -278,6 +280,7 @@ export const DeliveriesPage: React.FC = () => {
               </tbody>
             </table>
           </div>
+          <TablePagination pagination={pagination} label="entregas" />
         </div>
 
         {/* Right: Side Scheduling Panel (5 cols) */}

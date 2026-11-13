@@ -6,9 +6,10 @@ import { validateZone } from '../../../entities/zone/model/zone.rules';
 export function useZoneDraft(
   initial: Zone | undefined,
   zones: Zone[],
-  onSave: (zone: Zone) => void,
+  onSave: (zone: Zone) => Promise<unknown>,
   onClose: () => void,
 ) {
+  const [saving, setSaving] = useState(false);
   const [name, setName] = useState(initial?.name ?? '');
   const [active, setActive] = useState(initial?.active ?? true);
   const original =
@@ -34,11 +35,15 @@ export function useZoneDraft(
       setError((reason as Error).message);
     }
   };
-  const save = (event: React.FormEvent) => {
+  // El diálogo solo se cierra cuando el servidor confirmó la zona.
+  const save = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (saving) return;
+    setError('');
     try {
       if (drawing) throw Error('Cierra el polígono antes de guardar.');
-      onSave({
+      setSaving(true);
+      await onSave({
         id: initial?.id ?? `ZONA-${crypto.randomUUID()}`,
         name,
         active,
@@ -46,7 +51,11 @@ export function useZoneDraft(
       });
       onClose();
     } catch (reason) {
-      setError((reason as Error).message);
+      setError(
+        reason instanceof Error ? reason.message : 'No se pudo guardar la zona.',
+      );
+    } finally {
+      setSaving(false);
     }
   };
   const preview: Zone[] =
@@ -69,6 +78,7 @@ export function useZoneDraft(
     error,
     closePolygon,
     save,
+    saving,
     preview,
   };
 }

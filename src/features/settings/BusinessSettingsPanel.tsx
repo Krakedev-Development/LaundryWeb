@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { CalendarDays, Settings2, Info } from 'lucide-react';
 import { storageService } from '../../services/storage';
 import { useApp } from '../../context/AppContext';
+import { TablePagination, usePagination } from '../../shared/ui/TablePagination';
 import type {
   BusinessPolicy,
   SlotContext,
@@ -24,6 +25,10 @@ export function BusinessSettingsPanel() {
     reservedCount: 0,
     active: true,
   });
+  const slotRows = state.timeSlots.filter(
+    (s) => s.facilityId === slot.facilityId && s.context === slot.context,
+  );
+  const slotPages = usePagination(slotRows, `${slot.facilityId}|${slot.context}`);
   if (currentUser.role !== 'ADMIN') return null;
   const run = (work: () => void) => {
     try {
@@ -239,13 +244,7 @@ export function BusinessSettingsPanel() {
               </tr>
             </thead>
             <tbody>
-              {state.timeSlots
-                .filter(
-                  (s) =>
-                    s.facilityId === slot.facilityId &&
-                    s.context === slot.context,
-                )
-                .map((s) => (
+              {slotPages.rows.map((s) => (
                   <tr key={s.id} className="border-t">
                     <td className="py-2">
                       {s.date} · {s.start}–{s.end}
@@ -278,6 +277,7 @@ export function BusinessSettingsPanel() {
                 ))}
             </tbody>
           </table>
+          <TablePagination pagination={slotPages} label="horarios" />
         </div>
       </div>
     </section>

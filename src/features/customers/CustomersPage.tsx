@@ -5,6 +5,7 @@ import { listCustomers } from '../../services/api/customersApi';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { PageHeader } from '../../components/common/PageHeader';
+import { TablePagination, usePagination } from '../../shared/ui/TablePagination';
 import { MetricCard } from '../../components/common/MetricCard';
 import { Customer } from '../../types';
 import {
@@ -84,8 +85,8 @@ export const CustomersPage: React.FC = () => {
           : membershipFilter !== 'ALL' && c.membership !== membershipFilter
       )
         return false;
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
+      const q = searchQuery.trim().toLowerCase();
+      if (q) {
         const matches =
           c.fullName.toLowerCase().includes(q) ||
           c.email.toLowerCase().includes(q) ||
@@ -96,6 +97,10 @@ export const CustomersPage: React.FC = () => {
       return true;
     });
   }, [customers, membershipFilter, searchQuery]);
+  const pagination = usePagination(
+    filteredCustomers,
+    `${membershipFilter}|${searchQuery.trim()}`,
+  );
 
   // Planes que realmente tienen los clientes: no hay una lista fija de membresías.
   const planNames = useMemo(
@@ -222,7 +227,7 @@ export const CustomersPage: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredCustomers.map((cust) => (
+              {pagination.rows.map((cust) => (
                 <tr
                   key={cust.id}
                   onClick={() => setSelectedCustomerId(cust.id)}
@@ -302,6 +307,7 @@ export const CustomersPage: React.FC = () => {
             </tbody>
           </table>
         </div>
+        <TablePagination pagination={pagination} label="clientes" />
       </div>
 
       {/* Customer 360 Drawer per spec #34 */}

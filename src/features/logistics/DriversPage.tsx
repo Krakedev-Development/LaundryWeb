@@ -4,6 +4,7 @@ import { IconPlaceholder } from '../../components/common/IconPlaceholder';
 import React, { useEffect, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { PageHeader } from '../../components/common/PageHeader';
+import { TablePagination, usePagination } from '../../shared/ui/TablePagination';
 import { MetricCard } from '../../components/common/MetricCard';
 import { Driver, DriverStatus } from '../../types';
 import {
@@ -40,6 +41,7 @@ export const DriversPage: React.FC = () => {
     showToast,
   } = useApp();
   const isAdmin = currentUser.role === 'ADMIN';
+  const pagination = usePagination(drivers);
   const { zones } = useZones();
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -323,7 +325,7 @@ export const DriversPage: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {drivers.map((driver) => {
+              {pagination.rows.map((driver) => {
                 const loadPercent = Math.round(
                   (driver.activeOrders / driver.maxOrders) * 100,
                 );
@@ -443,6 +445,7 @@ export const DriversPage: React.FC = () => {
             </tbody>
           </table>
         </div>
+        <TablePagination pagination={pagination} label="choferes" />
       </div>
 
       {/* Drawer Crear / Editar Chofer (Solo Admin) */}

@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { PageHeader } from '../../components/common/PageHeader';
+import { TablePagination, usePagination } from '../../shared/ui/TablePagination';
 import { MetricCard } from '../../components/common/MetricCard';
 import { Incident, IncidentSeverity, IncidentStatus } from '../../types';
 import {
@@ -67,6 +68,7 @@ export const IncidentsPage: React.FC = () => {
       return true;
     });
   }, [incidents, activeTab, searchQuery]);
+  const pagination = usePagination(filteredIncidents, `${activeTab}|${searchQuery.trim()}`);
 
   const handleAddNote = (e: React.FormEvent) => {
     e.preventDefault();
@@ -275,7 +277,7 @@ export const IncidentsPage: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredIncidents.map((inc) => (
+              {pagination.rows.map((inc) => (
                 <tr
                   key={inc.id}
                   onClick={() => setSelectedIncidentId(inc.id)}
@@ -321,6 +323,7 @@ export const IncidentsPage: React.FC = () => {
             </tbody>
           </table>
         </div>
+        <TablePagination pagination={pagination} label="incidencias" />
       </div>
 
       {/* Incident Detail Drawer / Modal per spec #33 */}
