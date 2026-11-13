@@ -14,7 +14,6 @@ import {
   mapServiceToCatalogItem,
   mapExtraToCatalogItem,
 } from '../../services/api/catalogApi';
-import { ApiError } from '../../services/api/apiConfig';
 import { PageHeader } from '../../components/common/PageHeader';
 import { TablePagination, usePagination } from '../../shared/ui/TablePagination';
 import { MetricCard } from '../../components/common/MetricCard';
@@ -32,8 +31,6 @@ import {
 export const CatalogPage: React.FC = () => {
   const {
     catalog,
-    createCatalogItem,
-    updateCatalogItem,
     currentUser,
     showToast,
   } = useApp();
@@ -244,15 +241,8 @@ export const CatalogPage: React.FC = () => {
       }
       setIsDrawerOpen(false);
     } catch (err) {
-      if (err instanceof ApiError && err.status === 0) {
-        if (editingItem) {
-          updateCatalogItem({ ...editingItem, ...draftMeta });
-        } else {
-          createCatalogItem(draftMeta);
-        }
-        setIsDrawerOpen(false);
-        return;
-      }
+      // Sin respaldo local: un ítem que solo existe en el navegador se vería en la web
+      // pero nunca llegaría a la app del cliente. El formulario queda abierto.
       showToast({
         type: 'error',
         title: 'Error al guardar en catálogo',
