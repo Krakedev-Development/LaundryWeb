@@ -424,7 +424,7 @@ export const DriversPage: React.FC = () => {
                     <td className="py-3.5 px-4 text-[11px] text-slate-500 truncate max-w-[150px]">
                       {driver.location.address}
                       <span className="block text-[10px] text-slate-400 font-mono">
-                        {driver.location.lastUpdated}
+                        {driver.location.lastUpdated || 'Sin ubicación registrada'}
                       </span>
                     </td>
 

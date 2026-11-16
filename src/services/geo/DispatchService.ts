@@ -35,6 +35,13 @@ export interface DriverCandidate {
   score: number;
   reasons: string[];
 }
+export interface ExcludedDriver {
+  driverId: string;
+  reasons: string[];
+  /** Momento de la última ubicación recibida, para indicar su antigüedad. */
+  locationAt: string;
+}
+
 export function isLocationStale(
   updatedAt: string,
   now = Date.now(),
@@ -129,6 +136,36 @@ export class DispatchService {
     private staleSeconds = 120,
     private enforceLimit = false,
   ) {}
+  // Igual que candidates(), pero informa también qué choferes quedaron fuera y por qué, para
+  // que administración sepa qué corregir en lugar de ver una lista vacía.
+  async evaluate(
+    drivers: DispatchDriver[],
+    target: DispatchTarget,
+    signal?: AbortSignal,
+    enforceLimit = this.enforceLimit,
+  ): Promise<{ candidates: DriverCandidate[]; excluded: ExcludedDriver[] }> {
+    const now = Date.now();
+    const excluded: ExcludedDriver[] = [];
+    for (const d of drivers) {
+      const reasons = eligibilityReasons(d, target, now, this.staleSeconds, enforceLimit);
+      if (reasons.length) excluded.push({ driverId: d.id, reasons, locationAt: d.updatedAt });
+    }
+    const candidates = await this.candidates(drivers, target, signal, enforceLimit);
+    const ranked = new Set(candidates.map((c) => c.driverId));
+    const ineligible = new Set(excluded.map((e) => e.driverId));
+    // Con hasta maxCandidates elegibles todos entran al cálculo de rutas: quedar fuera significa
+    // que no hay ruta. Con más, también puede estar entre los más lejanos.
+    const reason =
+      drivers.length - ineligible.size <= this.maxCandidates
+        ? 'No se pudo calcular una ruta hasta la dirección'
+        : `Fuera de los ${this.maxCandidates} choferes más cercanos o sin ruta hasta la dirección`;
+    for (const d of drivers) {
+      if (ranked.has(d.id) || ineligible.has(d.id)) continue;
+      excluded.push({ driverId: d.id, reasons: [reason], locationAt: d.updatedAt });
+    }
+    return { candidates, excluded };
+  }
+
   async candidates(
     drivers: DispatchDriver[],
     target: DispatchTarget,

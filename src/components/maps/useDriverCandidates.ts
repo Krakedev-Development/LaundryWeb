@@ -6,6 +6,7 @@ import { serviceAreaService } from '../../services/geo/ServiceAreaService';
 import {
   isLocationStale,
   type DriverCandidate,
+  type ExcludedDriver,
 } from '../../services/geo/DispatchService';
 import type { Order } from '../../types';
 export function useDriverCandidates(
@@ -15,6 +16,7 @@ export function useDriverCandidates(
   const { drivers } = useApp();
   const policy=storageService.getWorkflow().businessPolicy;
   const [candidates, setCandidates] = useState<DriverCandidate[]>([]),
+    [excluded, setExcluded] = useState<ExcludedDriver[]>([]),
     [loading, setLoading] = useState(false),
     [error, setError] = useState('');
   const coordinates =
@@ -30,6 +32,7 @@ export function useDriverCandidates(
     .join('|');
   useEffect(() => {
     setCandidates([]);
+    setExcluded([]);
     setError('');
     if (!order || !coordinates) {
       setLoading(false);
@@ -39,7 +42,7 @@ export function useDriverCandidates(
     setLoading(true);
     const area = serviceAreaService.findArea(coordinates);
     dispatchService
-      .candidates(
+      .evaluate(
         drivers.map((d) => ({
           id: d.id,
           status: d.status,
@@ -62,7 +65,9 @@ export function useDriverCandidates(
         policy.enforceDriverLimit,
       )
       .then((value) => {
-        if (!controller.signal.aborted) setCandidates(value);
+        if (controller.signal.aborted) return;
+        setCandidates(value.candidates);
+        setExcluded(value.excluded);
       })
       .catch((e) => {
         if (!controller.signal.aborted) setError(e.message);
@@ -81,5 +86,5 @@ export function useDriverCandidates(
     coordinates?.lat,
     coordinates?.lng,
   ]);
-  return { candidates, loading, error };
+  return { candidates, excluded, loading, error };
 }

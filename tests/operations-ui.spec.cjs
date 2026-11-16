@@ -101,3 +101,49 @@ test('assignment controls, keyboard dismissal and operation screens work at desk
   await dialog.getByRole('button', { name: 'Cancelar', exact: true }).click();
   await expect(dialog).toHaveCount(0);
 });
+
+test('si ningún chofer es elegible se explica el motivo de cada uno', async ({ page }) => {
+  const cors = { 'access-control-allow-origin': '*' };
+  let serverDrivers = [];
+  // El servidor informa a los choferes con la última ubicación de hace 2 horas o sin ubicación.
+  await page.route(/\/api\/v1\/drivers(\?.*)?$/, (route) =>
+    route.request().method() === 'OPTIONS'
+      ? route.fulfill({
+          status: 204,
+          headers: { ...cors, 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' },
+        })
+      : route.fulfill({ status: 200, headers: cors, contentType: 'application/json', body: JSON.stringify(serverDrivers) }),
+  );
+  await page.goto('/operations/orders/SOL-HOME-001');
+  const twoHoursAgo = new Date(Date.now() - 2 * 3600 * 1000).toISOString();
+  serverDrivers = await page.evaluate((at) => {
+    const raw = JSON.parse(localStorage.getItem('lw_workflow_v2') || '{}');
+    return (raw.drivers || []).map((d, i) => ({
+      id: d.id,
+      userId: `u-${d.id}`,
+      name: d.name,
+      email: d.email,
+      phone: d.phone,
+      status: 'AVAILABLE',
+      vehicle: d.vehicleType,
+      plate: d.vehiclePlate,
+      facilityId: d.facilityId,
+      facilityName: d.facilityName,
+      latitude: d.location.lat,
+      longitude: d.location.lng,
+      // El primero nunca envió su ubicación.
+      locationAt: i === 0 ? null : at,
+      activeLegsCount: 0,
+    }));
+  }, twoHoursAgo);
+  expect(serverDrivers.length).toBeGreaterThan(1);
+
+  await page.getByRole('button', { name: 'Asignar chofer de recogida', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Asignar chofer' });
+  await expect(dialog.getByText('No hay choferes elegibles con una ruta disponible.')).toBeVisible();
+  const list = dialog.getByRole('list', { name: 'Choferes no elegibles' });
+  await expect(list).toBeVisible();
+  await expect(list).toContainText('Sin ubicación registrada: el chofer debe abrir la app con la ubicación activada.');
+  await expect(list).toContainText('Ubicación desactualizada (última hace 2 h 0 min)');
+  await expect(dialog.getByRole('button', { name: 'Confirmar asignación', exact: true })).toBeDisabled();
+});

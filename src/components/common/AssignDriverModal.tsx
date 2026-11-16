@@ -13,6 +13,21 @@ import { syncDrivers } from '../../services/api/driversApi';
 import { ApiError } from '../../services/api/apiConfig';
 import { storageService } from '../../services/storage';
 
+// Explica cuánto tiempo lleva sin llegar la ubicación del chofer y qué debe hacer.
+function staleLocationText(locationAt: string, now = Date.now()) {
+  const at = Date.parse(locationAt);
+  if (!Number.isFinite(at))
+    return 'Sin ubicación registrada: el chofer debe abrir la app con la ubicación activada.';
+  const minutes = Math.max(1, Math.round((now - at) / 60000));
+  const age =
+    minutes < 60
+      ? `${minutes} min`
+      : minutes < 1440
+        ? `${Math.floor(minutes / 60)} h ${minutes % 60} min`
+        : `${Math.floor(minutes / 1440)} d`;
+  return `Ubicación desactualizada (última hace ${age}): el chofer debe tener la app abierta con la ubicación activada.`;
+}
+
 export const AssignDriverModal = ({
   order,
   type,
@@ -27,7 +42,7 @@ export const AssignDriverModal = ({
   const { drivers, assignDriver, customers, facilities, orders, showToast } =
     useApp();
   const [submitting, setSubmitting] = useState(false);
-  const { candidates, loading, error } = useDriverCandidates(
+  const { candidates, excluded, loading, error } = useDriverCandidates(
     isOpen ? order : undefined,
     type,
   );
@@ -214,7 +229,52 @@ export const AssignDriverModal = ({
               <p className="text-sm text-slate-600">
                 No hay choferes elegibles con una ruta disponible.
               </p>
+              {excluded.length > 0 && (
+                <p className="mt-1 text-xs text-slate-500">
+                  Revisa abajo por qué no se puede asignar a cada chofer.
+                </p>
+              )}
             </div>
+          )}
+          {!loading && !error && excluded.length > 0 && (
+            <details
+              open={!candidates.length}
+              className="rounded-2xl border border-slate-200 bg-white"
+            >
+              <summary className="cursor-pointer px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-600">
+                Choferes no elegibles ({excluded.length})
+              </summary>
+              <ul
+                aria-label="Choferes no elegibles"
+                className="divide-y divide-slate-100 border-t border-slate-100"
+              >
+                {excluded.map((item) => {
+                  const driver = drivers.find((d) => d.id === item.driverId);
+                  return (
+                    <li key={item.driverId} className="px-4 py-3 text-xs">
+                      <p className="font-semibold text-[#102A43]">
+                        {driver?.name ?? 'Chofer'}
+                        {driver?.facilityName ? (
+                          <span className="font-normal text-slate-500">
+                            {' '}
+                            · {driver.facilityName}
+                          </span>
+                        ) : null}
+                      </p>
+                      <ul className="mt-1 list-disc space-y-0.5 pl-4 text-slate-600">
+                        {item.reasons.map((reason) => (
+                          <li key={reason}>
+                            {reason === 'Ubicación desactualizada'
+                              ? staleLocationText(item.locationAt)
+                              : reason}
+                          </li>
+                        ))}
+                      </ul>
+                    </li>
+                  );
+                })}
+              </ul>
+            </details>
           )}
           <div className="space-y-3">
             {candidates.map((candidate, i) => {

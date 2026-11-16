@@ -182,9 +182,9 @@ export function mapBackendDriverToDriver(
       lat,
       lng,
       address: matchedFacility?.address || existing?.location?.address || facilityName,
-      lastUpdated: raw.locationAt
-        ? new Date(raw.locationAt).toISOString()
-        : existing?.location?.lastUpdated || new Date().toISOString(),
+      // Solo cuenta la hora que informa el servidor: sin ubicación real el chofer no debe
+      // parecer recién ubicado (queda como "sin ubicación registrada").
+      lastUpdated: raw.locationAt ? new Date(raw.locationAt).toISOString() : '',
       simulated: existing?.location?.simulated ?? false,
     },
   };
