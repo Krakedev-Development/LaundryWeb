@@ -354,11 +354,12 @@ export function mapBackendOrderToOrder(
         },
       ];
 
-  const totalAmount = Number(raw.total ?? existing?.pricing?.total ?? 0);
-  const itemsSubtotal = detail ? Number(detail.itemsSubtotal) : totalAmount;
-  const discount = detail ? Number(detail.discount) : (existing?.pricing?.discount ?? 0);
-  const extrasTotal = detail ? Number(detail.extrasTotal) : (existing?.pricing?.extrasTotal ?? 0);
-  const deliveryFee = detail ? Number(detail.logisticsFee) : (existing?.pricing?.deliveryFee ?? 0);
+  const totalAmount = Number(raw.total ?? existing?.pricing?.total ?? 0) || 0;
+  // Un monto ausente no puede quedar en NaN: guardado pasa a null y rompe la vista al recargar.
+  const itemsSubtotal = detail ? Number(detail.itemsSubtotal) || 0 : totalAmount;
+  const discount = detail ? Number(detail.discount) || 0 : (existing?.pricing?.discount ?? 0);
+  const extrasTotal = detail ? Number(detail.extrasTotal) || 0 : (existing?.pricing?.extrasTotal ?? 0);
+  const deliveryFee = detail ? Number(detail.logisticsFee) || 0 : (existing?.pricing?.deliveryFee ?? 0);
 
   const priority: OrderPriority = detail?.priority ? 'HIGH' : existing?.priority ?? 'NORMAL';
   const slaStatus: SLARisk = existing?.slaStatus ?? 'ON_TIME';

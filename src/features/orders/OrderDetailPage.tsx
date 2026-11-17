@@ -37,7 +37,12 @@ import {
   getOrder,
   mapBackendOrderToOrder,
   transitionOrder,
+  type BackendOrderDetail,
 } from '../../services/api/ordersApi';
+import { FailedPickupPanel } from './FailedPickupPanel';
+import { FacilityReceptionPanel } from './FacilityReceptionPanel';
+import { PlantProcessPanel } from '../plant/PlantProcessPanel';
+import { DispatchCustodyPanel } from './DispatchCustodyPanel';
 import { ApiError } from '../../services/api/apiConfig';
 import { storageService } from '../../services/storage';
 
@@ -180,6 +185,21 @@ export const OrderDetailPage: React.FC = () => {
         title: 'No se pudo actualizar el estado',
         message: err instanceof Error ? err.message : 'Revisa los datos.',
       });
+    }
+  };
+
+  // Aplica la solicitud que devolvió el servidor (o la vuelve a pedir) en la vista y el cache.
+  const refreshFromServer = async (updated?: BackendOrderDetail) => {
+    if (!order) return;
+    try {
+      const raw = updated ?? (await getOrder(order.id));
+      const mapped = mapBackendOrderToOrder(raw, order, customers, facilities, drivers);
+      setLiveOrder(mapped);
+      const next = orders.map((o) => (o.id === mapped.id ? mapped : o));
+      if (!next.some((o) => o.id === mapped.id)) next.push(mapped);
+      storageService.saveOrders(next);
+    } catch {
+      // Si no se puede recargar, la próxima visita traerá el estado vigente.
     }
   };
 
@@ -517,6 +537,35 @@ export const OrderDetailPage: React.FC = () => {
         }
       />
 
+      {/* Llegada a planta: la sede valida el código del chofer y las prendas recibidas. */}
+      {/* La web agrupa las etapas de recogida en AWAITING_INTAKE + hito: se usa la etapa operativa. */}
+      {operationalStage(order) === 'HEADING_TO_FACILITY' && (
+        <FacilityReceptionPanel
+          orderId={order.id}
+          version={order.version ?? order.workflowVersion ?? 1}
+          onChanged={(updated) => void refreshFromServer(updated)}
+        />
+      )}
+      {/* Salida a reparto, retiro en sede y cierre, con el servidor. */}
+      <DispatchCustodyPanel
+        orderId={order.id}
+        onChanged={(updated) => void refreshFromServer(updated)}
+      />
+      {/* Proceso en planta con el servidor (solo mientras la solicitud está en planta). */}
+      <PlantProcessPanel
+        orderId={order.id}
+        onlyInPlant
+        onChanged={(updated) => void refreshFromServer(updated)}
+      />
+      {/* Recogida fallida: la sede reprograma la recogida o cancela la solicitud retenida. */}
+      {order.status === 'INCIDENT' && (
+        <FailedPickupPanel
+          orderId={order.id}
+          version={order.version ?? order.workflowVersion ?? 1}
+          facilityId={order.facilityId}
+          onChanged={(updated) => void refreshFromServer(updated)}
+        />
+      )}
       {/* Quarantine Alert Warning if active */}
       {order.businessVersion === 3 && <OrderBusinessPanel order={order} />}
       {operationalStage(order) === 'QUARANTINE' && (
