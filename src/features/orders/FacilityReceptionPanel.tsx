@@ -29,14 +29,17 @@ export function FacilityReceptionPanel({
   orderId,
   version,
   onChanged,
+  initialCode = '',
 }: {
   orderId: string;
   version: number;
   onChanged(updated: BackendOrderDetail): void;
+  /** Código o QR leído en "Recepción y retiros", para no tener que volver a escanearlo. */
+  initialCode?: string;
 }) {
   const { showToast } = useApp();
   const [declared, setDeclared] = useState<number | null>(null);
-  const [code, setCode] = useState('');
+  const [code, setCode] = useState(initialCode);
   const [received, setReceived] = useState('');
   const [notes, setNotes] = useState('');
   const [errors, setErrors] = useState<{ code?: string; received?: string; notes?: string }>({});

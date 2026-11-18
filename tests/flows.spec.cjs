@@ -10,13 +10,7 @@ test('el personal no puede verificar por el chofer ni ve códigos de custodia', 
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto('/operations/handoffs', { waitUntil: 'domcontentloaded' });
-  await page.getByLabel('Sede de operación').selectOption('FAC-02');
-  await page.getByRole('tab', { name: 'Transferencias chofer', exact: true }).click();
-  await page
-    .getByRole('button')
-    .filter({ hasText: 'SOL-SAMPLE-FAC-02-CHOFER' })
-    .filter({ hasText: 'Ingreso del chofer en planta' })
-    .click();
+  await expect(page.getByRole('heading', { name: 'Recepción y retiros', exact: true })).toBeVisible();
   // Ningún control de muestra, ni código preparado, ni representación del chofer.
   await expect(page.getByText(/Demo:|Control demo|modo demo/i)).toHaveCount(0);
   await expect(page.getByRole('checkbox', { name: /representar/i })).toHaveCount(0);

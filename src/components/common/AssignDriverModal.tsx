@@ -13,21 +13,6 @@ import { syncDrivers } from '../../services/api/driversApi';
 import { ApiError } from '../../services/api/apiConfig';
 import { storageService } from '../../services/storage';
 
-// Explica cuánto tiempo lleva sin llegar la ubicación del chofer y qué debe hacer.
-function staleLocationText(locationAt: string, now = Date.now()) {
-  const at = Date.parse(locationAt);
-  if (!Number.isFinite(at))
-    return 'Sin ubicación registrada: el chofer debe abrir la app con la ubicación activada.';
-  const minutes = Math.max(1, Math.round((now - at) / 60000));
-  const age =
-    minutes < 60
-      ? `${minutes} min`
-      : minutes < 1440
-        ? `${Math.floor(minutes / 60)} h ${minutes % 60} min`
-        : `${Math.floor(minutes / 1440)} d`;
-  return `Ubicación desactualizada (última hace ${age}): el chofer debe tener la app abierta con la ubicación activada.`;
-}
-
 export const AssignDriverModal = ({
   order,
   type,
@@ -264,9 +249,7 @@ export const AssignDriverModal = ({
                       <ul className="mt-1 list-disc space-y-0.5 pl-4 text-slate-600">
                         {item.reasons.map((reason) => (
                           <li key={reason}>
-                            {reason === 'Ubicación desactualizada'
-                              ? staleLocationText(item.locationAt)
-                              : reason}
+                            {reason}
                           </li>
                         ))}
                       </ul>

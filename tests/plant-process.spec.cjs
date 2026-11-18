@@ -111,6 +111,8 @@ test('servicio por prenda: no se pesa, pasa directo a la inspección', async ({ 
   const panel = await panelOf(page);
   await expect(panel).toContainText('Por prenda');
   await expect(panel.getByRole('button', { name: 'Iniciar pesaje', exact: true })).toHaveCount(0);
+  // Con el panel del servidor activo, la pestaña no repite la inspección local.
+  await expect(page.getByRole('button', { name: /^Iniciar inspección/ })).toHaveCount(1);
   await panel.getByRole('button', { name: 'Iniciar inspección', exact: true }).click();
   await expect(panel).toContainText('Inspección');
   expect(calls).toEqual([['/transitions', expect.objectContaining({ to: 'INSPECTION' })]]);
@@ -120,6 +122,9 @@ test('con saldo pendiente por transferencia, la sede confirma el pago', async ({
   const { calls } = await mockServer(page, { status: 'IN_PROCESS', amountDue: '5.34', paymentMethodKind: 'TRANSFER' });
   const panel = await panelOf(page);
   await expect(panel).toContainText('$5.34');
+  // "Pasar a control de calidad" solo existe dentro del panel, no repetido en la pestaña.
+  const toQc = { name: 'Pasar a control de calidad', exact: true };
+  expect(await page.getByRole('button', toQc).count()).toBe(await panel.getByRole('button', toQc).count());
   await panel.getByRole('button', { name: 'Confirmar pago por transferencia', exact: true }).click();
   await expect(panel.getByRole('button', { name: 'Confirmar pago por transferencia', exact: true })).toHaveCount(0);
   expect(calls[0][0]).toBe('/confirm-payment');

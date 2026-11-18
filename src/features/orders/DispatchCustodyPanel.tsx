@@ -46,13 +46,19 @@ const STEPS: Record<string, Step> = {
 export function DispatchCustodyPanel({
   orderId,
   onChanged,
+  refreshKey,
+  initialCode = '',
 }: {
   orderId: string;
   onChanged(updated: PlantOrder): void;
+  /** Cambia cuando la solicitud cambió en otro panel (p. ej. su versión): se vuelve a consultar. */
+  refreshKey?: string | number;
+  /** Código o QR leído en "Recepción y retiros", para no tener que volver a escanearlo. */
+  initialCode?: string;
 }) {
   const { showToast } = useApp();
   const [order, setOrder] = useState<PlantOrder | null>(null);
-  const [code, setCode] = useState('');
+  const [code, setCode] = useState(initialCode);
   const [name, setName] = useState('');
   const [relationship, setRelationship] = useState('');
   const [notes, setNotes] = useState('');
@@ -71,7 +77,7 @@ export function DispatchCustodyPanel({
 
   useEffect(() => {
     void load();
-  }, [load]);
+  }, [load, refreshKey]);
 
   // Lectura del QR con la cámara (requiere HTTPS o localhost).
   useEffect(() => {

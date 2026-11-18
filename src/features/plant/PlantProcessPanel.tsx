@@ -52,12 +52,18 @@ export function PlantProcessPanel({
   onChanged,
   fallback = null,
   onlyInPlant = false,
+  onActiveChange,
+  refreshKey,
 }: {
   orderId: string;
   onChanged?(updated: PlantOrder): void;
   fallback?: ReactNode;
   /** No muestra nada si la solicitud no está en planta (p. ej. en el detalle de la solicitud). */
   onlyInPlant?: boolean;
+  /** Avisa si el panel del servidor está guiando el proceso en planta, para ocultar acciones repetidas. */
+  onActiveChange?(active: boolean): void;
+  /** Cambia cuando la solicitud cambió en otro panel (p. ej. su versión): se vuelve a consultar. */
+  refreshKey?: string | number;
 }) {
   const { showToast } = useApp();
   const [order, setOrder] = useState<PlantOrder | null>(null);
@@ -90,7 +96,14 @@ export function PlantProcessPanel({
 
   useEffect(() => {
     void load();
-  }, [load]);
+  }, [load, refreshKey]);
+
+  const active =
+    state === 'ready' && !!order && (PLANT_STATUSES as readonly string[]).includes(order.status);
+  useEffect(() => {
+    onActiveChange?.(active);
+  }, [active, onActiveChange]);
+  useEffect(() => () => onActiveChange?.(false), [onActiveChange]);
 
   if (state === 'loading')
     return onlyInPlant ? null : (

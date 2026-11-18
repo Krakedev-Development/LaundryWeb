@@ -88,7 +88,7 @@ const driver = (id, extra = {}) => ({
   maxOrders: 4,
   ...extra,
 });
-test('eligibility excludes unavailable, full, stale and unauthorized drivers before Matrix', async () => {
+test('eligibility excludes unavailable, full and other-facility drivers; stale GPS and other zone stay eligible without a made-up ETA', async () => {
   const drivers = [
     driver('a'),
     driver('offline', { status: 'OFFLINE' }),
@@ -108,21 +108,37 @@ test('eligibility excludes unavailable, full, stale and unauthorized drivers bef
     drivers,
     target,
   );
+  // Solo los choferes con ubicación reciente entran al cálculo de rutas.
   assert.deepEqual(
-    origins.map((v) => v.id),
-    ['a'],
+    origins.map((v) => v.id).sort(),
+    ['a', 'zone'],
   );
+  // Otra zona baja en el puntaje; GPS viejo queda al final, sin tiempo de llegada.
   assert.deepEqual(
     candidates.map((v) => v.driverId),
-    ['a'],
+    ['a', 'zone', 'old'],
+  );
+  const old = candidates.find((v) => v.driverId === 'old');
+  assert.equal(old.etaSeconds, null);
+  assert.ok(old.reasons.includes('En sede · GPS pendiente'));
+  const { excluded } = await new DispatchService(new SampleGeoProvider(), 10, 120, true).evaluate(drivers, target);
+  assert.deepEqual(
+    Object.fromEntries(excluded.map((e) => [e.driverId, e.reasons])),
+    {
+      offline: ['Chofer no disponible'],
+      full: ['Sin capacidad disponible'],
+      other: ['Sede incompatible'],
+    },
   );
   assert.equal(
     isLocationStale(new Date(Date.now() + 60000).toISOString()),
     true,
   );
   assert.ok(
-    eligibilityReasons(driver('zero', { maxOrders: 0 }), target).length,
+    eligibilityReasons(driver('zero', { maxOrders: 0 }), target, Date.now(), 120, true).length,
   );
+  // Sin límite de capacidad configurado, maxOrders 0 no excluye.
+  assert.equal(eligibilityReasons(driver('zero', { maxOrders: 0 }), target).length, 0);
 });
 test('ranking is finite for one candidate/equal ETA, handles missing history and deterministic ties', () => {
   const drivers = [driver('b'), driver('a')];

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Sparkles,
   Receipt,
@@ -46,6 +46,9 @@ import { QuarantineModal } from './components/QuarantineModal';
 
 export const OrderDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  // Código o QR leído en "Recepción y retiros": el panel de la etapa lo trae ya cargado.
+  const [searchParams] = useSearchParams();
+  const custodyCode = searchParams.get('custodia') ?? '';
   const {
     orders,
     customers,
@@ -461,6 +464,7 @@ export const OrderDetailPage: React.FC = () => {
           onConfirmPayment={handleConfirmPayment}
           hasActiveIncidents={hasActiveIncidents}
           activeIncidentsCount={orderIncidents.length}
+          custodyCode={custodyCode}
         />
       )}
 

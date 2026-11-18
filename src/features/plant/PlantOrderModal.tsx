@@ -307,9 +307,9 @@ export function PlantOrderModal({
             )}
             <Link
               className="inline-block text-sm font-semibold text-[#0F4C81] underline"
-              to="/operations/handoffs"
+              to={`/operations/orders/${order.id}`}
             >
-              Abrir recepción y retiros para validar custodia
+              Abrir el detalle de la solicitud para validar custodia
             </Link>
           </div>
         )}

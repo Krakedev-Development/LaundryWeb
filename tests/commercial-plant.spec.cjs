@@ -165,7 +165,7 @@ for (const width of [1440, 390]) {
     });
     await modal.getByRole('button', { name: 'Gestionar proceso' }).click();
     await expect(
-      modal.getByRole('link', { name: /Abrir recepción y retiros/ }),
+      modal.getByRole('link', { name: /Abrir el detalle de la solicitud para validar custodia/ }),
     ).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(modal).not.toBeVisible();

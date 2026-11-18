@@ -1,6 +1,7 @@
 // URL base de la API (p. ej. http://localhost:4000/api/v1). Se define por instalación.
 const raw =
-  (import.meta.env.VITE_API_URL as string | undefined) ||
+  // "?." permite cargar este módulo en las pruebas unitarias de Node, donde no hay import.meta.env.
+  (import.meta.env?.VITE_API_URL as string | undefined) ||
   'http://localhost:4000/api/v1';
 
 export const apiUrl = raw.replace(/\/+$/, '');

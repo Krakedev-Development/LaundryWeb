@@ -188,11 +188,16 @@ export class DispatchService {
         !eligibilityReasons(d, target, now, this.staleSeconds, enforceLimit)
           .length,
     );
+    // Solo una ubicación reciente sirve para calcular la ruta: con una vieja el tiempo de llegada
+    // sería inventado. Esos choferes siguen siendo elegibles, como "En sede · GPS pendiente".
+    const located = (d: DispatchDriver) =>
+      validCoordinates(d.coordinates) &&
+      !isLocationStale(d.updatedAt, now, this.staleSeconds);
     // Straight-line distance only shortlists candidates; ranking uses road travel times.
     const shortlist = eligible
       .sort((a, b) => {
-        const aValid = validCoordinates(a.coordinates) ? 0 : 1;
-        const bValid = validCoordinates(b.coordinates) ? 0 : 1;
+        const aValid = located(a) ? 0 : 1;
+        const bValid = located(b) ? 0 : 1;
         if (aValid !== bValid) return aValid - bValid;
         if (aValid === 0 && validCoordinates(target.coordinates)) {
           const distDiff =
@@ -210,7 +215,7 @@ export class DispatchService {
       })
       .slice(0, this.maxCandidates);
 
-    const routable = shortlist.filter((d) => validCoordinates(d.coordinates));
+    const routable = shortlist.filter(located);
     let matrix: Awaited<ReturnType<GeoProvider['getMatrix']>> = [];
     if (routable.length > 0 && validCoordinates(target.coordinates)) {
       try {

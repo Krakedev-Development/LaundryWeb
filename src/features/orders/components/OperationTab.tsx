@@ -21,6 +21,7 @@ import { PlantProgress } from '../../plant/plantProgress';
 import { FacilityReceptionPanel } from '../FacilityReceptionPanel';
 import { DispatchCustodyPanel } from '../DispatchCustodyPanel';
 import { FailedPickupPanel } from '../FailedPickupPanel';
+import { PlantProcessPanel } from '../../plant/PlantProcessPanel';
 
 interface OperationTabProps {
   order: Order;
@@ -35,6 +36,8 @@ interface OperationTabProps {
   onConfirmPayment: () => Promise<void>;
   hasActiveIncidents: boolean;
   activeIncidentsCount: number;
+  /** Código o QR leído en "Recepción y retiros" para validar en el panel que corresponda. */
+  custodyCode?: string;
 }
 
 export const OperationTab: React.FC<OperationTabProps> = ({
@@ -49,8 +52,15 @@ export const OperationTab: React.FC<OperationTabProps> = ({
   onConfirmPayment,
   hasActiveIncidents,
   activeIncidentsCount,
+  custodyCode = '',
 }) => {
   const stage = operationalStage(order);
+  // Con una solicitud del servidor en planta, el panel "Proceso en planta" guía cada paso con sus
+  // validaciones (pesaje, ajustes, pago). Mientras esté activo no se repiten aquí sus acciones.
+  const [serverPlantActive, setServerPlantActive] = React.useState(false);
+  // Cada paso (en este u otro panel) cambia la versión: los paneles vuelven a consultar el servidor
+  // para mostrar el paso siguiente sin recargar la página.
+  const versionKey = `${order.version ?? order.workflowVersion ?? 0}:${order.status}`;
   const isPerWeight = order.pricing?.pricingModel === 'PER_WEIGHT';
   const latestEvent = order.timeline[order.timeline.length - 1];
 
@@ -316,6 +326,22 @@ export const OperationTab: React.FC<OperationTabProps> = ({
       break;
   }
 
+  // Acciones que el panel del servidor ya ofrece. La retención para revisión técnica no la
+  // ofrece el panel, así que se conserva durante el lavado.
+  if (serverPlantActive) {
+    if (['ARRIVED_AT_FACILITY', 'AT_FACILITY', 'QUALITY_CONTROL'].includes(stage)) primaryCTA = null;
+    else if (stage === 'IN_PROCESS')
+      primaryCTA = (
+        <button
+          onClick={onOpenQuarantine}
+          className="px-4 py-2.5 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer"
+        >
+          <AlertTriangle className="w-3.5 h-3.5" />
+          <span>Retener para revisión técnica</span>
+        </button>
+      );
+  }
+
   // Check if payment verification alert is legitimately needed (Fixing Finding H-04)
   const isTransferPending =
     order.pricing?.paymentMethod === 'TRANSFERENCIA' && order.pricing?.paymentStatus !== 'PAID';
@@ -414,6 +440,7 @@ export const OperationTab: React.FC<OperationTabProps> = ({
             <FacilityReceptionPanel
               orderId={order.id}
               version={order.version ?? order.workflowVersion ?? 1}
+              initialCode={custodyCode}
               onChanged={(updated) => void refreshFromServer(updated)}
             />
           )}
@@ -428,13 +455,23 @@ export const OperationTab: React.FC<OperationTabProps> = ({
             />
           )}
 
-          {/* Contextual Dispatch Panel */}
-          {['READY_FOR_DELIVERY', 'DELIVERY_SCHEDULED', 'DELIVERY_ASSIGNED', 'OUT_FOR_DELIVERY', 'ARRIVED_FOR_DELIVERY'].includes(stage) && (
-            <DispatchCustodyPanel
-              orderId={order.id}
-              onChanged={(updated) => void refreshFromServer(updated)}
-            />
-          )}
+          {/* Salida a reparto, retiro en sede y cierre. Se monta siempre: el panel consulta el
+              estado real en el servidor y decide qué mostrar (el estado local agrupa etapas). */}
+          <DispatchCustodyPanel
+            orderId={order.id}
+            refreshKey={versionKey}
+            initialCode={custodyCode}
+            onChanged={(updated) => void refreshFromServer(updated)}
+          />
+
+          {/* Proceso en planta con el servidor (solo mientras la solicitud está en planta). */}
+          <PlantProcessPanel
+            orderId={order.id}
+            onlyInPlant
+            refreshKey={versionKey}
+            onActiveChange={setServerPlantActive}
+            onChanged={(updated) => void refreshFromServer(updated)}
+          />
         </div>
 
         {/* Right: Compact Request Summary & Last Event (1 col) */}
