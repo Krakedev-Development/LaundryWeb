@@ -218,7 +218,8 @@ export const AssignDriverModal = ({
           )}
           <div className="space-y-3">
             {candidates.map((candidate, i) => {
-              const driver = drivers.find((d) => d.id === candidate.driverId)!;
+              const driver = drivers.find((d) => d.id === candidate.driverId);
+              if (!driver) return null;
               return (
                 <DriverCandidateCard
                   key={driver.id}
