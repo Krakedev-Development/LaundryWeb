@@ -1,16 +1,17 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { PaginatedTable } from '../../shared/ui/TablePagination';
-import { ArrowUpRight, History, Package, Workflow } from 'lucide-react';
-import type { Order } from '../../types';
-import { useApp } from '../../context/AppContext';
-import { storageService } from '../../services/storage';
-import { operationalStage } from '../../services/fulfillment';
-import { Modal } from '../../shared/ui/Modal';
-import { StatusBadge } from '../../components/common/StatusBadge';
-import { OrderBusinessPanel } from '../orders/OrderBusinessPanel';
-import { OrderHistory, displayDate } from './OrderHistory';
-import { PlantProgress } from './plantProgress';
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { PaginatedTable } from "../../shared/ui/TablePagination";
+import { ArrowUpRight, History, Package, Workflow } from "lucide-react";
+import type { Order } from "../../types";
+import { useApp } from "../../context/AppContext";
+import { storageService } from "../../services/storage";
+import { operationalStage } from "../../services/fulfillment";
+import { Modal } from "../../shared/ui/Modal";
+import { StatusBadge } from "../../components/common/StatusBadge";
+import { OrderBusinessPanel } from "../orders/OrderBusinessPanel";
+import { PlantProcessPanel } from "./PlantProcessPanel";
+import { OrderHistory, displayDate } from "./OrderHistory";
+import { PlantProgress } from "./plantProgress";
 
 export function PlantOrderModal({
   order,
@@ -26,8 +27,8 @@ export function PlantOrderModal({
     moveToQuarantine,
     releaseFromQuarantine,
   } = useApp();
-  const [tab, setTab] = useState('summary');
-  const [reason, setReason] = useState('');
+  const [tab, setTab] = useState("summary");
+  const [reason, setReason] = useState("");
   const state = storageService.getWorkflow();
   const stage = operationalStage(order);
   const money = (value: number) =>
@@ -71,16 +72,16 @@ export function PlantOrderModal({
         aria-label="Secciones del pedido"
       >
         {[
-          { id: 'summary', label: 'Resumen y prendas', Icon: Package },
-          { id: 'process', label: 'Gestionar proceso', Icon: Workflow },
-          { id: 'history', label: 'Historial y bitácora', Icon: History },
+          { id: "summary", label: "Resumen y prendas", Icon: Package },
+          { id: "process", label: "Gestionar proceso", Icon: Workflow },
+          { id: "history", label: "Historial y bitácora", Icon: History },
         ].map(({ id, label, Icon }) => (
           <button
             key={id}
             type="button"
             aria-pressed={tab === id}
             onClick={() => setTab(id)}
-            className={`inline-flex shrink-0 items-center gap-2 border-b-2 px-3 py-4 text-sm font-semibold ${tab === id ? 'border-[#0F4C81] text-[#0F4C81]' : 'border-transparent text-slate-600 hover:text-[#0F4C81]'}`}
+            className={`inline-flex shrink-0 items-center gap-2 border-b-2 px-3 py-4 text-sm font-semibold ${tab === id ? "border-[#0F4C81] text-[#0F4C81]" : "border-transparent text-slate-600 hover:text-[#0F4C81]"}`}
           >
             <Icon size={16} />
             {label}
@@ -88,7 +89,7 @@ export function PlantOrderModal({
         ))}
       </div>
       <div className="p-5 sm:p-6">
-        {tab === 'summary' && (
+        {tab === "summary" && (
           <div className="space-y-6">
             <dl className="grid gap-x-8 gap-y-5 text-sm sm:grid-cols-2">
               <div>
@@ -98,9 +99,9 @@ export function PlantOrderModal({
               <div>
                 <dt className="text-slate-600">Modalidad</dt>
                 <dd className="mt-1 font-semibold">
-                  {order.fulfillment?.outbound.method === 'CUSTOMER'
-                    ? 'Recogida a domicilio y retiro en sede'
-                    : 'Recogida y entrega a domicilio'}
+                  {order.fulfillment?.outbound.method === "CUSTOMER"
+                    ? "Recogida a domicilio y retiro en sede"
+                    : "Recogida y entrega a domicilio"}
                 </dd>
               </div>
               <div>
@@ -108,19 +109,19 @@ export function PlantOrderModal({
                 <dd className="mt-1 font-semibold">
                   {order.pricing.measuredWeight !== undefined
                     ? `${order.pricing.measuredWeight} ${order.pricing.weightUnit}`
-                    : 'Sin pesaje registrado'}
+                    : "Sin pesaje registrado"}
                 </dd>
               </div>
               <div>
                 <dt className="text-slate-600">Importe y pago</dt>
                 <dd className="mt-1 font-semibold">
                   {order.pricing.amountKnown === false
-                    ? 'Pendiente de pesaje'
-                    : money(order.pricing.total)}{' '}
-                  ·{' '}
-                  {order.pricing.paymentStatus === 'PAID'
-                    ? 'Pagado'
-                    : 'Pendiente'}
+                    ? "Pendiente de pesaje"
+                    : money(order.pricing.total)}{" "}
+                  ·{" "}
+                  {order.pricing.paymentStatus === "PAID"
+                    ? "Pagado"
+                    : "Pendiente"}
                 </dd>
               </div>
               <div>
@@ -139,32 +140,38 @@ export function PlantOrderModal({
             )}
             <section>
               <h3 className="mb-3 font-semibold">Prendas del pedido</h3>
-              <PaginatedTable items={order.items} label="prendas del pedido" hideWhenSinglePage>
+              <PaginatedTable
+                items={order.items}
+                label="prendas del pedido"
+                hideWhenSinglePage
+              >
                 {(itemRows) => (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead className="border-y border-slate-200 bg-slate-50 text-xs text-slate-600">
-                    <tr>
-                      <th className="px-3 py-3">Prenda</th>
-                      <th className="px-3 py-3">Cantidad</th>
-                      <th className="px-3 py-3">Observaciones</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {itemRows.map((item) => (
-                      <tr key={item.id}>
-                        <td className="px-3 py-3 font-medium">{item.name}</td>
-                        <td className="px-3 py-3 tabular-nums">
-                          {item.quantity}
-                        </td>
-                        <td className="px-3 py-3 text-slate-600">
-                          {item.notes || 'Sin observaciones'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                      <thead className="border-y border-slate-200 bg-slate-50 text-xs text-slate-600">
+                        <tr>
+                          <th className="px-3 py-3">Prenda</th>
+                          <th className="px-3 py-3">Cantidad</th>
+                          <th className="px-3 py-3">Observaciones</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {itemRows.map((item) => (
+                          <tr key={item.id}>
+                            <td className="px-3 py-3 font-medium">
+                              {item.name}
+                            </td>
+                            <td className="px-3 py-3 tabular-nums">
+                              {item.quantity}
+                            </td>
+                            <td className="px-3 py-3 text-slate-600">
+                              {item.notes || "Sin observaciones"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 )}
               </PaginatedTable>
             </section>
@@ -178,10 +185,10 @@ export function PlantOrderModal({
                     className="mb-2 border-l-2 border-amber-500 pl-3 text-sm"
                   >
                     <span className="font-semibold">
-                      {incident.id} ·{' '}
-                      {incident.status === 'RESOLVED'
-                        ? 'Resuelta'
-                        : 'Pendiente'}
+                      {incident.id} ·{" "}
+                      {incident.status === "RESOLVED"
+                        ? "Resuelta"
+                        : "Pendiente"}
                     </span>
                     <span className="mt-1 block text-slate-600">
                       {incident.description}
@@ -196,57 +203,63 @@ export function PlantOrderModal({
             </section>
           </div>
         )}
-        {tab === 'process' && (
+        {tab === "process" && (
           <div className="space-y-5">
-            {order.businessVersion === 3 ? (
-              <OrderBusinessPanel order={order} />
-            ) : (
-              <div className="flex flex-wrap gap-3">
-                {stage === 'AT_FACILITY' && (
-                  <button
-                    className="rounded-lg bg-[#0F4C81] px-4 py-2.5 text-sm font-semibold text-white"
-                    onClick={() =>
-                      updateOrderStatus(
-                        order.id,
-                        'IN_PROCESS',
-                        'Procesamiento iniciado desde planta',
-                      )
-                    }
-                  >
-                    Iniciar procesamiento
-                  </button>
-                )}
-                {stage === 'IN_PROCESS' && (
-                  <button
-                    className="rounded-lg bg-[#0F4C81] px-4 py-2.5 text-sm font-semibold text-white"
-                    onClick={() =>
-                      updateOrderStatus(
-                        order.id,
-                        'QUALITY_CONTROL',
-                        'Lavado terminado',
-                      )
-                    }
-                  >
-                    Pasar a control de calidad
-                  </button>
-                )}
-                {stage === 'QUALITY_CONTROL' && (
-                  <button
-                    className="rounded-lg bg-[#0F4C81] px-4 py-2.5 text-sm font-semibold text-white"
-                    onClick={() =>
-                      updateOrderStatus(
-                        order.id,
-                        'READY_FOR_DELIVERY',
-                        'Calidad aprobada desde planta',
-                      )
-                    }
-                  >
-                    Marcar listo
-                  </button>
-                )}
-              </div>
-            )}
-            {['IN_PROCESS', 'QUALITY_CONTROL'].includes(stage) && (
+            {/* Proceso en planta con el servidor; sin servidor (datos locales) se usa el panel local. */}
+            <PlantProcessPanel
+              orderId={order.id}
+              fallback={
+                order.businessVersion === 3 ? (
+                  <OrderBusinessPanel order={order} />
+                ) : (
+                  <div className="flex flex-wrap gap-3">
+                    {stage === "AT_FACILITY" && (
+                      <button
+                        className="rounded-lg bg-[#0F4C81] px-4 py-2.5 text-sm font-semibold text-white"
+                        onClick={() =>
+                          updateOrderStatus(
+                            order.id,
+                            "IN_PROCESS",
+                            "Procesamiento iniciado desde planta",
+                          )
+                        }
+                      >
+                        Iniciar procesamiento
+                      </button>
+                    )}
+                    {stage === "IN_PROCESS" && (
+                      <button
+                        className="rounded-lg bg-[#0F4C81] px-4 py-2.5 text-sm font-semibold text-white"
+                        onClick={() =>
+                          updateOrderStatus(
+                            order.id,
+                            "QUALITY_CONTROL",
+                            "Lavado terminado",
+                          )
+                        }
+                      >
+                        Pasar a control de calidad
+                      </button>
+                    )}
+                    {stage === "QUALITY_CONTROL" && (
+                      <button
+                        className="rounded-lg bg-[#0F4C81] px-4 py-2.5 text-sm font-semibold text-white"
+                        onClick={() =>
+                          updateOrderStatus(
+                            order.id,
+                            "READY_FOR_DELIVERY",
+                            "Calidad aprobada desde planta",
+                          )
+                        }
+                      >
+                        Marcar listo
+                      </button>
+                    )}
+                  </div>
+                )
+              }
+            />
+            {["IN_PROCESS", "QUALITY_CONTROL"].includes(stage) && (
               <section className="border-t border-slate-200 pt-5">
                 <h3 className="font-semibold">Retener para revisión</h3>
                 <label className="mt-3 block text-sm text-slate-600">
@@ -267,7 +280,7 @@ export function PlantOrderModal({
                 </button>
               </section>
             )}
-            {stage === 'QUARANTINE' && (
+            {stage === "QUARANTINE" && (
               <section>
                 <label className="block text-sm text-slate-600">
                   Resolución de la retención
@@ -283,7 +296,7 @@ export function PlantOrderModal({
                   onClick={() =>
                     releaseFromQuarantine(
                       order.id,
-                      'QUALITY_CONTROL',
+                      "QUALITY_CONTROL",
                       reason.trim(),
                     )
                   }
@@ -294,13 +307,13 @@ export function PlantOrderModal({
             )}
             <Link
               className="inline-block text-sm font-semibold text-[#0F4C81] underline"
-              to="/operations/handoffs"
+              to={`/operations/orders/${order.id}`}
             >
-              Abrir recepción y retiros para validar custodia
+              Abrir el detalle de la solicitud para validar custodia
             </Link>
           </div>
         )}
-        {tab === 'history' && (
+        {tab === "history" && (
           <OrderHistory
             order={order}
             state={state}

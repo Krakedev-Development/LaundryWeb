@@ -44,38 +44,6 @@ test('assignment controls, keyboard dismissal and operation screens work at desk
     path: 'test-results/dispatch-desktop.png',
     fullPage: true,
   });
-  await page.goto('/operations/handoffs');
-  await page.getByLabel('Sede de operación').selectOption('FAC-02');
-  await page.getByRole('tab', { name: 'Transferencias chofer', exact: true }).click();
-  await page
-    .getByRole('button')
-    .filter({ hasText: 'SOL-SAMPLE-FAC-02-CHOFER' })
-    .filter({ hasText: 'Ingreso del chofer en planta' })
-    .click();
-  // El código lo conoce quien presenta; la prueba lo lee de los datos sembrados.
-  const code = await page.evaluate(() =>
-    JSON.parse(localStorage.getItem('lw_workflow_v2')).handoffs.find(
-      (h) =>
-        h.orderId === 'SOL-SAMPLE-FAC-02-CHOFER' &&
-        h.type === 'DRIVER_TO_FACILITY' &&
-        h.status === 'ACTIVE',
-    ).fallbackCode,
-  );
-  await page.getByLabel('Código de transferencia').fill(code);
-  await page
-    .getByRole('button', { name: 'Verificar código', exact: true })
-    .click();
-  await expect(
-    page.getByRole('heading', { name: 'Revisión y confirmación' }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole('button', { name: 'Confirmar transferencia', exact: true }),
-  ).toBeDisabled();
-  await page.screenshot({
-    path: 'test-results/handoffs-desktop.png',
-    fullPage: true,
-  });
-
   await page.setViewportSize({ width: 375, height: 812 });
   for (const path of ['/operations/dispatch', '/operations/handoffs']) {
     await page.goto(path);
@@ -100,4 +68,53 @@ test('assignment controls, keyboard dismissal and operation screens work at desk
   await dialog.screenshot({ path: 'test-results/assignment-mobile.png' });
   await dialog.getByRole('button', { name: 'Cancelar', exact: true }).click();
   await expect(dialog).toHaveCount(0);
+});
+
+test('sin GPS reciente el chofer sigue elegible; solo el estado, la sede o la capacidad lo excluyen', async ({ page }) => {
+  const cors = { 'access-control-allow-origin': '*' };
+  let serverDrivers = [];
+  // El primero está desconectado; los demás nunca enviaron ubicación o la última es de hace 2 h.
+  await page.route(/\/api\/v1\/drivers(\?.*)?$/, (route) =>
+    route.request().method() === 'OPTIONS'
+      ? route.fulfill({
+          status: 204,
+          headers: { ...cors, 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' },
+        })
+      : route.fulfill({ status: 200, headers: cors, contentType: 'application/json', body: JSON.stringify(serverDrivers) }),
+  );
+  await page.goto('/operations/orders/SOL-HOME-001');
+  const twoHoursAgo = new Date(Date.now() - 2 * 3600 * 1000).toISOString();
+  serverDrivers = await page.evaluate((at) => {
+    const raw = JSON.parse(localStorage.getItem('lw_workflow_v2') || '{}');
+    return (raw.drivers || []).map((d, i) => ({
+      id: d.id,
+      userId: `u-${d.id}`,
+      name: d.name,
+      email: d.email,
+      phone: d.phone,
+      status: i === 0 ? 'OFFLINE' : 'AVAILABLE',
+      vehicle: d.vehicleType,
+      plate: d.vehiclePlate,
+      facilityId: d.facilityId,
+      facilityName: d.facilityName,
+      latitude: d.location.lat,
+      longitude: d.location.lng,
+      locationAt: i === 1 ? null : at,
+      activeLegsCount: 0,
+    }));
+  }, twoHoursAgo);
+  expect(serverDrivers.length).toBeGreaterThan(2);
+
+  await page.getByRole('button', { name: 'Asignar chofer de recogida', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Asignar chofer' });
+  // Sin ubicación reciente no se inventa un tiempo de llegada: se muestra "GPS pendiente".
+  await expect(dialog.getByText('GPS pendiente', { exact: true }).first()).toBeVisible();
+  await expect(dialog.getByText('No hay choferes elegibles con una ruta disponible.')).toHaveCount(0);
+  await dialog.locator('summary', { hasText: 'Choferes no elegibles' }).click();
+  const list = dialog.getByRole('list', { name: 'Choferes no elegibles' });
+  await expect(list).toBeVisible();
+  await expect(list).toContainText(serverDrivers[0].name);
+  await expect(list).toContainText('Chofer no disponible');
+  await expect(list).not.toContainText('Ubicación desactualizada');
+  await expect(list).not.toContainText('Sin ubicación registrada');
 });

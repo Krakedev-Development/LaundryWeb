@@ -57,10 +57,14 @@ export function DriverCandidateCard({
           <Clock className="size-4 text-[#0F4C81]" aria-hidden="true" />
           <span>
             <strong className="font-bold text-[#102A43]">
-              {Math.ceil(candidate.etaSeconds! / 60)} min
+              {candidate.etaSeconds !== null
+                ? `${Math.ceil(candidate.etaSeconds / 60)} min`
+                : 'GPS pendiente'}
             </strong>
             <span className="block text-[10px] text-slate-500">
-              Tiempo de llegada
+              {candidate.etaSeconds !== null
+                ? 'Tiempo de llegada'
+                : 'En sede operativa'}
             </span>
           </span>
         </span>
@@ -68,10 +72,14 @@ export function DriverCandidateCard({
           <MapPin className="size-4 text-[#0F4C81]" aria-hidden="true" />
           <span>
             <strong className="font-bold text-[#102A43]">
-              {(candidate.distanceMeters! / 1000).toFixed(1)} km
+              {candidate.distanceMeters !== null
+                ? `${(candidate.distanceMeters / 1000).toFixed(1)} km`
+                : 'En sede'}
             </strong>
             <span className="block text-[10px] text-slate-500">
-              Distancia estimada
+              {candidate.distanceMeters !== null
+                ? 'Distancia estimada'
+                : 'En sede · GPS pendiente'}
             </span>
           </span>
         </span>

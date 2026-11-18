@@ -28,6 +28,10 @@ import {
   updateDriver as updateDriverApi,
   mapBackendDriverToDriver,
 } from '../../services/api/driversApi';
+import {
+  getFacilities,
+  mapFacilityResponseToFacility,
+} from '../../services/api/geoApi';
 import { ApiError } from '../../services/api/apiConfig';
 import { storageService } from '../../services/storage';
 
@@ -60,23 +64,41 @@ export const DriversPage: React.FC = () => {
   const [vehiclePlate, setVehiclePlate] = useState('');
   const [facilityId, setFacilityId] = useState(facilities[0]?.id || '');
   const [zoneId, setZoneId] = useState('ZONA-NORTE');
-  const [maxOrders, setMaxOrders] = useState(0);
+  const [maxOrders, setMaxOrders] = useState(8);
   const [status, setStatus] = useState<DriverStatus>('AVAILABLE');
 
   const refreshDrivers = async () => {
     try {
       setRefreshing(true);
-      const backendList = await listDrivers();
+      const [backendList, backendFacilities] = await Promise.all([
+        listDrivers(),
+        getFacilities().catch(() => null),
+      ]);
+
+      let activeFacilities = facilities;
+      if (backendFacilities && backendFacilities.length > 0) {
+        const mappedFacilities = backendFacilities.map((raw) =>
+          mapFacilityResponseToFacility(
+            raw,
+            zones,
+            facilities.find((f) => f.id === raw.id),
+          ),
+        );
+        storageService.saveFacilities(mappedFacilities);
+        activeFacilities = mappedFacilities;
+        if (!facilityId || !mappedFacilities.some((f) => f.id === facilityId)) {
+          setFacilityId(mappedFacilities[0].id);
+        }
+      }
+
       const mapped = backendList.map((raw) =>
         mapBackendDriverToDriver(
           raw,
           drivers.find((d) => d.id === raw.id || d.email === raw.email),
-          facilities,
+          activeFacilities,
         ),
       );
-      if (mapped.length > 0) {
-        storageService.saveDrivers(mapped);
-      }
+      storageService.saveDrivers(mapped);
     } catch {
       // Offline fallback: maintain stored drivers
     } finally {
@@ -100,13 +122,13 @@ export const DriversPage: React.FC = () => {
     setEditingDriver(null);
     setName('');
     setPhone('+593 99 000 0000');
-    setEmail('chofer@laundryweb.com');
+    setEmail('');
     setTemporaryPassword('Password123!');
     setVehicleType('VAN');
     setVehiclePlate('ABC-1234');
     setFacilityId(facilities[0]?.id || '');
     setZoneId('ZONA-NORTE');
-    setMaxOrders(0);
+    setMaxOrders(8);
     setStatus('AVAILABLE');
     setIsDrawerOpen(true);
   };
@@ -179,7 +201,7 @@ export const DriversPage: React.FC = () => {
           title: 'Chofer actualizado',
           message: `Los datos de ${name} fueron actualizados exitosamente.`,
         });
-        void refreshDrivers();
+        await refreshDrivers();
       } else {
         try {
           await createDriverApi({
@@ -424,7 +446,7 @@ export const DriversPage: React.FC = () => {
                     <td className="py-3.5 px-4 text-[11px] text-slate-500 truncate max-w-[150px]">
                       {driver.location.address}
                       <span className="block text-[10px] text-slate-400 font-mono">
-                        {driver.location.lastUpdated}
+                        {driver.location.lastUpdated || 'Sin ubicación registrada'}
                       </span>
                     </td>
 
@@ -492,12 +514,14 @@ export const DriversPage: React.FC = () => {
               </div>
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">
-                  Correo corporativo
+                  Correo corporativo *
                 </label>
                 <input
                   type="email"
+                  required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  placeholder="chofer@laundry.com"
                   className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-sky-500"
                 />
               </div>

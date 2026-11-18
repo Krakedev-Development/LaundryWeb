@@ -61,6 +61,8 @@ test('MVP uses icons even when stored records contain legacy image URLs', async 
   ).toBeVisible();
   await expect(page.locator('img[src*="legacy-photo"]')).toHaveCount(0);
   await page.goto(`/operations/orders/${incident.orderId}`);
+  // Las incidencias y sus evidencias están en la pestaña Actividad del detalle.
+  await page.getByRole('button', { name: /^Actividad/ }).click();
   await expect(
     page.getByRole('img', { name: incident.evidences[0].caption, exact: true }),
   ).toBeVisible();

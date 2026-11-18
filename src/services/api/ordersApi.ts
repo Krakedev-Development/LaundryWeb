@@ -12,6 +12,7 @@ import type {
   OrderTimelineEvent,
   SLARisk,
 } from '../../types';
+import type { LegStatus, Milestone } from '../fulfillment';
 
 export interface ListOrdersParams {
   status?: string;
@@ -227,6 +228,66 @@ export async function confirmOrderPayment(
 const GYE_LAT = -2.1894;
 const GYE_LNG = -79.8891;
 
+type LegView = { status: LegStatus; milestone: Milestone };
+const PLANT = ['AT_FACILITY', 'WEIGHING', 'INSPECTION', 'PRICING_PENDING', 'CUSTOMER_APPROVAL_PENDING', 'IN_PROCESS', 'QUALITY_CONTROL'];
+const INBOUND: Record<string, Milestone> = {
+  PICKUP_ASSIGNED: 'ASSIGNED',
+  HEADING_TO_PICKUP: 'EN_ROUTE',
+  ARRIVED_FOR_PICKUP: 'ARRIVED',
+  PICKED_UP: 'COLLECTED',
+  HEADING_TO_FACILITY: 'TO_FACILITY',
+};
+const OUTBOUND: Record<string, Milestone> = {
+  READY_FOR_DELIVERY: 'PENDING',
+  READY_FOR_PICKUP: 'PENDING',
+  DELIVERY_ASSIGNED: 'ASSIGNED',
+  OUT_FOR_DELIVERY: 'EN_ROUTE',
+  ARRIVED_FOR_DELIVERY: 'ARRIVED',
+  DELIVERED: 'DELIVERED',
+};
+
+/**
+ * Traduce el estado del servidor al modelo local de la Web (estado + hitos de cada tramo), que
+ * agrupa la logística de entrada en AWAITING_INTAKE y la de salida en READY. Así el detalle, las
+ * barras de progreso y la lista muestran la etapa real, también en estados que solo existen en el
+ * servidor (READY_FOR_PICKUP, DELIVERED pendiente de cierre).
+ */
+export function localStateFromServer(
+  status: string,
+  hasInboundDriver: boolean,
+  hasOutboundDriver: boolean,
+  previous?: string | null,
+): { status: OrderStatus; inbound: LegView; outbound: LegView } {
+  const pending = (driver: boolean): LegView => ({ status: 'SCHEDULED', milestone: driver ? 'ASSIGNED' : 'PENDING' });
+  const done: LegView = { status: 'COMPLETED', milestone: 'DELIVERED' };
+  if (status === 'COMPLETED') return { status: 'COMPLETED', inbound: done, outbound: done };
+  if (status in OUTBOUND) {
+    const milestone = OUTBOUND[status];
+    return {
+      status: 'READY',
+      inbound: done,
+      outbound: {
+        status: milestone === 'DELIVERED' ? 'COMPLETED' : milestone === 'PENDING' ? 'SCHEDULED' : 'IN_PROGRESS',
+        milestone,
+      },
+    };
+  }
+  if (PLANT.includes(status)) return { status: status as OrderStatus, inbound: done, outbound: pending(hasOutboundDriver) };
+  if (status in INBOUND)
+    return { status: 'AWAITING_INTAKE', inbound: { status: 'IN_PROGRESS', milestone: INBOUND[status] }, outbound: pending(hasOutboundDriver) };
+  if (status === 'INCIDENT' || status === 'CANCELLED') {
+    // Se conserva hasta dónde llegó la solicitud antes de la incidencia o la cancelación.
+    const before = previous ? localStateFromServer(previous, hasInboundDriver, hasOutboundDriver) : null;
+    return {
+      status: status as OrderStatus,
+      inbound: before?.inbound ?? pending(hasInboundDriver),
+      outbound: before?.outbound ?? pending(hasOutboundDriver),
+    };
+  }
+  // PAYMENT_PENDING, CONFIRMED.
+  return { status: status as OrderStatus, inbound: pending(hasInboundDriver), outbound: pending(hasOutboundDriver) };
+}
+
 export function mapBackendOrderToOrder(
   raw: BackendOrderDetail | BackendOrderSummary,
   existing?: Order,
@@ -245,6 +306,14 @@ export function mapBackendOrderToOrder(
 
   const inboundLeg = detail?.legs?.find((l) => l.kind === 'INBOUND');
   const outboundLeg = detail?.legs?.find((l) => l.kind === 'OUTBOUND');
+  const openIncident = ((detail as any)?.incidents as { status?: string; previousStatus?: string | null }[] | undefined)
+    ?.find((i) => i.status !== 'RESOLVED' && i.status !== 'CLOSED');
+  const local = localStateFromServer(
+    raw.status,
+    Boolean(inboundLeg?.driverId),
+    Boolean(outboundLeg?.driverId),
+    openIncident?.previousStatus,
+  );
 
   const inboundLat = Number(inboundLeg?.latitude) || existing?.customerAddress?.coordinates?.lat || GYE_LAT;
   const inboundLng = Number(inboundLeg?.longitude) || existing?.customerAddress?.coordinates?.lng || GYE_LNG;
@@ -354,11 +423,12 @@ export function mapBackendOrderToOrder(
         },
       ];
 
-  const totalAmount = Number(raw.total ?? existing?.pricing?.total ?? 0);
-  const itemsSubtotal = detail ? Number(detail.itemsSubtotal) : totalAmount;
-  const discount = detail ? Number(detail.discount) : (existing?.pricing?.discount ?? 0);
-  const extrasTotal = detail ? Number(detail.extrasTotal) : (existing?.pricing?.extrasTotal ?? 0);
-  const deliveryFee = detail ? Number(detail.logisticsFee) : (existing?.pricing?.deliveryFee ?? 0);
+  const totalAmount = Number(raw.total ?? existing?.pricing?.total ?? 0) || 0;
+  // Un monto ausente no puede quedar en NaN: guardado pasa a null y rompe la vista al recargar.
+  const itemsSubtotal = detail ? Number(detail.itemsSubtotal) || 0 : totalAmount;
+  const discount = detail ? Number(detail.discount) || 0 : (existing?.pricing?.discount ?? 0);
+  const extrasTotal = detail ? Number(detail.extrasTotal) || 0 : (existing?.pricing?.extrasTotal ?? 0);
+  const deliveryFee = detail ? Number(detail.logisticsFee) || 0 : (existing?.pricing?.deliveryFee ?? 0);
 
   const priority: OrderPriority = detail?.priority ? 'HIGH' : existing?.priority ?? 'NORMAL';
   const slaStatus: SLARisk = existing?.slaStatus ?? 'ON_TIME';
@@ -412,7 +482,7 @@ export function mapBackendOrderToOrder(
     zoneId: facility?.zoneId || existing?.zoneId || 'ZONA-GYE-CENTRO',
     zoneName: facility?.zone || existing?.zoneName || 'Guayaquil',
     priority,
-    status: raw.status as OrderStatus,
+    status: local.status,
     previousStatus: existing?.previousStatus,
     slaStatus,
     slaDeadline: existing?.slaDeadline || '24h',
@@ -461,7 +531,14 @@ export function mapBackendOrderToOrder(
       ? new Date(detail.updatedAt).toLocaleDateString('es-EC')
       : existing?.updatedAt || 'Hoy',
     version: raw.version ?? existing?.version ?? 1,
-    workflowVersion: raw.version ?? existing?.workflowVersion ?? 1,
+    // La inspección quedó hecha si el servidor ya pasó de esa etapa.
+    inspectionCompleted:
+      ['PRICING_PENDING', 'CUSTOMER_APPROVAL_PENDING', 'IN_PROCESS', 'QUALITY_CONTROL', 'COMPLETED'].includes(raw.status) ||
+      raw.status in OUTBOUND ||
+      Boolean(existing?.inspectionCompleted),
+    // Versión del modelo local (2), no la del servidor: con otro valor la Web volvería a
+    // "migrar" la solicitud como si fuera un registro antiguo y perdería su etapa real.
+    workflowVersion: 2,
     businessVersion: 3,
     fulfillment: {
       mode: raw.mode ?? 'HOME_HOME',
@@ -473,8 +550,8 @@ export function mapBackendOrderToOrder(
         timeSlot: pickupSlotText,
         driverId: pickupDriverId,
         handoffIds: [],
-        status: (inboundLeg?.status as any) ?? 'SCHEDULED',
-        milestone: inboundLeg?.driverId ? 'ASSIGNED' : 'PENDING',
+        status: local.inbound.status,
+        milestone: local.inbound.milestone,
       },
       outbound: {
         method: raw.mode === 'HOME_STORE' ? 'CUSTOMER' : 'DRIVER',
@@ -484,8 +561,8 @@ export function mapBackendOrderToOrder(
         timeSlot: deliverySlotText,
         driverId: deliveryDriverId,
         handoffIds: [],
-        status: (outboundLeg?.status as any) ?? 'SCHEDULED',
-        milestone: outboundLeg?.driverId ? 'ASSIGNED' : 'PENDING',
+        status: local.outbound.status,
+        milestone: local.outbound.milestone,
       },
     },
   };

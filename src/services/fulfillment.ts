@@ -273,6 +273,9 @@ export function operationalStage<
   if (!f) return order.status;
   if (order.status === 'INCIDENT' && order.quarantineReason)
     return 'QUARANTINE' as T['status'];
+  // Entregada (a domicilio o en sede) y pendiente de cierre.
+  if (order.status === 'READY' && f.outbound.milestone === 'DELIVERED')
+    return 'DELIVERED' as T['status'];
   if (
     (order.status === 'AWAITING_INTAKE' && f.inbound.method === 'CUSTOMER') ||
     (order.status === 'READY' && f.outbound.method === 'CUSTOMER') ||

@@ -1,5 +1,5 @@
 const { test, expect } = require('./support/fixtures.cjs');
-test('only two modes are selectable in list and configuration retains review values', async ({
+test('only two modes are selectable in list and configuration shows the server-backed panels', async ({
   page,
 }) => {
   await page.goto('/operations/orders');
@@ -16,11 +16,12 @@ test('only two modes are selectable in list and configuration retains review val
       .first(),
   ).toBeVisible();
   await page.goto('/settings');
+  // La política y la agenda viven en el servidor (detalle en policy.spec y time-slots.spec).
   await expect(
-    page.getByRole('heading', { name: 'Políticas y agenda' }),
+    page.getByRole('heading', { name: 'Política de negocio', exact: true }),
   ).toBeVisible();
-  await expect(page.getByLabel('IVA (fracción: 0.15 = 15%)')).toHaveValue('');
   await expect(
-    page.getByText('Decisiones en revisión', { exact: true }),
+    page.getByRole('heading', { name: 'Franjas horarias y cupos', exact: true }),
   ).toBeVisible();
+  await expect(page.getByText('Decisiones en revisión', { exact: true })).toHaveCount(0);
 });
