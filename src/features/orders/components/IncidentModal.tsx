@@ -14,6 +14,8 @@ interface IncidentModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  /** Abre con "Retener la solicitud" marcado (retención para revisión técnica). */
+  defaultHold?: boolean;
 }
 
 const TYPES: { value: string; label: string }[] = [
@@ -40,12 +42,13 @@ export const IncidentModal: React.FC<IncidentModalProps> = ({
   isOpen,
   onClose,
   onSuccess,
+  defaultHold = false,
 }) => {
   const { showToast } = useApp();
   const [type, setType] = useState(TYPES[0].value);
   const [severity, setSeverity] = useState<ServerIncidentSeverity>('MEDIUM');
   const [description, setDescription] = useState('');
-  const [holdOrder, setHoldOrder] = useState(false);
+  const [holdOrder, setHoldOrder] = useState(defaultHold);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -98,7 +101,7 @@ export const IncidentModal: React.FC<IncidentModalProps> = ({
             </div>
             <div>
               <h2 id="incident-modal-title" className="text-base font-bold text-slate-900">
-                Registrar incidencia operacional
+                {defaultHold ? 'Retener solicitud para revisión' : 'Registrar incidencia operacional'}
               </h2>
               <p className="text-xs text-slate-500">Solicitud {label}</p>
             </div>

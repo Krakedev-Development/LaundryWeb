@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 import { ClipboardCheck, LoaderCircle, Scale } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { ApiError } from '../../services/api/apiConfig';
+import { isIncidentActive, useServerIncidents } from '../../services/api/incidentsApi';
 import {
   ADJUSTMENT_TYPES,
   advance,
@@ -40,24 +41,23 @@ const STEP_LABEL: Record<string, string> = {
   CUSTOMER_APPROVAL_PENDING: 'Esperando la decisión del cliente',
   IN_PROCESS: 'En lavado y cuidado',
   QUALITY_CONTROL: 'Control de calidad',
+  INCIDENT: 'Retenida por incidencia',
 };
 const ADJ_STATUS = { PENDING_CUSTOMER: 'Esperando al cliente', APPROVED: 'Aprobado', REJECTED: 'Rechazado' };
 
 /**
- * Proceso en planta contra el servidor, paso a paso. Si la solicitud no existe en el servidor
- * (datos locales o sin conexión) se muestra `fallback`, el panel local anterior.
+ * Proceso en planta contra el servidor, paso a paso. El servidor es la única fuente de verdad:
+ * si no responde se muestra el error con "Reintentar"; nunca se avanza en local.
  */
 export function PlantProcessPanel({
   orderId,
   onChanged,
-  fallback = null,
   onlyInPlant = false,
   onActiveChange,
   refreshKey,
 }: {
   orderId: string;
   onChanged?(updated: PlantOrder): void;
-  fallback?: ReactNode;
   /** No muestra nada si la solicitud no está en planta (p. ej. en el detalle de la solicitud). */
   onlyInPlant?: boolean;
   /** Avisa si el panel del servidor está guiando el proceso en planta, para ocultar acciones repetidas. */
@@ -66,9 +66,10 @@ export function PlantProcessPanel({
   refreshKey?: string | number;
 }) {
   const { showToast } = useApp();
+  const { incidents } = useServerIncidents();
   const [order, setOrder] = useState<PlantOrder | null>(null);
   const [adjustments, setAdjustments] = useState<StaffAdjustment[]>([]);
-  const [state, setState] = useState<'loading' | 'ready' | 'unavailable' | 'error'>('loading');
+  const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [weight, setWeight] = useState('');
@@ -84,12 +85,8 @@ export function PlantProcessPanel({
       setState('ready');
       return raw;
     } catch (e) {
-      // Sin servidor o solicitud solo local: se usa el panel local.
-      if (e instanceof ApiError && (e.status === 0 || e.status === 404 || e.status === 400)) setState('unavailable');
-      else {
-        setError(messageOf(e));
-        setState('error');
-      }
+      setError(messageOf(e));
+      setState('error');
       return null;
     }
   }, [orderId]);
@@ -111,7 +108,6 @@ export function PlantProcessPanel({
         Cargando el proceso en planta...
       </p>
     );
-  if (state === 'unavailable') return <>{fallback}</>;
   if (state === 'error' || !order)
     return onlyInPlant ? null : (
       <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
@@ -143,6 +139,7 @@ export function PlantProcessPanel({
   const pending = adjustments.filter((a) => a.status === 'PENDING_CUSTOMER');
   const due = Number(order.amountDue) || 0;
   const inPlant = (PLANT_STATUSES as readonly string[]).includes(status);
+  const heldBy = incidents.find((i) => i.orderId === order.id && i.previousStatus && isIncidentActive(i));
   if (onlyInPlant && !inPlant) return null;
 
   const submitWeight = (e: FormEvent) => {
@@ -222,7 +219,27 @@ export function PlantProcessPanel({
         </div>
       )}
 
-      {!inPlant && <p className="text-xs text-slate-600">Esta solicitud no está en planta.</p>}
+      {status === 'INCIDENT' && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+          <p className="font-semibold">La solicitud está retenida por una incidencia.</p>
+          <p className="mt-1">El proceso continúa cuando se resuelve: vuelve a la etapa en que estaba.</p>
+          {heldBy ? (
+            <Link
+              to={`/operations/incidents/${heldBy.id}`}
+              className="mt-2 inline-block font-semibold text-[#0F4C81] underline"
+            >
+              Resolver en Incidencias
+            </Link>
+          ) : (
+            <Link to="/operations/incidents" className="mt-2 inline-block font-semibold text-[#0F4C81] underline">
+              Ver Incidencias
+            </Link>
+          )}
+        </div>
+      )}
+      {!inPlant && status !== 'INCIDENT' && (
+        <p className="text-xs text-slate-600">Esta solicitud no está en planta.</p>
+      )}
 
       {status === 'AT_FACILITY' && (
         <div className="space-y-2">

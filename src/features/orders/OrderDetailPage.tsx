@@ -49,7 +49,6 @@ import {
   useServerIncidents,
   type ServerIncidentSeverity,
 } from '../../services/api/incidentsApi';
-import { QuarantineModal } from './components/QuarantineModal';
 
 export const OrderDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -373,7 +372,7 @@ export const OrderDetailPage: React.FC = () => {
                     className="w-full text-left px-3.5 py-2 hover:bg-slate-50 flex items-center gap-2 cursor-pointer text-amber-700"
                   >
                     <AlertTriangle className="w-3.5 h-3.5" />
-                    <span>Retención técnica (Quarantine)</span>
+                    <span>Retener para revisión técnica</span>
                   </button>
 
                   {isAdmin && (
@@ -550,13 +549,17 @@ export const OrderDetailPage: React.FC = () => {
         />
       )}
 
-      {/* Quarantine Modal */}
+      {/* Retención para revisión técnica: incidencia con retención en el servidor */}
       {isQuarantineModalOpen && (
-        <QuarantineModal
+        <IncidentModal
           order={order}
           isOpen={true}
+          defaultHold
           onClose={() => setIsQuarantineModalOpen(false)}
-          onSuccess={() => void refreshFromServer()}
+          onSuccess={() => {
+            void refreshFromServer();
+            void refreshIncidents();
+          }}
         />
       )}
     </div>
