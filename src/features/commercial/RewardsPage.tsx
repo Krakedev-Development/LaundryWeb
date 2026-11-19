@@ -1,5 +1,5 @@
 import { Modal } from '../../shared/ui/Modal';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { storageService } from '../../services/storage';
 import {
   getRewards,
@@ -8,11 +8,16 @@ import {
   mapRewardResponseToReward,
 } from '../../services/api/catalogApi';
 import { ApiError } from '../../services/api/apiConfig';
+import {
+  listRedemptions,
+  mapServerRedemption,
+  reviewRedemption,
+} from '../../services/api/pointsApi';
 import { useApp } from '../../context/AppContext';
 import { PageHeader } from '../../components/common/PageHeader';
 import { TablePagination, usePagination } from '../../shared/ui/TablePagination';
 import { MetricCard } from '../../components/common/MetricCard';
-import { Reward } from '../../types';
+import { Reward, RewardRedemption } from '../../types';
 import {
   Gift,
   Coins,
@@ -21,21 +26,19 @@ import {
   Plus,
   Edit2,
   Lock,
+  RefreshCw,
 } from 'lucide-react';
 
 export const RewardsPage: React.FC = () => {
   const {
     rewards,
-    redemptions,
-    pointsLedger,
     createReward,
-    updateRedemptionStatus,
     currentUser,
     showToast,
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<
-    'REWARDS' | 'RULES' | 'REDEMPTIONS' | 'LEDGER'
+    'REWARDS' | 'RULES' | 'REDEMPTIONS'
   >('REWARDS');
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingReward, setEditingReward] = useState<Reward | null>(null);
@@ -50,6 +53,10 @@ export const RewardsPage: React.FC = () => {
   const [status, setStatus] = useState<Reward['status']>('ACTIVE');
 
   const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
+  const [serverRedemptions, setServerRedemptions] = useState<RewardRedemption[]>([]);
+  const [redemptionState, setRedemptionState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
+  const [redemptionError, setRedemptionError] = useState('');
+  const [reviewBusyId, setReviewBusyId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -71,8 +78,28 @@ export const RewardsPage: React.FC = () => {
     };
   }, []);
 
-  const redemptionPages = usePagination(redemptions);
-  const ledgerPages = usePagination(pointsLedger);
+  const loadRedemptions = useCallback(async () => {
+    setRedemptionState('loading');
+    setRedemptionError('');
+    try {
+      const rows = await listRedemptions();
+      setServerRedemptions(rows.map(mapServerRedemption));
+      setRedemptionState('ready');
+    } catch (err) {
+      setRedemptionError(
+        err instanceof Error ? err.message : 'No se pudieron cargar los canjes.',
+      );
+      setRedemptionState('error');
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'REDEMPTIONS' && redemptionState === 'idle') {
+      void loadRedemptions();
+    }
+  }, [activeTab, redemptionState, loadRedemptions]);
+
+  const redemptionPages = usePagination(serverRedemptions);
 
   // Role Guard
   if (currentUser.role !== 'ADMIN') {
@@ -92,18 +119,52 @@ export const RewardsPage: React.FC = () => {
     );
   }
 
-  // KPIs
+  // KPIs (canjes desde servidor cuando ya se cargaron)
   const totalRewards = rewards.length;
-  const pendingRedemptions = redemptions.filter(
+  const pendingRedemptions = serverRedemptions.filter(
     (r) => r.status === 'PENDING',
   ).length;
-  const approvedRedemptions = redemptions.filter(
-    (r) => r.status === 'APPROVED' || r.status === 'DELIVERED',
+  const approvedRedemptions = serverRedemptions.filter(
+    (r) => r.status === 'APPROVED',
   ).length;
-  const totalPointsSpent = redemptions.reduce(
+  const totalPointsSpent = serverRedemptions.reduce(
     (acc, r) => acc + r.pointsSpent,
     0,
   );
+
+  const handleReview = async (id: string, approve: boolean) => {
+    const reason = reviewNotes[id]?.trim();
+    if (!approve && !reason) {
+      showToast({
+        type: 'error',
+        title: 'Motivo obligatorio',
+        message: 'Indica el motivo del rechazo.',
+      });
+      return;
+    }
+    setReviewBusyId(id);
+    try {
+      const updated = await reviewRedemption(id, approve, reason);
+      setServerRedemptions((prev) =>
+        prev.map((r) => (r.id === id ? mapServerRedemption(updated) : r)),
+      );
+      showToast({
+        type: approve ? 'success' : 'info',
+        title: approve ? 'Canje aprobado' : 'Canje rechazado',
+        message: approve
+          ? 'La solicitud quedó aprobada en el servidor.'
+          : 'Se rechazó el canje y el servidor devolvió los puntos.',
+      });
+    } catch (err) {
+      showToast({
+        type: 'error',
+        title: 'No se pudo revisar el canje',
+        message: err instanceof Error ? err.message : 'Error del servidor.',
+      });
+    } finally {
+      setReviewBusyId(null);
+    }
+  };
 
   const handleOpenEditReward = (rew: Reward) => {
     setEditingReward(rew);
@@ -197,7 +258,7 @@ export const RewardsPage: React.FC = () => {
     <div className="space-y-8">
       <PageHeader
         title="Sistema de Recompensas y Fidelización"
-        subtitle="Configuración de premios por puntos, reglas de acumulación y auditoría de canjes (Ledger)."
+        subtitle="Catálogo de premios y revisión de canjes contra el servidor."
         actions={
           <button
             onClick={() => {
@@ -262,13 +323,8 @@ export const RewardsPage: React.FC = () => {
           {
             id: 'REDEMPTIONS',
             label: 'Solicitudes de Canje',
-            count: redemptions.length,
+            count: serverRedemptions.length,
             highlight: pendingRedemptions > 0,
-          },
-          {
-            id: 'LEDGER',
-            label: 'Ledger General de Puntos (Regla #39)',
-            count: pointsLedger.length,
           },
         ].map((tab) => (
           <button
@@ -381,204 +437,150 @@ export const RewardsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Tab 3: Solicitudes de Canje */}
+      {/* Tab 3: Solicitudes de Canje (servidor) */}
       {activeTab === 'REDEMPTIONS' && (
         <div className="bg-white rounded-2xl border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.03)] overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left">
-              <thead className="bg-slate-50/80 text-slate-600 font-semibold border-b border-slate-200/80">
-                <tr>
-                  <th className="py-3.5 px-4">Cliente</th>
-                  <th className="py-3.5 px-4">Recompensa Canjeada</th>
-                  <th className="py-3.5 px-4 text-center">Puntos Canjeados</th>
-                  <th className="py-3.5 px-4">Fecha Solicitud</th>
-                  <th className="py-3.5 px-4">Estado</th>
-                  <th className="py-3.5 px-4 text-right">Acción Admin</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {redemptionPages.rows.map((red) => (
-                  <tr
-                    key={red.id}
-                    className="hover:bg-slate-50/70 transition-colors"
-                  >
-                    <td className="py-3.5 px-4 font-bold text-slate-900">
-                      {red.customerName}
-                    </td>
-                    <td className="py-3.5 px-4 text-slate-800 font-medium">
-                      {red.rewardName}
-                    </td>
-                    <td className="py-3.5 px-4 text-center font-mono font-bold text-amber-700 tabular-nums">
-                      {red.pointsSpent} pts
-                    </td>
-                    <td className="py-3.5 px-4 font-mono text-slate-500 text-[11px]">
-                      {red.date}
-                    </td>
-                    <td className="py-3.5 px-4 whitespace-nowrap">
-                      <span
-                        className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-md border ${
-                          red.status === 'DELIVERED'
-                            ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                            : red.status === 'APPROVED'
-                              ? 'bg-sky-50 text-sky-800 border-sky-200'
-                              : red.status === 'PENDING'
-                                ? 'bg-amber-50 text-amber-800 border-amber-200'
-                                : 'bg-rose-50 text-rose-800 border-rose-200'
-                        }`}
-                      >
-                        {red.status}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                      {['PENDING', 'APPROVED'].includes(red.status) && (
-                        <input
-                          aria-label={'Motivo del canje ' + red.id}
-                          placeholder="Motivo de revisión o entrega"
-                          value={reviewNotes[red.id] ?? ''}
-                          onChange={(e) =>
-                            setReviewNotes({
-                              ...reviewNotes,
-                              [red.id]: e.target.value,
-                            })
-                          }
-                          className="mb-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-xs"
-                        />
-                      )}
-                      {red.notes && (
-                        <p className="mb-2 whitespace-normal text-xs text-slate-500">
-                          {red.notes}
-                        </p>
-                      )}
-                      {red.status === 'PENDING' && (
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() =>
-                              updateRedemptionStatus(
-                                red.id,
-                                'APPROVED',
-                                reviewNotes[red.id],
-                              )
-                            }
-                            className="px-3 py-1.5 text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg shadow-xs cursor-pointer"
-                          >
-                            Aprobar
-                          </button>
-                          <button
-                            onClick={() =>
-                              updateRedemptionStatus(
-                                red.id,
-                                'REJECTED',
-                                reviewNotes[red.id],
-                              )
-                            }
-                            className="px-3 py-1.5 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-lg border border-rose-200 cursor-pointer"
-                          >
-                            Rechazar
-                          </button>
-                        </div>
-                      )}
-                      {red.status === 'APPROVED' && (
-                        <button
-                          onClick={() =>
-                            updateRedemptionStatus(
-                              red.id,
-                              'DELIVERED',
-                              reviewNotes[red.id],
-                            )
-                          }
-                          className="px-3 py-1.5 text-xs font-bold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-lg shadow-xs cursor-pointer"
-                        >
-                          Marcar Entregado
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <TablePagination pagination={redemptionPages} label="canjes" />
-        </div>
-      )}
-
-      {/* Tab 4: Ledger General per spec #39 */}
-      {activeTab === 'LEDGER' && (
-        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.03)] p-6 space-y-5">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
             <div>
-              <h3 className="text-sm font-bold text-slate-900">
-                Libro Mayor de Puntos Inmutable (Audit Ledger - Regla #39)
-              </h3>
+              <h3 className="text-sm font-bold text-slate-900">Canjes del servidor</h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Cada saldo de cliente se deriva de transacciones firmadas con
-                fecha, motivo y usuario auditor.
+                Aprobar o rechazar llama a `/redemptions/:id/review`. No hay estado
+                &quot;entregado&quot; en el backend.
               </p>
             </div>
-            <span className="text-xs font-mono font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-lg">
-              {pointsLedger.length} entradas
-            </span>
+            <button
+              type="button"
+              onClick={() => void loadRedemptions()}
+              disabled={redemptionState === 'loading'}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 cursor-pointer"
+            >
+              <RefreshCw
+                size={14}
+                className={redemptionState === 'loading' ? 'animate-spin' : ''}
+              />
+              Actualizar
+            </button>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left">
-              <thead className="bg-slate-50/80 text-slate-600 font-semibold border-b border-slate-200/80">
-                <tr>
-                  <th className="py-3.5 px-4">Fecha y Hora</th>
-                  <th className="py-3.5 px-4">Cliente ID</th>
-                  <th className="py-3.5 px-4">Tipo de Evento</th>
-                  <th className="py-3.5 px-4">Motivo / Justificación</th>
-                  <th className="py-3.5 px-4 text-right">Variación Puntos</th>
-                  <th className="py-3.5 px-4">Auditor Responsable</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {ledgerPages.rows.map((entry) => (
-                  <tr
-                    key={entry.id}
-                    className="hover:bg-slate-50/70 transition-colors"
-                  >
-                    <td className="py-3.5 px-4 font-mono text-slate-600 whitespace-nowrap">
-                      {entry.date}
-                    </td>
-                    <td className="py-3.5 px-4 font-mono font-bold text-sky-800 whitespace-nowrap">
-                      {entry.customerId}
-                    </td>
-                    <td className="py-3.5 px-4 whitespace-nowrap">
-                      <span
-                        className={`text-[11px] font-semibold px-2 py-0.5 rounded-md border ${
-                          entry.type === 'PURCHASE'
-                            ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                            : entry.type === 'REDEMPTION'
-                              ? 'bg-amber-50 text-amber-800 border-amber-200'
-                              : 'bg-purple-50 text-purple-800 border-purple-200'
-                        }`}
-                      >
-                        {entry.type}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 text-slate-700">
-                      {entry.reason}
-                    </td>
-                    <td className="py-3.5 px-4 text-right font-mono font-bold text-sm whitespace-nowrap tabular-nums">
-                      <span
-                        className={
-                          entry.points > 0
-                            ? 'text-emerald-700'
-                            : 'text-rose-600'
-                        }
-                      >
-                        {entry.points > 0 ? `+${entry.points}` : entry.points}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 text-slate-500 whitespace-nowrap">
-                      {entry.adminUser || 'Sistema LaundryWeb'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <TablePagination pagination={ledgerPages} label="movimientos de puntos" />
+          {redemptionState === 'loading' && (
+            <p role="status" className="py-10 text-center text-sm text-slate-500">
+              Cargando canjes…
+            </p>
+          )}
+
+          {redemptionState === 'error' && (
+            <div role="alert" className="m-5 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+              <p className="font-semibold">No se pudieron cargar los canjes.</p>
+              <p className="mt-1">{redemptionError}</p>
+              <button
+                type="button"
+                className="mt-3 rounded-xl bg-[#0F4C81] px-4 py-2 text-xs font-bold text-white cursor-pointer"
+                onClick={() => void loadRedemptions()}
+              >
+                Reintentar
+              </button>
+            </div>
+          )}
+
+          {redemptionState === 'ready' && serverRedemptions.length === 0 && (
+            <p className="py-10 text-center text-sm text-slate-500">
+              No hay solicitudes de canje en el servidor.
+            </p>
+          )}
+
+          {redemptionState === 'ready' && serverRedemptions.length > 0 && (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-left">
+                  <thead className="bg-slate-50/80 text-slate-600 font-semibold border-b border-slate-200/80">
+                    <tr>
+                      <th className="py-3.5 px-4">Cliente</th>
+                      <th className="py-3.5 px-4">Recompensa</th>
+                      <th className="py-3.5 px-4 text-center">Puntos</th>
+                      <th className="py-3.5 px-4">Fecha</th>
+                      <th className="py-3.5 px-4">Estado</th>
+                      <th className="py-3.5 px-4 text-right">Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {redemptionPages.rows.map((red) => (
+                      <tr key={red.id} className="hover:bg-slate-50/70 transition-colors">
+                        <td className="py-3.5 px-4 font-bold text-slate-900">
+                          {red.customerName}
+                        </td>
+                        <td className="py-3.5 px-4 text-slate-800 font-medium">
+                          {red.rewardName}
+                        </td>
+                        <td className="py-3.5 px-4 text-center font-mono font-bold text-amber-700 tabular-nums">
+                          {red.pointsSpent} pts
+                        </td>
+                        <td className="py-3.5 px-4 font-mono text-slate-500 text-[11px]">
+                          {red.date}
+                        </td>
+                        <td className="py-3.5 px-4 whitespace-nowrap">
+                          <span
+                            className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-md border ${
+                              red.status === 'APPROVED'
+                                ? 'bg-sky-50 text-sky-800 border-sky-200'
+                                : red.status === 'PENDING'
+                                  ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                  : 'bg-rose-50 text-rose-800 border-rose-200'
+                            }`}
+                          >
+                            {red.status}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                          {red.notes && (
+                            <p className="mb-2 whitespace-normal text-xs text-slate-500">
+                              {red.notes}
+                            </p>
+                          )}
+                          {red.status === 'PENDING' && (
+                            <>
+                              <input
+                                aria-label={'Motivo del canje ' + red.id}
+                                placeholder="Motivo (obligatorio al rechazar)"
+                                value={reviewNotes[red.id] ?? ''}
+                                onChange={(e) =>
+                                  setReviewNotes({
+                                    ...reviewNotes,
+                                    [red.id]: e.target.value,
+                                  })
+                                }
+                                className="mb-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-xs"
+                              />
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  type="button"
+                                  disabled={reviewBusyId === red.id}
+                                  onClick={() => void handleReview(red.id, true)}
+                                  className="px-3 py-1.5 text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg shadow-xs cursor-pointer disabled:opacity-50"
+                                >
+                                  Aprobar
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={reviewBusyId === red.id}
+                                  onClick={() => void handleReview(red.id, false)}
+                                  className="px-3 py-1.5 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-lg border border-rose-200 cursor-pointer disabled:opacity-50"
+                                >
+                                  Rechazar
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="p-4">
+                <TablePagination pagination={redemptionPages} label="canjes" />
+              </div>
+            </>
+          )}
         </div>
       )}
 
