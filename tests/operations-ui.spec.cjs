@@ -31,6 +31,27 @@ test('assignment controls, keyboard dismissal and operation screens work at desk
   await expect(dialog).toHaveCount(0);
   await expect(trigger).toBeFocused();
 
+  // La cola de Despacho sale del servidor: se simula una recogida confirmada en la sede del pedido.
+  const facilityId = await page.evaluate(() => {
+    const raw = JSON.parse(localStorage.getItem('lw_workflow_v2') || '{}');
+    return (raw.orders || []).find((o) => o.id === 'SOL-HOME-001')?.facilityId ?? 'f1';
+  });
+  const cors = { 'access-control-allow-origin': '*' };
+  await page.route(/\/api\/v1\/orders(\?.*)?$/, (route) =>
+    route.request().method() === 'OPTIONS'
+      ? route.fulfill({ status: 204, headers: { ...cors, 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' } })
+      : route.fulfill({
+          status: 200,
+          headers: cors,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            page: 1, pageSize: 100, total: 1,
+            data: new URL(route.request().url()).searchParams.get('status') === 'CONFIRMED'
+              ? [{ id: 'SOL-HOME-001', number: 3001, status: 'CONFIRMED', mode: 'HOME_HOME', facilityId, paymentStatus: 'PAID', pricingStatus: 'ESTIMATED', total: '15.00', version: 3, createdAt: '2026-11-19T13:00:00.000Z' }]
+              : [],
+          }),
+        }),
+  );
   await page.goto('/operations/dispatch');
   await expect(
     page.getByRole('heading', { name: 'Despacho', exact: true }),

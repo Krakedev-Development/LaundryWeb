@@ -8,6 +8,7 @@ import { DriverCandidateCard } from './DriverCandidateCard';
 import {
   assignDriver as assignDriverApi,
   mapBackendOrderToOrder,
+  type BackendOrderDetail,
 } from '../../services/api/ordersApi';
 import { syncDrivers } from '../../services/api/driversApi';
 import { ApiError } from '../../services/api/apiConfig';
@@ -18,14 +19,16 @@ export const AssignDriverModal = ({
   type,
   isOpen,
   onClose,
+  onAssigned,
 }: {
   order: Order;
   type: 'pickup' | 'delivery';
   isOpen: boolean;
   onClose: () => void;
+  /** Respuesta del servidor tras asignar: quien abrió el modal actualiza su vista. */
+  onAssigned?: (updated: BackendOrderDetail) => void;
 }) => {
-  const { drivers, assignDriver, customers, facilities, orders, showToast } =
-    useApp();
+  const { drivers, customers, facilities, orders, showToast } = useApp();
   const [submitting, setSubmitting] = useState(false);
   const { candidates, excluded, loading, error } = useDriverCandidates(
     isOpen ? order : undefined,
@@ -103,8 +106,12 @@ export const AssignDriverModal = ({
         facilities,
         drivers,
       );
-      const next = orders.map((o) => (o.id === mapped.id ? mapped : o));
-      storageService.saveOrders(next);
+      storageService.saveOrders(
+        orders.some((o) => o.id === mapped.id)
+          ? orders.map((o) => (o.id === mapped.id ? mapped : o))
+          : [...orders, mapped],
+      );
+      onAssigned?.(updated);
       void syncDrivers(facilities, drivers)
         .then((synced) => {
           if (synced.length > 0) storageService.saveDrivers(synced);
@@ -116,19 +123,20 @@ export const AssignDriverModal = ({
           type === 'pickup'
             ? 'Chofer de recogida asignado'
             : 'Chofer de entrega asignado',
-        message: `La solicitud ${order.id} avanzó a ${mapped.status}.`,
+        message: `La solicitud ${order.trackingNumber || order.id} ya tiene chofer.`,
       });
       onClose();
     } catch (err) {
-      if (err instanceof ApiError && err.status === 0) {
-        if (assignDriver(order.id, selected, type, notes)) onClose();
-        return;
-      }
+      // Nunca se asigna solo en el navegador: sin servidor la asignación no existe.
       showToast({
         type: 'error',
-        title: 'Error de asignación',
+        title: 'No se asignó el chofer',
         message:
-          err instanceof Error ? err.message : 'No se pudo asignar el chofer.',
+          err instanceof ApiError && err.status === 0
+            ? 'No se pudo conectar con el servidor. La solicitud sigue sin chofer; intenta de nuevo.'
+            : err instanceof Error
+              ? err.message
+              : 'No se pudo asignar el chofer.',
       });
     } finally {
       setSubmitting(false);
