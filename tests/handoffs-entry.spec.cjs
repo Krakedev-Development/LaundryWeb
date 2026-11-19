@@ -97,3 +97,33 @@ test('en móvil la pantalla no se desborda', async ({ page }) => {
   await expect(page.getByRole('region', { name: 'Llegan a planta' })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
 });
+
+test('si el servidor falla se muestra el error y Reintentar vuelve a cargar', async ({ page }) => {
+  let failList = true;
+  await page.route(/\/api\/v1\/(orders|facilities)(\/[^?]*)?(\?.*)?$/, (route) => {
+    const req = route.request();
+    if (req.method() === 'OPTIONS') {
+      return route.fulfill({
+        status: 204,
+        headers: { ...cors, 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' },
+      });
+    }
+    const path = new URL(req.url()).pathname.replace(/^.*\/api\/v1/, '');
+    const json = (status, body) =>
+      route.fulfill({
+        status,
+        headers: cors,
+        contentType: 'application/json',
+        body: JSON.stringify(body),
+      });
+    if (path === '/facilities') return json(200, [{ id: 'f1', name: 'Sede Norte', address: 'Av. 1' }]);
+    if (path === '/orders' && failList) return json(500, { message: 'Base de datos no disponible.' });
+    if (path === '/orders') return json(200, { page: 1, pageSize: 100, total: 0, data: [] });
+    return json(200, []);
+  });
+  await page.goto('/operations/handoffs', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('alert')).toContainText('No se pudieron cargar las solicitudes');
+  failList = false;
+  await page.getByRole('button', { name: 'Reintentar' }).click();
+  await expect(page.getByRole('region', { name: 'Llegan a planta' })).toBeVisible();
+});

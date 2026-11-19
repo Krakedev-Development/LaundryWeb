@@ -48,6 +48,10 @@ export const verifyHandoff = (
   } & CustodyInput,
 ) => request<BackendOrderDetail>(`/orders/${orderId}/handoffs/verify`, 'POST', payload);
 
+/** Revoca un traspaso pendiente/activo (personal de sede). */
+export const revokeHandoff = (handoffId: string, reason: string) =>
+  request<unknown>(`/handoffs/${handoffId}/revoke`, 'POST', { reason });
+
 /** Prendas que el chofer declaró al recoger (traspaso del cliente ya usado). */
 export const declaredAtPickup = (rows: HandoffRecord[]) =>
   rows.find((h) => h.type === 'CUSTOMER_TO_DRIVER' && h.status === 'USED')?.declaredCount ?? null;
