@@ -23,12 +23,33 @@ async function mockDirectory(page) {
   );
 }
 
+// Las incidencias vienen del servidor: una retenida basta para abrir su modal.
+async function mockIncidents(page) {
+  await page.route(/\/api\/v1\/incidents(\?.*)?$/, (route) =>
+    route.request().method() === 'OPTIONS'
+      ? route.fulfill({ status: 204, headers: { ...cors, 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' } })
+      : route.fulfill({
+          status: 200,
+          headers: cors,
+          contentType: 'application/json',
+          body: JSON.stringify([
+            {
+              id: 'inc-1', orderId: 'SOL-HOME-001', type: 'PRENDA_DANADA', severity: 'HIGH',
+              status: 'OPEN', description: 'Camisa con rotura', previousStatus: 'IN_PROCESS',
+              evidenceRefs: [], createdAt: '2026-11-19T15:00:00.000Z',
+            },
+          ]),
+        }),
+  );
+}
+
 for (const width of [1440, 390]) {
   test(`remaining forms open centrally and retain their controls at ${width}px`, async ({
     page,
   }) => {
     await page.setViewportSize({ width, height: 900 });
     await mockDirectory(page);
+    await mockIncidents(page);
     const center = async () => {
       const modal = page.getByRole('dialog');
       await expect(modal).toBeVisible();
@@ -75,7 +96,7 @@ for (const width of [1440, 390]) {
     await page.getByRole('row').nth(1).getByRole('cell').first().click();
     modal = await center();
     await expect(
-      modal.getByRole('heading', { name: /Incidencia en Solicitud/ }),
+      modal.getByRole('heading', { name: /Incidencia en/ }),
     ).toBeVisible();
     await page.screenshot({
       path: `test-results/incidents-centered-${width}.png`,

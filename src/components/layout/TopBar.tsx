@@ -1,3 +1,9 @@
+import {
+  INCIDENT_SEVERITY_LABEL,
+  incidentTypeLabel,
+  isIncidentActive,
+  useServerIncidents,
+} from '../../services/api/incidentsApi';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -30,7 +36,8 @@ export function TopBar({
   onOpenMobileSidebar,
   mobileSidebarOpen,
 }: TopBarProps) {
-  const { currentUser, orders, incidents } = useApp();
+  const { currentUser, orders } = useApp();
+  const { incidents } = useServerIncidents();
   const pendingKyc = usePendingKyc(currentUser.role === 'ADMIN');
   const { title: pageTitle, subtitle: pageSubtitle } = usePageHeader();
   const [showNotifications, setShowNotifications] = useState(false);
@@ -81,12 +88,12 @@ export function TopBar({
         tone: 'bg-rose-50 text-rose-700',
       })),
     ...incidents
-      .filter((incident) => ['OPEN', 'IN_PROGRESS'].includes(incident.status))
+      .filter(isIncidentActive)
       .map((incident) => ({
         id: incident.id,
-        title: `Incidencia · ${incident.id}`,
-        detail: `${incident.type} · ${incident.customerName}`,
-        path: '/operations/incidents',
+        title: `Incidencia · ${incidentTypeLabel(incident.type)}`,
+        detail: `Severidad ${(INCIDENT_SEVERITY_LABEL[incident.severity] ?? incident.severity).toLowerCase()}`,
+        path: `/operations/incidents/${incident.id}`,
         Icon: AlertTriangle,
         tone: 'bg-amber-50 text-amber-700',
       })),

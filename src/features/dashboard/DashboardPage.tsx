@@ -23,11 +23,15 @@ import {
   ArrowUpRight,
 } from 'lucide-react';
 import { OrderStatus } from '../../types';
+import {
+  incidentTypeLabel,
+  isIncidentActive,
+  useServerIncidents,
+} from '../../services/api/incidentsApi';
 
 export const DashboardPage: React.FC = () => {
   const {
     orders,
-    incidents,
     drivers,
     customers,
     facilities,
@@ -35,6 +39,7 @@ export const DashboardPage: React.FC = () => {
     auditLogs,
   } = useApp();
   const navigate = useNavigate();
+  const { incidents } = useServerIncidents();
 
   const isAdmin = currentUser.role === 'ADMIN';
 
@@ -50,9 +55,7 @@ export const DashboardPage: React.FC = () => {
   );
   const onTimeCount = orders.filter((o) => o.slaStatus === 'ON_TIME').length;
   const slaCompliance = Math.round((onTimeCount / (orders.length || 1)) * 100);
-  const openIncidents = incidents.filter(
-    (i) => i.status === 'OPEN' || i.status === 'IN_PROGRESS',
-  );
+  const openIncidents = incidents.filter(isIncidentActive);
   const quarantineOrders = orders.filter(
     (o) => operationalStage(o) === 'QUARANTINE',
   );
@@ -495,10 +498,10 @@ export const DashboardPage: React.FC = () => {
                     <span className="w-2 h-2 rounded-full bg-amber-600 mt-1.5 shrink-0" />
                     <div>
                       <p className="text-xs font-bold text-slate-900 group-hover:text-amber-700 transition-colors">
-                        {openIncidents.length} incidencia(s) en investigación
+                        {openIncidents.length} incidencia(s) por resolver
                       </p>
                       <p className="text-[11px] text-slate-500 mt-0.5">
-                        Caso {openIncidents[0].id}: {openIncidents[0].type}
+                        Más reciente: {incidentTypeLabel(openIncidents[0].type)}
                       </p>
                     </div>
                   </div>

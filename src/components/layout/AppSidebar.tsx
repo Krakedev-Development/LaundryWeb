@@ -1,3 +1,4 @@
+import { isIncidentActive, useServerIncidents } from '../../services/api/incidentsApi';
 import { useEffect, useMemo, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
@@ -20,7 +21,8 @@ import { PrefetchNavLink } from './PrefetchNavLink';
 import './sidebar.css';
 
 export function AppSidebar() {
-  const { currentUser, orders, incidents } = useApp();
+  const { currentUser, orders } = useApp();
+  const { incidents } = useServerIncidents();
   const pendingKyc = usePendingKyc(currentUser.role === 'ADMIN', true);
   const { collapsed, isLargeScreen, mobileOpen, closeMobile } =
     useSidebarState();
@@ -37,9 +39,7 @@ export function AppSidebar() {
     dispatch: orders.filter(
       (order) => operationalStage(order) === 'PICKUP_PENDING',
     ).length,
-    incidents: incidents.filter((incident) =>
-      ['OPEN', 'IN_PROGRESS'].includes(incident.status),
-    ).length,
+    incidents: incidents.filter(isIncidentActive).length,
     kyc: pendingKyc.length,
   };
 

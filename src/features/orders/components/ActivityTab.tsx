@@ -12,9 +12,14 @@ import {
   ShieldAlert,
   Info,
 } from 'lucide-react';
-import type { Order, Incident } from '../../../types';
+import type { Order } from '../../../types';
+import {
+  INCIDENT_SEVERITY_LABEL,
+  INCIDENT_STATUS_LABEL,
+  incidentTypeLabel,
+  type ServerIncident,
+} from '../../../services/api/incidentsApi';
 import { useApp } from '../../../context/AppContext';
-import { IconPlaceholder } from '../../../components/common/IconPlaceholder';
 
 export const STATUS_LABELS_HUMAN: Record<string, string> = {
   CREATED: 'Solicitud creada en el sistema',
@@ -51,7 +56,7 @@ export const STATUS_LABELS_HUMAN: Record<string, string> = {
 
 interface ActivityTabProps {
   order: Order;
-  orderIncidents: Incident[];
+  orderIncidents: ServerIncident[];
   onOpenIncidentModal: () => void;
 }
 
@@ -210,29 +215,21 @@ export const ActivityTab: React.FC<ActivityTabProps> = ({
                     key={inc.id}
                     className="p-3.5 rounded-2xl border border-rose-100 bg-rose-50/40 text-xs space-y-1.5"
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="font-mono font-bold text-rose-900">{inc.id}</span>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-bold text-slate-800">{incidentTypeLabel(inc.type)}</span>
                       <span className="text-[10px] font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded-full">
-                        {inc.severity}
+                        {INCIDENT_SEVERITY_LABEL[inc.severity] ?? inc.severity}
                       </span>
                     </div>
-
-                    <p className="font-bold text-slate-800">{inc.type}</p>
-                    <p className="text-slate-600 text-[11px]">{inc.description}</p>
-
-                    {/* Evidences list without external stock images */}
-                    {(inc.evidences || []).length > 0 && (
-                      <div className="mt-2 flex gap-2">
-                        {inc.evidences.map((ev) => (
-                          <div key={ev.id} className="relative group cursor-pointer">
-                            <IconPlaceholder
-                              kind="evidence"
-                              label={ev.caption || 'Evidencia fotográfica'}
-                              className="size-14 rounded-xl border border-rose-200"
-                            />
-                          </div>
-                        ))}
-                      </div>
+                    <p className="text-[11px] font-semibold text-slate-700">
+                      {INCIDENT_STATUS_LABEL[inc.status] ?? inc.status}
+                      {inc.previousStatus && (inc.status === 'OPEN' || inc.status === 'IN_REVIEW')
+                        ? ' · Solicitud retenida'
+                        : ''}
+                    </p>
+                    <p className="whitespace-pre-line text-slate-600 text-[11px]">{inc.description}</p>
+                    {inc.resolution && (
+                      <p className="text-[11px] text-emerald-800">Resolución: {inc.resolution}</p>
                     )}
                   </div>
                 ))}

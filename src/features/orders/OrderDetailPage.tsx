@@ -42,6 +42,13 @@ import {
   type GarmentInspectionUnit,
 } from './components/GarmentInspectionModal';
 import { IncidentModal } from './components/IncidentModal';
+import {
+  createIncident,
+  isIncidentActive,
+  upsertIncident,
+  useServerIncidents,
+  type ServerIncidentSeverity,
+} from '../../services/api/incidentsApi';
 import { QuarantineModal } from './components/QuarantineModal';
 
 export const OrderDetailPage: React.FC = () => {
@@ -56,10 +63,13 @@ export const OrderDetailPage: React.FC = () => {
     drivers,
     currentUser,
     updateOrderStatus,
-    createIncident,
-    incidents,
     showToast,
   } = useApp();
+  const { incidents, refresh: refreshIncidents } = useServerIncidents();
+  // Las incidencias de la solicitud se consultan al servidor cada vez que se abre su detalle.
+  useEffect(() => {
+    void refreshIncidents();
+  }, [id, refreshIncidents]);
   const navigate = useNavigate();
 
   const [liveOrder, setLiveOrder] = useState<Order | null>(null);
@@ -139,9 +149,8 @@ export const OrderDetailPage: React.FC = () => {
 
   const isAdmin = currentUser.role === 'ADMIN';
   const orderIncidents = incidents.filter((i) => i.orderId === order.id);
-  const hasActiveIncidents = orderIncidents.some(
-    (i) => i.status === 'OPEN' || i.status === 'IN_PROGRESS',
-  );
+  const activeIncidents = orderIncidents.filter(isIncidentActive);
+  const hasActiveIncidents = activeIncidents.length > 0;
 
   // Transition handler
   const handleAdvanceStatus = async (nextStatus: OrderStatus, noteText?: string) => {
@@ -244,33 +253,38 @@ export const OrderDetailPage: React.FC = () => {
   ) => {
     const hasIncidents = results.some((r) => r.result === 'INCIDENT');
 
-    // Register any incidents created during unit inspection
-    results
-      .filter((r) => r.result === 'INCIDENT')
-      .forEach((incUnit) => {
-        createIncident({
+    // Las prendas con incidencia se registran en el servidor como un solo caso que retiene la
+    // solicitud: el lavado no empieza hasta resolverlo.
+    const damaged = results.filter((r) => r.result === 'INCIDENT');
+    if (damaged.length > 0) {
+      const rank: ServerIncidentSeverity[] = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
+      const toServer: Record<string, ServerIncidentSeverity> = {
+        BAJA: 'LOW', MEDIA: 'MEDIUM', ALTA: 'HIGH', CRITICA: 'CRITICAL',
+      };
+      const severity = damaged
+        .map((u) => toServer[u.severity ?? 'MEDIA'] ?? 'MEDIUM')
+        .reduce((a, b) => (rank.indexOf(b) > rank.indexOf(a) ? b : a), 'LOW' as ServerIncidentSeverity);
+      try {
+        const created = await createIncident({
           orderId: order.id,
-          customerId: order.customerId,
-          customerName: order.customerName,
           type: 'PRENDA_DANADA',
-          severity: incUnit.severity || 'MEDIA',
-          description: `Prenda #${incUnit.unitIndex} (${incUnit.itemName}): ${incUnit.incidentType} - ${incUnit.description}`,
-          assignedTo: currentUser.name,
-          reportedBy: currentUser.name,
-          reportedRole: currentUser.role,
-          evidences: [
-            {
-              id: 'EVD-' + Date.now(),
-              url: '',
-              caption: `Inspección física prenda #${incUnit.unitIndex}`,
-              uploadedAt: new Date().toLocaleTimeString('es-ES', {
-                hour: '2-digit',
-                minute: '2-digit',
-              }),
-            },
-          ],
+          severity,
+          holdOrder: true,
+          description: damaged
+            .map((u) => `Prenda #${u.unitIndex} (${u.itemName}): ${u.incidentType} - ${u.description}`)
+            .join('\n')
+            .slice(0, 1000),
         });
-      });
+        upsertIncident(created);
+      } catch (err) {
+        showToast({
+          type: 'error',
+          title: 'No se pudo registrar la incidencia',
+          message: err instanceof Error ? err.message : 'Intenta de nuevo.',
+        });
+        return;
+      }
+    }
 
     // Advance to IN_PROCESS if no blocking incidents
     if (!hasIncidents) {
@@ -283,7 +297,7 @@ export const OrderDetailPage: React.FC = () => {
         type: 'warning',
         title: 'Inspección finalizada con incidencias',
         message:
-          'Se abrieron las incidencias correspondientes. La solicitud requiere resolución antes del lavado.',
+          'Se registró la incidencia y la solicitud queda retenida hasta resolverla en Incidencias.',
       });
       void refreshFromServer();
     }
@@ -463,7 +477,7 @@ export const OrderDetailPage: React.FC = () => {
           confirmingPayment={confirmingPayment}
           onConfirmPayment={handleConfirmPayment}
           hasActiveIncidents={hasActiveIncidents}
-          activeIncidentsCount={orderIncidents.length}
+          activeIncidentsCount={activeIncidents.length}
           custodyCode={custodyCode}
         />
       )}
@@ -529,7 +543,10 @@ export const OrderDetailPage: React.FC = () => {
           order={order}
           isOpen={true}
           onClose={() => setIsIncidentModalOpen(false)}
-          onSuccess={() => void refreshFromServer()}
+          onSuccess={() => {
+            void refreshFromServer();
+            void refreshIncidents();
+          }}
         />
       )}
 
