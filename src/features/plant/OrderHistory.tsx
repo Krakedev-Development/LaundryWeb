@@ -1,5 +1,12 @@
-import type { AuditLog, Incident, Order } from '../../types';
-import type { BusinessState } from '../../services/BusinessService';
+import { useCallback, useEffect, useState } from 'react';
+import { getOrder, type BackendOrderEvent } from '../../services/api/ordersApi';
+import { listAdjustments, type StaffAdjustment } from '../../services/api/plantApi';
+import { listHandoffs, type HandoffRecord } from '../../services/api/handoffsApi';
+import {
+  INCIDENT_STATUS_LABEL,
+  incidentTypeLabel,
+  useServerIncidents,
+} from '../../services/api/incidentsApi';
 import { HANDOFF_LABELS } from '../../services/fulfillment';
 
 interface Entry {
@@ -10,17 +17,7 @@ interface Entry {
   actor?: string;
   source: string;
 }
-function dateValue(value: string) {
-  const parsed = Date.parse(value);
-  if (Number.isFinite(parsed)) return parsed;
-  const time = /Hoy\s+(\d{1,2}):(\d{2})/i.exec(value);
-  if (time) {
-    const date = new Date();
-    date.setHours(Number(time[1]), Number(time[2]), 0, 0);
-    return date.getTime();
-  }
-  return 0;
-}
+
 export function displayDate(value: string) {
   const parsed = Date.parse(value);
   return Number.isFinite(parsed)
@@ -31,180 +28,131 @@ export function displayDate(value: string) {
     : value || 'Fecha no registrada';
 }
 
-export function OrderHistory({
-  order,
-  state,
-  audits,
-  incidents,
-}: {
-  order: Order;
-  state: BusinessState;
-  audits: AuditLog[];
-  incidents: Incident[];
-}) {
-  const handoffs = state.handoffs.filter((item) => item.orderId === order.id);
-  const handoffIds = new Set(handoffs.map((item) => item.id));
-  const entries: Entry[] = order.timeline.map((event, index) => ({
-    id: `timeline-${event.id}-${index}`,
-    at: event.timestamp,
-    title: event.label,
-    actor: `${event.userName} · ${event.userRole}`,
-    detail: event.notes,
-    source: event.isOverride ? 'Cambio excepcional' : 'Historial',
-  }));
-  audits
-    .filter(
-      (event) => event.entityId === order.id || handoffIds.has(event.entityId),
-    )
-    .forEach((event, index) =>
-      entries.push({
-        id: `audit-${event.id}-${index}`,
-        at: event.timestamp,
-        title: event.action.replaceAll('_', ' '),
-        detail: [
-          event.previousValue && `Antes: ${event.previousValue}`,
-          event.newValue && `Después: ${event.newValue}`,
-          event.notes,
-        ]
-          .filter(Boolean)
-          .join(' · '),
-        actor: `${event.userName} · ${event.userRole}`,
-        source: 'Bitácora',
-      }),
+const ROLE_LABEL: Record<string, string> = {
+  ADMIN: 'Administración',
+  SUPERVISOR: 'Sede',
+  DRIVER: 'Chofer',
+  CLIENT: 'Cliente',
+};
+
+const money = (value: string | number) => `$${Number(value).toFixed(2)}`;
+
+type Loaded = {
+  events: BackendOrderEvent[];
+  adjustments: StaffAdjustment[];
+  handoffs: HandoffRecord[];
+};
+
+/**
+ * Historial completo de la solicitud tal como lo registra el servidor: eventos de estado,
+ * ajustes de precio, traspasos de custodia confirmados e incidencias.
+ */
+export function OrderHistory({ orderId, customerName }: { orderId: string; customerName: string }) {
+  const { incidents } = useServerIncidents();
+  const [data, setData] = useState<Loaded | null>(null);
+  const [error, setError] = useState('');
+
+  const load = useCallback(async () => {
+    setError('');
+    try {
+      const [order, adjustments, handoffs] = await Promise.all([
+        getOrder(orderId),
+        listAdjustments(orderId).catch(() => [] as StaffAdjustment[]),
+        listHandoffs(orderId).catch(() => [] as HandoffRecord[]),
+      ]);
+      setData({ events: order.events ?? [], adjustments, handoffs });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo cargar el historial.');
+    }
+  }, [orderId]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  if (error)
+    return (
+      <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900">
+        <p>No se pudo cargar el historial del servidor. {error}</p>
+        <button
+          type="button"
+          onClick={() => void load()}
+          className="mt-3 rounded-lg border border-rose-300 px-3 py-1.5 text-xs font-semibold hover:bg-rose-100"
+        >
+          Reintentar
+        </button>
+      </div>
     );
-  state.weights
-    .filter((item) => item.orderId === order.id)
-    .forEach((item) =>
+  if (!data) return <p className="py-8 text-center text-sm text-slate-600">Cargando historial...</p>;
+
+  const entries: Entry[] = [];
+  data.events.forEach((ev) =>
+    entries.push({
+      id: `event-${ev.id}`,
+      at: ev.createdAt,
+      title: ev.title,
+      detail: ev.description ?? undefined,
+      actor: ev.actorRole ? (ROLE_LABEL[ev.actorRole] ?? ev.actorRole) : undefined,
+      source: 'Historial',
+    }),
+  );
+  data.adjustments.forEach((a) =>
+    entries.push({
+      id: `adjustment-${a.id}`,
+      at: a.createdAt,
+      title: `Ajuste ${Number(a.amountDifference) >= 0 ? 'propuesto' : 'aplicado'}: ${money(a.amountDifference)}`,
+      detail: [
+        a.customerMessage,
+        a.status === 'PENDING_CUSTOMER'
+          ? 'Esperando la decisión del cliente'
+          : a.status === 'APPROVED'
+            ? `Aprobado${a.requiresCustomerApproval ? ` por ${customerName}` : ''}`
+            : `Rechazado por ${customerName}`,
+      ]
+        .filter(Boolean)
+        .join(' · '),
+      source: 'Precio',
+    }),
+  );
+  data.handoffs
+    .filter((h) => h.usedAt)
+    .forEach((h) =>
       entries.push({
-        id: `weight-${item.id}`,
-        at: item.at,
-        title: `Pesaje: ${item.weight} ${item.unit}`,
-        actor: item.actorId,
-        source: 'Prendas',
-      }),
-    );
-  state.payments
-    .filter((item) => item.orderId === order.id)
-    .forEach((item) =>
-      entries.push({
-        id: `payment-${item.id}`,
-        at: item.at,
-        title: `Pago: $${item.amount.toFixed(2)}`,
-        detail: item.method,
-        source: 'Pago',
-      }),
-    );
-  state.adjustments
-    .filter((item) => item.orderId === order.id)
-    .forEach((item) => {
-      entries.push({
-        id: `adjustment-${item.id}`,
-        at: item.createdAt,
-        title: `Ajuste propuesto: $${item.amount.toFixed(2)}`,
-        detail: `${item.reason} · ${item.customerMessage}`,
-        source: 'Precio',
-      });
-      if (item.decidedAt)
-        entries.push({
-          id: `decision-${item.id}`,
-          at: item.decidedAt,
-          title:
-            item.status === 'ACCEPTED' ? 'Ajuste aceptado' : 'Ajuste rechazado',
-          actor: order.customerName,
-          source: 'Decisión del cliente',
-        });
-    });
-  state.changes
-    .filter((item) => item.orderId === order.id)
-    .forEach((item) =>
-      entries.push({
-        id: `change-${item.id}`,
-        at: item.at,
-        title: 'Cambio de agenda o modalidad',
-        detail: item.reason,
-        actor: item.actorId,
-        source: 'Agenda',
-      }),
-    );
-  state.charges
-    .filter((item) => item.orderId === order.id)
-    .forEach((item) =>
-      entries.push({
-        id: `charge-${item.id}`,
-        at: item.createdAt,
-        title: `Cargo: $${item.amount.toFixed(2)}`,
-        detail: `${item.reason} · ${item.status}${item.waivedReason ? ` · ${item.waivedReason}` : ''}`,
-        source: 'Cargo',
-      }),
-    );
-  state.messages
-    .filter((item) => item.orderId === order.id)
-    .forEach((item) =>
-      entries.push({
-        id: `message-${item.id}`,
-        at: item.at,
-        title: 'Mensaje del pedido',
-        detail: item.text,
-        actor: item.senderId,
-        source: 'Comunicación',
-      }),
-    );
-  handoffs
-    .filter((item) => item.usedAt)
-    .forEach((item) =>
-      entries.push({
-        id: `receipt-${item.id}`,
-        at: item.usedAt!,
-        title: HANDOFF_LABELS[item.type],
-        detail: [
-          item.receipt?.count !== undefined &&
-            `Recibidas: ${item.receipt.count}; declaradas: ${item.receipt.declaredCount}`,
-          item.receipt?.recipient,
-          item.receipt?.relationship,
-          item.receipt?.notes,
-        ]
-          .filter(Boolean)
-          .join(' · '),
-        actor: item.usedByUserId,
+        id: `handoff-${h.id}`,
+        at: h.usedAt!,
+        title: HANDOFF_LABELS[h.type] ?? h.type,
+        detail:
+          h.receivedCount !== null
+            ? `Recibidas: ${h.receivedCount}${h.declaredCount !== null ? `; declaradas: ${h.declaredCount}` : ''}`
+            : undefined,
         source: 'Constancia de custodia',
       }),
     );
   incidents
-    .filter((item) => item.orderId === order.id)
-    .forEach((item) => {
+    .filter((i) => i.orderId === orderId)
+    .forEach((i) => {
       entries.push({
-        id: `incident-${item.id}`,
-        at: item.createdAt,
-        title: `Incidencia ${item.id}`,
-        detail: item.description,
-        actor: item.reportedBy,
+        id: `incident-${i.id}`,
+        at: i.createdAt,
+        title: `Incidencia: ${incidentTypeLabel(i.type)}`,
+        detail: `${INCIDENT_STATUS_LABEL[i.status]} · ${i.description}`,
         source: 'Incidencia',
       });
-      item.internalNotes.forEach((note) =>
+      if (i.resolvedAt)
         entries.push({
-          id: `note-${item.id}-${note.id}`,
-          at: note.createdAt,
-          title: `Nota de ${item.id}`,
-          detail: note.text,
-          actor: note.author,
-          source: 'Nota interna',
-        }),
-      );
-      if (item.resolvedAt)
-        entries.push({
-          id: `resolution-${item.id}`,
-          at: item.resolvedAt,
-          title: `Incidencia ${item.id} resuelta`,
-          detail: item.resolutionNotes,
+          id: `resolution-${i.id}`,
+          at: i.resolvedAt,
+          title: `Incidencia resuelta: ${incidentTypeLabel(i.type)}`,
+          detail: i.resolution ?? undefined,
           source: 'Resolución',
         });
     });
-  entries.sort((a, b) => dateValue(b.at) - dateValue(a.at));
+  entries.sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+
   return (
     <section aria-label="Historial completo y bitácora">
       <p className="mb-5 text-sm text-slate-600">
-        {entries.length} registros · Más recientes primero. Incluye eventos
-        operativos y registros de auditoría.
+        {entries.length} registros · Más recientes primero. Registrados por el servidor.
       </p>
       {!entries.length ? (
         <p className="py-8 text-center text-sm text-slate-600">
@@ -216,24 +164,16 @@ export function OrderHistory({
             <li key={entry.id} className="relative pb-6 pl-6 last:pb-0">
               <span className="absolute -left-1.5 top-1.5 size-3 rounded-full border-2 border-white bg-[#0F4C81]" />
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-xs font-semibold text-sky-800">
-                  {entry.source}
-                </span>
-                <time className="text-xs text-slate-600">
-                  {displayDate(entry.at)}
-                </time>
+                <span className="text-xs font-semibold text-sky-800">{entry.source}</span>
+                <time className="text-xs text-slate-600">{displayDate(entry.at)}</time>
               </div>
-              <p className="mt-1 text-sm font-semibold text-slate-900">
-                {entry.title}
-              </p>
+              <p className="mt-1 text-sm font-semibold text-slate-900">{entry.title}</p>
               {entry.detail && (
                 <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-relaxed text-slate-600">
                   {entry.detail}
                 </p>
               )}
-              {entry.actor && (
-                <p className="mt-1 text-xs text-slate-600">{entry.actor}</p>
-              )}
+              {entry.actor && <p className="mt-1 text-xs text-slate-600">{entry.actor}</p>}
             </li>
           ))}
         </ol>

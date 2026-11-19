@@ -3,40 +3,51 @@ import { Link } from "react-router-dom";
 import { PaginatedTable } from "../../shared/ui/TablePagination";
 import { ArrowUpRight, History, Package, Workflow } from "lucide-react";
 import type { Order } from "../../types";
-import { useApp } from "../../context/AppContext";
-import { storageService } from "../../services/storage";
 import { operationalStage } from "../../services/fulfillment";
 import { Modal } from "../../shared/ui/Modal";
 import { StatusBadge } from "../../components/common/StatusBadge";
-import { OrderBusinessPanel } from "../orders/OrderBusinessPanel";
+import { IncidentModal } from "../orders/components/IncidentModal";
+import {
+  INCIDENT_STATUS_LABEL,
+  incidentTypeLabel,
+  useServerIncidents,
+} from "../../services/api/incidentsApi";
 import { PlantProcessPanel } from "./PlantProcessPanel";
 import { OrderHistory, displayDate } from "./OrderHistory";
 import { PlantProgress } from "./plantProgress";
 
+// Etapas de planta en las que se puede retener la solicitud para revisión.
+const HOLDABLE = [
+  "AT_FACILITY",
+  "WEIGHING",
+  "INSPECTION",
+  "PRICING_PENDING",
+  "CUSTOMER_APPROVAL_PENDING",
+  "IN_PROCESS",
+  "QUALITY_CONTROL",
+];
+
 export function PlantOrderModal({
   order,
   onClose,
+  onChanged,
 }: {
   order: Order;
   onClose(): void;
+  /** La solicitud cambió en el servidor: la lista de planta se vuelve a consultar. */
+  onChanged?(): void;
 }) {
-  const {
-    auditLogs,
-    incidents,
-    updateOrderStatus,
-    moveToQuarantine,
-    releaseFromQuarantine,
-  } = useApp();
+  const { incidents, refresh: refreshIncidents } = useServerIncidents();
   const [tab, setTab] = useState("summary");
-  const [reason, setReason] = useState("");
-  const state = storageService.getWorkflow();
+  const [holding, setHolding] = useState(false);
   const stage = operationalStage(order);
+  const orderIncidents = incidents.filter((i) => i.orderId === order.id);
   const money = (value: number) =>
     `${order.pricing.currency} ${value.toFixed(2)}`;
   return (
     <Modal
       wide
-      title={`Pedido ${order.id}`}
+      title={`Pedido ${order.trackingNumber || order.id}`}
       description={`${order.customerName} · ${order.facilityName}`}
       onClose={onClose}
     >
@@ -56,16 +67,6 @@ export function PlantOrderModal({
             <PlantProgress order={order} />
           </div>
         </div>
-        {order.quarantineReason && (
-          <p className="mt-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
-            Retención: {order.quarantineReason}
-          </p>
-        )}
-        {order.intakeHold && !order.intakeHold.resolvedAt && (
-          <p className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
-            Diferencia de prendas: {order.intakeHold.description}
-          </p>
-        )}
       </div>
       <div
         className="flex gap-1 overflow-x-auto border-b border-slate-200 px-4"
@@ -177,25 +178,21 @@ export function PlantOrderModal({
             </section>
             <section>
               <h3 className="mb-3 font-semibold">Incidencias vinculadas</h3>
-              {incidents
-                .filter((incident) => incident.orderId === order.id)
-                .map((incident) => (
-                  <p
-                    key={incident.id}
-                    className="mb-2 border-l-2 border-amber-500 pl-3 text-sm"
-                  >
-                    <span className="font-semibold">
-                      {incident.id} ·{" "}
-                      {incident.status === "RESOLVED"
-                        ? "Resuelta"
-                        : "Pendiente"}
-                    </span>
-                    <span className="mt-1 block text-slate-600">
-                      {incident.description}
-                    </span>
-                  </p>
-                ))}
-              {!incidents.some((incident) => incident.orderId === order.id) && (
+              {orderIncidents.map((incident) => (
+                <p
+                  key={incident.id}
+                  className="mb-2 border-l-2 border-amber-500 pl-3 text-sm"
+                >
+                  <span className="font-semibold">
+                    {incidentTypeLabel(incident.type)} ·{" "}
+                    {INCIDENT_STATUS_LABEL[incident.status]}
+                  </span>
+                  <span className="mt-1 block text-slate-600">
+                    {incident.description}
+                  </span>
+                </p>
+              ))}
+              {orderIncidents.length === 0 && (
                 <p className="text-sm text-slate-600">
                   Sin incidencias registradas.
                 </p>
@@ -205,103 +202,20 @@ export function PlantOrderModal({
         )}
         {tab === "process" && (
           <div className="space-y-5">
-            {/* Proceso en planta con el servidor; sin servidor (datos locales) se usa el panel local. */}
-            <PlantProcessPanel
-              orderId={order.id}
-              fallback={
-                order.businessVersion === 3 ? (
-                  <OrderBusinessPanel order={order} />
-                ) : (
-                  <div className="flex flex-wrap gap-3">
-                    {stage === "AT_FACILITY" && (
-                      <button
-                        className="rounded-lg bg-[#0F4C81] px-4 py-2.5 text-sm font-semibold text-white"
-                        onClick={() =>
-                          updateOrderStatus(
-                            order.id,
-                            "IN_PROCESS",
-                            "Procesamiento iniciado desde planta",
-                          )
-                        }
-                      >
-                        Iniciar procesamiento
-                      </button>
-                    )}
-                    {stage === "IN_PROCESS" && (
-                      <button
-                        className="rounded-lg bg-[#0F4C81] px-4 py-2.5 text-sm font-semibold text-white"
-                        onClick={() =>
-                          updateOrderStatus(
-                            order.id,
-                            "QUALITY_CONTROL",
-                            "Lavado terminado",
-                          )
-                        }
-                      >
-                        Pasar a control de calidad
-                      </button>
-                    )}
-                    {stage === "QUALITY_CONTROL" && (
-                      <button
-                        className="rounded-lg bg-[#0F4C81] px-4 py-2.5 text-sm font-semibold text-white"
-                        onClick={() =>
-                          updateOrderStatus(
-                            order.id,
-                            "READY_FOR_DELIVERY",
-                            "Calidad aprobada desde planta",
-                          )
-                        }
-                      >
-                        Marcar listo
-                      </button>
-                    )}
-                  </div>
-                )
-              }
-            />
-            {["IN_PROCESS", "QUALITY_CONTROL"].includes(stage) && (
+            <PlantProcessPanel orderId={order.id} onChanged={() => onChanged?.()} />
+            {HOLDABLE.includes(stage) && (
               <section className="border-t border-slate-200 pt-5">
                 <h3 className="font-semibold">Retener para revisión</h3>
-                <label className="mt-3 block text-sm text-slate-600">
-                  Motivo de la retención
-                  <textarea
-                    className="mt-2 w-full rounded-lg border border-slate-300 p-3 text-sm"
-                    value={reason}
-                    onChange={(event) => setReason(event.target.value)}
-                    placeholder="Describe el problema que requiere revisión"
-                  />
-                </label>
+                <p className="mt-1 text-sm text-slate-600">
+                  Registra una incidencia que detiene el proceso. Al resolverla
+                  en Incidencias, la solicitud vuelve a esta etapa.
+                </p>
                 <button
-                  disabled={reason.trim().length < 5}
-                  onClick={() => moveToQuarantine(order.id, reason.trim())}
-                  className="mt-3 rounded-lg border border-amber-300 px-4 py-2.5 text-sm font-semibold text-amber-900 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  type="button"
+                  onClick={() => setHolding(true)}
+                  className="mt-3 rounded-lg border border-amber-300 px-4 py-2.5 text-sm font-semibold text-amber-900 hover:bg-amber-50"
                 >
                   Retener pedido
-                </button>
-              </section>
-            )}
-            {stage === "QUARANTINE" && (
-              <section>
-                <label className="block text-sm text-slate-600">
-                  Resolución de la retención
-                  <textarea
-                    className="mt-2 w-full rounded-lg border border-slate-300 p-3 text-sm"
-                    value={reason}
-                    onChange={(event) => setReason(event.target.value)}
-                  />
-                </label>
-                <button
-                  disabled={reason.trim().length < 5}
-                  className="mt-3 rounded-lg bg-[#0F4C81] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
-                  onClick={() =>
-                    releaseFromQuarantine(
-                      order.id,
-                      "QUALITY_CONTROL",
-                      reason.trim(),
-                    )
-                  }
-                >
-                  Liberar a control de calidad
                 </button>
               </section>
             )}
@@ -314,14 +228,21 @@ export function PlantOrderModal({
           </div>
         )}
         {tab === "history" && (
-          <OrderHistory
-            order={order}
-            state={state}
-            audits={auditLogs}
-            incidents={incidents}
-          />
+          <OrderHistory orderId={order.id} customerName={order.customerName} />
         )}
       </div>
+      {holding && (
+        <IncidentModal
+          order={order}
+          isOpen
+          defaultHold
+          onClose={() => setHolding(false)}
+          onSuccess={() => {
+            void refreshIncidents();
+            onChanged?.();
+          }}
+        />
+      )}
     </Modal>
   );
 }

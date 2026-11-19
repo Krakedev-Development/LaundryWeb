@@ -1,539 +1,553 @@
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import {
+  AlertTriangle,
+  ArrowRight,
+  CheckCircle2,
+  Clock,
+  Lock,
+  RefreshCw,
+  Search,
+  ShieldAlert,
+} from 'lucide-react';
 import { Modal } from '../../shared/ui/Modal';
-import { IconPlaceholder } from '../../components/common/IconPlaceholder';
-import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { PageHeader } from '../../components/common/PageHeader';
 import { TablePagination, usePagination } from '../../shared/ui/TablePagination';
 import { MetricCard } from '../../components/common/MetricCard';
-import { Incident, IncidentSeverity, IncidentStatus } from '../../types';
+import { STATUS_LABELS_HUMAN } from '../orders/components/ActivityTab';
 import {
-  AlertTriangle,
-  Clock,
-  CheckCircle2,
-  ShieldAlert,
-  Search,
-  MessageSquare,
-  Camera,
-  Plus,
-  Send,
-  ArrowRight,
-} from 'lucide-react';
+  fetchIncidentOrderRef,
+  INCIDENT_SEVERITY_LABEL,
+  INCIDENT_STATUS_LABEL,
+  incidentTypeLabel,
+  isIncidentActive,
+  nextIncidentStatuses,
+  resolvesFromOrderDetail,
+  setIncidentStatus,
+  upsertIncident,
+  useServerIncidents,
+  type IncidentOrderRef,
+  type ServerIncident,
+  type ServerIncidentSeverity,
+  type ServerIncidentStatus,
+} from '../../services/api/incidentsApi';
 
-export const IncidentsPage: React.FC = () => {
-  const { incidents, updateIncidentStatus, addIncidentNote, currentUser } =
-    useApp();
-  const navigate = useNavigate();
+type Tab = 'ALL' | ServerIncidentStatus;
 
-  // Selected tab
-  const [activeTab, setActiveTab] = useState<'ALL' | IncidentStatus>('ALL');
-  const [searchQuery, setSearchQuery] = useState('');
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'ALL', label: 'Todas' },
+  { id: 'OPEN', label: 'Abiertas' },
+  { id: 'IN_REVIEW', label: 'En revisión' },
+  { id: 'RESOLVED', label: 'Resueltas' },
+  { id: 'CLOSED', label: 'Cerradas' },
+];
 
-  // Selected incident for detail drawer
-  const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(
-    null,
+const SEVERITY_STYLE: Record<ServerIncidentSeverity, string> = {
+  CRITICAL: 'bg-rose-50 text-rose-800 border-rose-200',
+  HIGH: 'bg-amber-50 text-amber-800 border-amber-200',
+  MEDIUM: 'bg-indigo-50 text-indigo-800 border-indigo-200',
+  LOW: 'bg-sky-50 text-sky-800 border-sky-200',
+};
+
+const STATUS_STYLE: Record<ServerIncidentStatus, string> = {
+  OPEN: 'bg-rose-50 text-rose-700 border-rose-200',
+  IN_REVIEW: 'bg-amber-50 text-amber-800 border-amber-200',
+  RESOLVED: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+  CLOSED: 'bg-slate-100 text-slate-700 border-slate-200',
+};
+
+const displayDate = (iso?: string | null) =>
+  iso
+    ? new Date(iso).toLocaleString('es-EC', {
+        day: '2-digit',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : '';
+
+const statusLabel = (status?: string | null) =>
+  status ? (STATUS_LABELS_HUMAN[status] ?? status) : '';
+
+function SeverityBadge({ severity }: { severity: ServerIncidentSeverity }) {
+  return (
+    <span
+      className={`inline-flex items-center rounded-md border px-2.5 py-0.5 text-[11px] font-semibold ${SEVERITY_STYLE[severity] ?? SEVERITY_STYLE.MEDIUM}`}
+    >
+      {INCIDENT_SEVERITY_LABEL[severity] ?? severity}
+    </span>
+  );
+}
+
+function StatusBadge({ status }: { status: ServerIncidentStatus }) {
+  return (
+    <span
+      className={`inline-flex items-center rounded-lg border px-2.5 py-0.5 text-xs font-semibold ${STATUS_STYLE[status] ?? STATUS_STYLE.OPEN}`}
+    >
+      {INCIDENT_STATUS_LABEL[status] ?? status}
+    </span>
+  );
+}
+
+/** Número de solicitud y cliente: primero de las solicitudes ya cargadas, luego del servidor. */
+function useOrderRefs(incidents: ServerIncident[]) {
+  const { orders } = useApp();
+  const [fetched, setFetched] = useState<Record<string, IncidentOrderRef>>({});
+
+  const known = useMemo(() => {
+    const map: Record<string, IncidentOrderRef> = {};
+    for (const o of orders)
+      map[o.id] = { trackingNumber: o.trackingNumber || o.id, customerName: o.customerName };
+    return map;
+  }, [orders]);
+
+  const missing = useMemo(
+    () =>
+      [...new Set(incidents.map((i) => i.orderId))].filter(
+        (id) => !known[id] && !fetched[id],
+      ),
+    [incidents, known, fetched],
   );
 
-  // New note input state
-  const [newNoteText, setNewNoteText] = useState('');
-  const [resolutionNotes, setResolutionNotes] = useState('');
+  useEffect(() => {
+    let alive = true;
+    for (const id of missing)
+      void fetchIncidentOrderRef(id).then((ref) => {
+        if (alive && ref) setFetched((prev) => ({ ...prev, [id]: ref }));
+      });
+    return () => {
+      alive = false;
+    };
+  }, [missing]);
+
+  return useCallback(
+    (orderId: string): IncidentOrderRef =>
+      known[orderId] ??
+      fetched[orderId] ?? { trackingNumber: `Solicitud ${orderId.slice(0, 8)}`, customerName: '—' },
+    [known, fetched],
+  );
+}
+
+export const IncidentsPage: React.FC = () => {
+  const { showToast } = useApp();
+  const navigate = useNavigate();
+  const { id: routeId } = useParams<{ id?: string }>();
+  const { incidents, state, error, refresh } = useServerIncidents();
+  const refOf = useOrderRefs(incidents);
+
+  const [activeTab, setActiveTab] = useState<Tab>('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedId, setSelectedId] = useState<string | null>(routeId ?? null);
+  const [resolution, setResolution] = useState('');
   const [isResolving, setIsResolving] = useState(false);
+  const [busy, setBusy] = useState(false);
 
-  const selectedIncident = incidents.find((i) => i.id === selectedIncidentId);
+  // Al abrir la pantalla siempre se consulta el servidor (la caché compartida puede ser vieja).
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
 
-  // KPI counts
-  const abiertasCount = incidents.filter((i) => i.status === 'OPEN').length;
-  const investigacionCount = incidents.filter(
-    (i) => i.status === 'IN_PROGRESS',
-  ).length;
-  const pendientesCierreCount = incidents.filter(
-    (i) => i.status === 'PENDING_CLOSURE',
-  ).length;
-  const resueltasCount = incidents.filter(
-    (i) => i.status === 'RESOLVED',
-  ).length;
+  useEffect(() => {
+    if (routeId) setSelectedId(routeId);
+  }, [routeId]);
 
-  const filteredIncidents = useMemo(() => {
+  const selected = incidents.find((i) => i.id === selectedId);
+  const count = (status: ServerIncidentStatus) => incidents.filter((i) => i.status === status).length;
+
+  const filtered = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
     return incidents.filter((inc) => {
       if (activeTab !== 'ALL' && inc.status !== activeTab) return false;
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const match =
-          inc.id.toLowerCase().includes(q) ||
-          inc.orderId.toLowerCase().includes(q) ||
-          inc.customerName.toLowerCase().includes(q) ||
-          inc.description.toLowerCase().includes(q);
-        if (!match) return false;
-      }
-      return true;
+      if (!q) return true;
+      const ref = refOf(inc.orderId);
+      return [ref.trackingNumber, ref.customerName, inc.description, incidentTypeLabel(inc.type)]
+        .join(' ')
+        .toLowerCase()
+        .includes(q);
     });
-  }, [incidents, activeTab, searchQuery]);
-  const pagination = usePagination(filteredIncidents, `${activeTab}|${searchQuery.trim()}`);
+  }, [incidents, activeTab, searchQuery, refOf]);
+  const pagination = usePagination(filtered, `${activeTab}|${searchQuery.trim()}`);
 
-  const handleAddNote = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newNoteText.trim() || !selectedIncident) return;
-    addIncidentNote(selectedIncident.id, newNoteText);
-    setNewNoteText('');
-  };
-
-  const handleResolveSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!resolutionNotes.trim() || !selectedIncident) return;
-    updateIncidentStatus(selectedIncident.id, 'RESOLVED', resolutionNotes);
+  const close = () => {
+    setSelectedId(null);
     setIsResolving(false);
-    setResolutionNotes('');
+    setResolution('');
+    if (routeId) navigate('/operations/incidents', { replace: true });
   };
 
-  const getSeverityBadge = (sev: IncidentSeverity) => {
-    const config: Record<
-      IncidentSeverity,
-      { bg: string; text: string; border: string; dot: string }
-    > = {
-      CRITICA: {
-        bg: 'bg-rose-50',
-        text: 'text-rose-800',
-        border: 'border-rose-200',
-        dot: 'bg-rose-500',
-      },
-      ALTA: {
-        bg: 'bg-amber-50',
-        text: 'text-amber-800',
-        border: 'border-amber-200',
-        dot: 'bg-amber-500',
-      },
-      MEDIA: {
-        bg: 'bg-indigo-50',
-        text: 'text-indigo-800',
-        border: 'border-indigo-200',
-        dot: 'bg-indigo-500',
-      },
-      BAJA: {
-        bg: 'bg-sky-50',
-        text: 'text-sky-800',
-        border: 'border-sky-200',
-        dot: 'bg-sky-500',
-      },
-    };
-    const c = config[sev] || config.MEDIA;
-    return (
-      <span
-        className={`inline-flex items-center gap-1.5 font-bold text-[10px] px-2.5 py-0.5 rounded-md border ${c.bg} ${c.text} ${c.border}`}
-      >
-        <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />
-        {sev}
-      </span>
-    );
+  const apply = async (target: 'IN_REVIEW' | 'RESOLVED' | 'CLOSED') => {
+    if (!selected) return;
+    if (target === 'RESOLVED' && !resolution.trim()) return;
+    setBusy(true);
+    try {
+      const updated = await setIncidentStatus(
+        selected.id,
+        target,
+        target === 'RESOLVED' ? resolution.trim() : undefined,
+      );
+      upsertIncident(updated);
+      setIsResolving(false);
+      setResolution('');
+      showToast({
+        type: 'success',
+        title:
+          target === 'IN_REVIEW'
+            ? 'Incidencia en revisión'
+            : target === 'RESOLVED'
+              ? 'Incidencia resuelta'
+              : 'Incidencia cerrada',
+        message:
+          target === 'RESOLVED' && selected.previousStatus
+            ? `La solicitud ${refOf(selected.orderId).trackingNumber} vuelve a: ${statusLabel(selected.previousStatus)}.`
+            : `Caso de ${refOf(selected.orderId).trackingNumber} actualizado.`,
+      });
+    } catch (err) {
+      showToast({
+        type: 'error',
+        title: 'No se pudo actualizar la incidencia',
+        message: err instanceof Error ? err.message : 'Intenta de nuevo.',
+      });
+      void refresh();
+    } finally {
+      setBusy(false);
+    }
   };
 
-  const getStatusBadge = (st: IncidentStatus) => {
-    const config: Record<IncidentStatus, { label: string; bg: string; dot: string }> = {
-      OPEN: {
-        label: 'Abierta',
-        bg: 'bg-rose-50 text-rose-700 border-rose-200',
-        dot: 'bg-rose-500',
-      },
-      IN_PROGRESS: {
-        label: 'En investigación',
-        bg: 'bg-amber-50 text-amber-800 border-amber-200',
-        dot: 'bg-amber-500',
-      },
-      PENDING_CLOSURE: {
-        label: 'Pendiente cierre',
-        bg: 'bg-sky-50 text-sky-800 border-sky-200',
-        dot: 'bg-sky-500',
-      },
-      RESOLVED: {
-        label: 'Resuelta',
-        bg: 'bg-emerald-50 text-emerald-800 border-emerald-200',
-        dot: 'bg-emerald-500',
-      },
-    };
-    const c = config[st] || config.OPEN;
-    return (
-      <span
-        className={`inline-flex items-center gap-1.5 font-semibold text-xs px-2.5 py-0.5 rounded-lg border ${c.bg}`}
-      >
-        <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />
-        {c.label}
-      </span>
-    );
-  };
+  const loading = state === 'loading' || state === 'idle';
 
   return (
     <div className="space-y-8">
       <PageHeader
-        title="Incidencias Operacionales"
-        subtitle="Monitoreo, investigación, seguimiento de evidencias y resolución de incidencias en prendas y rutas."
+        title="Incidencias operacionales"
+        subtitle="Casos reportados por choferes y personal de sede. Resolver una incidencia que retuvo la solicitud la devuelve a la etapa en que estaba."
       />
 
-      {/* Mandatory Operational Banner */}
-      <div className="p-4 sm:p-5 rounded-2xl bg-rose-50/70 border border-rose-200/90 flex items-center justify-between gap-4 shadow-2xs">
-        <div className="flex items-center gap-3">
-          <ShieldAlert className="w-5 h-5 text-rose-600 shrink-0" />
-          <p className="text-xs font-bold text-rose-950">
-            Regla de Integridad Operativa: Las solicitudes con incidencias
-            abiertas o en investigación NO pueden finalizarse en el sistema.
-          </p>
-        </div>
+      <div className="flex items-center gap-3 rounded-2xl border border-rose-200/90 bg-rose-50/70 p-4 sm:p-5">
+        <ShieldAlert className="h-5 w-5 shrink-0 text-rose-600" />
+        <p className="text-xs font-bold text-rose-950">
+          Una solicitud retenida no avanza hasta que se resuelve su incidencia.
+        </p>
       </div>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard
           title="Abiertas"
-          value={abiertasCount}
-          subtitle="Pendientes de asignación"
-          variant={abiertasCount > 0 ? 'urgent' : 'default'}
-          icon={<AlertTriangle className="w-5 h-5 text-rose-600" />}
+          value={count('OPEN')}
+          subtitle="Sin revisar"
+          variant={count('OPEN') > 0 ? 'urgent' : 'default'}
+          icon={<AlertTriangle className="h-5 w-5 text-rose-600" />}
         />
         <MetricCard
-          title="En Investigación"
-          value={investigacionCount}
-          subtitle="Con peritaje técnico"
-          variant={investigacionCount > 0 ? 'warning' : 'default'}
-          icon={<Clock className="w-5 h-5 text-amber-600" />}
-        />
-        <MetricCard
-          title="Pendientes Cierre"
-          value={pendientesCierreCount}
-          subtitle="A la espera de cliente"
-          variant="aqua"
-          icon={<ShieldAlert className="w-5 h-5 text-sky-600" />}
+          title="En revisión"
+          value={count('IN_REVIEW')}
+          subtitle="En análisis por la sede"
+          variant={count('IN_REVIEW') > 0 ? 'warning' : 'default'}
+          icon={<Clock className="h-5 w-5 text-amber-600" />}
         />
         <MetricCard
           title="Resueltas"
-          value={resueltasCount}
-          subtitle="Cerradas conforme"
+          value={count('RESOLVED')}
+          subtitle="Con resolución registrada"
           variant="success"
-          icon={<CheckCircle2 className="w-5 h-5 text-emerald-600" />}
+          icon={<CheckCircle2 className="h-5 w-5 text-emerald-600" />}
+        />
+        <MetricCard
+          title="Cerradas"
+          value={count('CLOSED')}
+          subtitle="Archivadas"
+          variant="aqua"
+          icon={<Lock className="h-5 w-5 text-sky-600" />}
         />
       </div>
 
-      {/* Tabs & Search Bar */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-5">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          {/* Tabs */}
-          <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0">
-            {[
-              { id: 'ALL', label: 'Todas', count: incidents.length },
-              { id: 'OPEN', label: 'Abiertas', count: abiertasCount },
-              {
-                id: 'IN_PROGRESS',
-                label: 'En investigación',
-                count: investigacionCount,
-              },
-              {
-                id: 'PENDING_CLOSURE',
-                label: 'Pendientes de cierre',
-                count: pendientesCierreCount,
-              },
-              { id: 'RESOLVED', label: 'Resueltas', count: resueltasCount },
-            ].map((tab) => (
+      <div className="space-y-5 rounded-2xl border border-slate-200/80 bg-white p-5 sm:p-6">
+        <div className="flex flex-col items-center justify-between gap-4 lg:flex-row">
+          <div className="flex w-full items-center gap-2 overflow-x-auto pb-1 lg:w-auto lg:pb-0">
+            {TABS.map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`px-3.5 py-2 text-xs font-semibold rounded-xl transition-all shrink-0 flex items-center gap-1.5 cursor-pointer ${
+                type="button"
+                aria-pressed={activeTab === tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex shrink-0 items-center gap-1.5 rounded-xl border px-3.5 py-2 text-xs font-semibold ${
                   activeTab === tab.id
-                    ? 'bg-sky-50 text-sky-800 font-bold border border-sky-200'
-                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent'
+                    ? 'border-sky-200 bg-sky-50 text-sky-800'
+                    : 'border-transparent text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                 }`}
               >
                 <span>{tab.label}</span>
-                <span className="text-[11px] font-mono opacity-75">
-                  ({tab.count})
+                <span className="font-mono text-[11px] opacity-75">
+                  ({tab.id === 'ALL' ? incidents.length : count(tab.id)})
                 </span>
               </button>
             ))}
           </div>
-
-          {/* Search */}
-          <div className="relative w-full sm:w-80">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar caso, cliente u orden..."
-              className="w-full text-xs pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-sky-500"
-            />
+          <div className="flex w-full items-center gap-2 lg:w-auto">
+            <div className="relative w-full lg:w-72">
+              <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                aria-label="Buscar incidencia"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Buscar solicitud, cliente o tipo..."
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-xs focus:border-sky-500 focus:outline-none"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => void refresh()}
+              disabled={loading}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+              Actualizar
+            </button>
           </div>
         </div>
 
-        {/* Incidents Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs text-left">
-            <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200/80">
-              <tr>
-                <th className="py-3.5 px-4">Caso</th>
-                <th className="py-3.5 px-4">Solicitud</th>
-                <th className="py-3.5 px-4">Cliente</th>
-                <th className="py-3.5 px-4">Tipo</th>
-                <th className="py-3.5 px-4">Severidad</th>
-                <th className="py-3.5 px-4">Responsable</th>
-                <th className="py-3.5 px-4">Fecha</th>
-                <th className="py-3.5 px-4">Estado</th>
-                <th className="py-3.5 px-4 text-right">Acción</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {pagination.rows.map((inc) => (
-                <tr
-                  key={inc.id}
-                  onClick={() => setSelectedIncidentId(inc.id)}
-                  className="hover:bg-slate-50/70 cursor-pointer transition-colors"
-                >
-                  <td className="py-3.5 px-4 font-bold font-mono text-rose-700">
-                    {inc.id}
-                  </td>
-                  <td className="py-3.5 px-4 font-mono font-semibold text-sky-800">
-                    {inc.orderId}
-                  </td>
-                  <td className="py-3.5 px-4 font-semibold text-slate-900 truncate max-w-[140px]">
-                    {inc.customerName}
-                  </td>
-                  <td className="py-3.5 px-4 font-medium text-slate-800">
-                    {inc.type}
-                  </td>
-                  <td className="py-3.5 px-4 whitespace-nowrap">
-                    {getSeverityBadge(inc.severity)}
-                  </td>
-                  <td className="py-3.5 px-4 text-slate-600 truncate max-w-[130px]">
-                    {inc.assignedTo}
-                  </td>
-                  <td className="py-3.5 px-4 text-slate-500 font-mono text-[11px] whitespace-nowrap">
-                    {inc.createdAt}
-                  </td>
-                  <td className="py-3.5 px-4 whitespace-nowrap">
-                    {getStatusBadge(inc.status)}
-                  </td>
-                  <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedIncidentId(inc.id);
-                      }}
-                      className="px-3 py-1.5 text-xs font-semibold text-sky-800 bg-sky-50 hover:bg-sky-100 rounded-lg transition-colors cursor-pointer"
-                    >
-                      Gestionar
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <TablePagination pagination={pagination} label="incidencias" />
+        {state === 'error' && (
+          <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900">
+            <span>No se pudieron cargar las incidencias del servidor. {error}</span>
+            <button
+              type="button"
+              onClick={() => void refresh()}
+              className="rounded-lg border border-rose-300 px-3 py-1.5 text-xs font-semibold hover:bg-rose-100"
+            >
+              Reintentar
+            </button>
+          </div>
+        )}
+
+        {loading && incidents.length === 0 ? (
+          <p className="py-10 text-center text-sm text-slate-500">Cargando incidencias...</p>
+        ) : filtered.length === 0 && state !== 'error' ? (
+          <p className="py-10 text-center text-sm text-slate-500">
+            {incidents.length === 0 ? 'No hay incidencias registradas.' : 'Ninguna incidencia coincide con el filtro.'}
+          </p>
+        ) : filtered.length > 0 ? (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="border-b border-slate-200/80 bg-slate-50 font-semibold text-slate-600">
+                  <tr>
+                    <th className="px-4 py-3.5">Solicitud</th>
+                    <th className="px-4 py-3.5">Cliente</th>
+                    <th className="px-4 py-3.5">Tipo</th>
+                    <th className="px-4 py-3.5">Severidad</th>
+                    <th className="px-4 py-3.5">Retención</th>
+                    <th className="px-4 py-3.5">Fecha</th>
+                    <th className="px-4 py-3.5">Estado</th>
+                    <th className="px-4 py-3.5 text-right">Acción</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {pagination.rows.map((inc) => {
+                    const ref = refOf(inc.orderId);
+                    return (
+                      <tr
+                        key={inc.id}
+                        onClick={() => setSelectedId(inc.id)}
+                        className="cursor-pointer hover:bg-slate-50/70"
+                      >
+                        <td className="px-4 py-3.5 font-mono font-semibold text-sky-800">
+                          {ref.trackingNumber}
+                        </td>
+                        <td className="max-w-[160px] truncate px-4 py-3.5 font-semibold text-slate-900">
+                          {ref.customerName}
+                        </td>
+                        <td className="px-4 py-3.5 font-medium text-slate-800">
+                          {incidentTypeLabel(inc.type)}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3.5">
+                          <SeverityBadge severity={inc.severity} />
+                        </td>
+                        <td className="px-4 py-3.5 text-slate-600">
+                          {inc.previousStatus ? (isIncidentActive(inc) ? 'Retenida' : 'Liberada') : 'No'}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3.5 font-mono text-[11px] text-slate-500">
+                          {displayDate(inc.createdAt)}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3.5">
+                          <StatusBadge status={inc.status} />
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3.5 text-right">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedId(inc.id);
+                            }}
+                            className="rounded-lg bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-800 hover:bg-sky-100"
+                          >
+                            Gestionar
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <TablePagination pagination={pagination} label="incidencias" />
+          </>
+        ) : null}
       </div>
 
-      {/* Incident Detail Drawer / Modal per spec #33 */}
-      {selectedIncident && (
+      {selected && (
         <Modal
           wide
-          title={`Incidencia en Solicitud ${selectedIncident.orderId}`}
-          description={`${selectedIncident.id} · ${selectedIncident.customerName}`}
-          onClose={() => setSelectedIncidentId(null)}
+          title={`Incidencia en ${refOf(selected.orderId).trackingNumber}`}
+          description={`${incidentTypeLabel(selected.type)} · ${refOf(selected.orderId).customerName}`}
+          onClose={close}
         >
           <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 px-5 py-3">
-            {getSeverityBadge(selectedIncident.severity)}
-            {getStatusBadge(selectedIncident.status)}
+            <SeverityBadge severity={selected.severity} />
+            <StatusBadge status={selected.status} />
           </div>
-          {/* Body */}
-          <div className="p-5 overflow-y-auto space-y-5 flex-1 text-xs">
-            {/* Overview Details */}
-            <div className="p-4 bg-[#F7F9FC] rounded-xl border border-slate-200 space-y-2">
-              <div className="flex justify-between">
-                <span className="text-slate-500">Cliente afectado:</span>
-                <span className="font-bold text-slate-900">
-                  {selectedIncident.customerName}
-                </span>
+          <div className="space-y-5 p-5 text-sm">
+            <dl className="grid gap-x-8 gap-y-3 sm:grid-cols-2">
+              <div>
+                <dt className="text-slate-500">Registrada</dt>
+                <dd className="mt-0.5 font-medium text-slate-900">{displayDate(selected.createdAt)}</dd>
               </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Tipo de caso:</span>
-                <span className="font-semibold text-slate-800">
-                  {selectedIncident.type}
-                </span>
+              <div>
+                <dt className="text-slate-500">Origen</dt>
+                <dd className="mt-0.5 font-medium text-slate-900">
+                  {selected.driverId ? 'Reportada por el chofer' : 'Registrada por la sede'}
+                </dd>
               </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Responsable asignado:</span>
-                <span className="font-semibold text-[#143F73]">
-                  {selectedIncident.assignedTo}
-                </span>
+              <div className="sm:col-span-2">
+                <dt className="text-slate-500">Retención de la solicitud</dt>
+                <dd className="mt-0.5 font-medium text-slate-900">
+                  {!selected.previousStatus
+                    ? 'La solicitud no se retuvo.'
+                    : isIncidentActive(selected)
+                      ? `Retenida. Al resolver vuelve a: ${statusLabel(selected.previousStatus)}.`
+                      : `Liberada. Volvió a: ${statusLabel(selected.previousStatus)}.`}
+                </dd>
               </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Reportado por:</span>
-                <span className="text-slate-700">
-                  {selectedIncident.reportedBy} ({selectedIncident.reportedRole}
-                  )
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">
-                  Fecha y hora de registro:
-                </span>
-                <span className="font-mono text-slate-700">
-                  {selectedIncident.createdAt}
-                </span>
-              </div>
-            </div>
+            </dl>
 
-            {/* Description */}
-            <div>
-              <h4 className="font-bold text-slate-900 mb-1">
-                Descripción del Incidente:
-              </h4>
-              <p className="p-3 bg-white border border-slate-200 rounded-xl text-slate-700 leading-relaxed">
-                {selectedIncident.description}
+            <section>
+              <h4 className="mb-1 font-semibold text-slate-900">Descripción</h4>
+              <p className="rounded-xl border border-slate-200 bg-white p-3 leading-relaxed text-slate-700">
+                {selected.description}
               </p>
-            </div>
+            </section>
 
-            {/* Evidences */}
-            <div>
-              <h4 className="font-bold text-slate-900 mb-1.5 flex items-center gap-1.5">
-                <Camera className="w-4 h-4 text-slate-500" />
-                Evidencias Fotográficas Adjuntas (
-                {selectedIncident.evidences.length})
-              </h4>
-              {selectedIncident.evidences.length === 0 ? (
-                <p className="text-slate-400 italic">
-                  No se adjuntaron fotografías al registrar el caso.
-                </p>
-              ) : (
-                <div className="grid grid-cols-2 gap-3">
-                  {selectedIncident.evidences.map((ev) => (
-                    <div
-                      key={ev.id}
-                      className="rounded-xl border border-slate-200 overflow-hidden bg-slate-50"
-                    >
-                      <IconPlaceholder
-                        kind="evidence"
-                        label={ev.caption}
-                        className="h-32 w-full"
-                      />
-                      <p className="p-2 text-[11px] text-slate-600">
-                        {ev.caption}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Resolution Notes if Resolved */}
-            {selectedIncident.status === 'RESOLVED' && (
-              <div className="p-3.5 bg-emerald-50 rounded-xl border border-emerald-200 text-emerald-900 space-y-1">
-                <div className="flex items-center gap-1.5 font-bold text-emerald-800">
-                  <CheckCircle2 className="w-4 h-4" />
-                  Caso Resuelto el {selectedIncident.resolvedAt}
-                </div>
-                <p className="text-xs text-emerald-800">
-                  {selectedIncident.resolutionNotes}
-                </p>
-              </div>
+            {(selected.evidenceRefs?.length ?? 0) > 0 && (
+              <p className="text-slate-600">
+                Evidencias registradas: {selected.evidenceRefs!.length}
+              </p>
             )}
 
-            {/* Internal Notes Feed */}
-            <div>
-              <h4 className="font-bold text-slate-900 mb-2 flex items-center gap-1.5">
-                <MessageSquare className="w-4 h-4 text-slate-500" />
-                Bitácora de Notas Internas (
-                {selectedIncident.internalNotes.length})
-              </h4>
+            {selected.resolution && (
+              <section className="rounded-xl border border-emerald-200 bg-emerald-50 p-3.5 text-emerald-900">
+                <p className="flex items-center gap-1.5 font-semibold">
+                  <CheckCircle2 className="h-4 w-4" />
+                  Resolución {selected.resolvedAt ? `· ${displayDate(selected.resolvedAt)}` : ''}
+                </p>
+                <p className="mt-1">{selected.resolution}</p>
+              </section>
+            )}
 
-              <div className="space-y-2 mb-3">
-                {selectedIncident.internalNotes.map((note) => (
-                  <div
-                    key={note.id}
-                    className="p-2.5 bg-slate-50 rounded-lg border border-slate-200"
-                  >
-                    <div className="flex justify-between text-[11px] text-slate-500 mb-0.5">
-                      <span className="font-bold text-slate-800">
-                        {note.author}
-                      </span>
-                      <span className="font-mono">{note.createdAt}</span>
-                    </div>
-                    <p className="text-slate-700">{note.text}</p>
-                  </div>
-                ))}
-              </div>
+            {isIncidentActive(selected) && resolvesFromOrderDetail(selected) && (
+              <p className="rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-amber-900">
+                Esta recogida fallida se resuelve desde el detalle de la solicitud: reprograma la
+                recogida con una nueva franja o cancela la solicitud.
+              </p>
+            )}
 
-              {/* Add Note Input */}
-              <form onSubmit={handleAddNote} className="flex gap-2">
-                <input
-                  type="text"
-                  value={newNoteText}
-                  onChange={(e) => setNewNoteText(e.target.value)}
-                  placeholder="Agregar nota interna al expediente..."
-                  className="flex-1 p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs focus:outline-none"
-                />
-                <button
-                  type="submit"
-                  className="px-3.5 py-2 bg-[#0F4C81] text-white font-bold rounded-lg hover:bg-[#0A3660] transition-colors cursor-pointer"
-                >
-                  <Send className="w-3.5 h-3.5" />
-                </button>
-              </form>
-            </div>
-
-            {/* Resolve Form */}
             {isResolving && (
               <form
-                onSubmit={handleResolveSubmit}
-                className="p-4 bg-emerald-50 rounded-xl border border-emerald-200 space-y-3"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void apply('RESOLVED');
+                }}
+                className="space-y-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4"
               >
-                <h4 className="font-bold text-emerald-900">
-                  Confirmar Resolución del Caso
-                </h4>
-                <textarea
-                  value={resolutionNotes}
-                  onChange={(e) => setResolutionNotes(e.target.value)}
-                  required
-                  rows={2}
-                  placeholder="Detalle de solución técnica o acuerdo con el cliente..."
-                  className="w-full p-2.5 bg-white border border-emerald-300 rounded-lg text-xs"
-                />
+                <label className="block font-semibold text-emerald-900">
+                  Resolución del caso
+                  <textarea
+                    value={resolution}
+                    onChange={(e) => setResolution(e.target.value)}
+                    required
+                    rows={3}
+                    placeholder="Qué se hizo y qué se acordó con el cliente"
+                    className="mt-2 w-full rounded-lg border border-emerald-300 bg-white p-2.5 text-sm font-normal"
+                  />
+                </label>
+                {selected.previousStatus && (
+                  <p className="text-xs text-emerald-900">
+                    Al resolver, la solicitud vuelve a: {statusLabel(selected.previousStatus)}.
+                  </p>
+                )}
                 <div className="flex justify-end gap-2">
                   <button
                     type="button"
                     onClick={() => setIsResolving(false)}
-                    className="px-3 py-1.5 text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"
+                    className="rounded-lg px-3 py-1.5 text-slate-600 hover:bg-slate-100"
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-1.5 bg-emerald-700 text-white font-bold rounded-lg hover:bg-emerald-800 cursor-pointer"
+                    disabled={busy || !resolution.trim()}
+                    className="rounded-lg bg-emerald-700 px-4 py-1.5 font-semibold text-white hover:bg-emerald-800 disabled:opacity-50"
                   >
-                    Resolver Incidencia
+                    Confirmar resolución
                   </button>
                 </div>
               </form>
             )}
           </div>
 
-          {/* Footer Actions */}
-          <div className="p-4 border-t border-slate-200/80 bg-slate-50/70 flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200/80 bg-slate-50/70 p-4">
             <button
-              onClick={() =>
-                navigate(`/operations/orders/${selectedIncident.orderId}`)
-              }
-              className="text-xs font-semibold text-sky-700 hover:underline inline-flex items-center gap-1.5 cursor-pointer"
+              type="button"
+              onClick={() => navigate(`/operations/orders/${selected.orderId}`)}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-sky-700 hover:underline"
             >
-              <span>Abrir Solicitud {selectedIncident.orderId}</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              Abrir solicitud {refOf(selected.orderId).trackingNumber}
+              <ArrowRight className="h-3.5 w-3.5" />
             </button>
-
-            <div className="flex items-center gap-2">
-              {selectedIncident.status !== 'RESOLVED' && !isResolving && (
-                <button
-                  onClick={() => setIsResolving(true)}
-                  className="px-4 py-2 text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg shadow-xs transition-colors flex items-center gap-1.5"
-                >
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Resolver Incidencia</span>
-                </button>
-              )}
-            </div>
+            {!resolvesFromOrderDetail(selected) || !isIncidentActive(selected) ? (
+              <div className="flex flex-wrap items-center gap-2">
+                {nextIncidentStatuses(selected.status).includes('IN_REVIEW') && (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void apply('IN_REVIEW')}
+                    className="rounded-lg border border-amber-300 px-4 py-2 text-xs font-semibold text-amber-900 hover:bg-amber-50 disabled:opacity-50"
+                  >
+                    Pasar a revisión
+                  </button>
+                )}
+                {nextIncidentStatuses(selected.status).includes('RESOLVED') && !isResolving && (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => setIsResolving(true)}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-700 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-800 disabled:opacity-50"
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    Resolver incidencia
+                  </button>
+                )}
+                {nextIncidentStatuses(selected.status).includes('CLOSED') && (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void apply('CLOSED')}
+                    className="rounded-lg border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-50"
+                  >
+                    Cerrar caso
+                  </button>
+                )}
+              </div>
+            ) : null}
           </div>
         </Modal>
       )}

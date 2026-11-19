@@ -16,8 +16,10 @@ import { facilityZoneId } from '../../entities/zone/model/zone.rules';
 import { polygonFromVertices } from '../../entities/zone/model/polygonGeometry';
 import type { Coordinates } from '../../services/geo/geo.types';
 import { DriverMapControls } from './zones/DriverMapControls';
+import { isIncidentActive, useServerIncidents } from '../../services/api/incidentsApi';
 export function OperationalMapPage() {
-  const { facilities, drivers, orders, incidents, currentUser } = useApp();
+  const { facilities, drivers, orders, currentUser } = useApp();
+  const { incidents } = useServerIncidents();
   const isAdmin = currentUser.role === 'ADMIN';
   const navigate = useNavigate();
   const [layers, setLayers] = useState({
@@ -116,7 +118,7 @@ export function OperationalMapPage() {
     });
   if (layers.incident)
     incidents
-      .filter((i) => ['OPEN', 'IN_PROGRESS'].includes(i.status))
+      .filter(isIncidentActive)
       .forEach((i) => {
         const o = orders.find((v) => v.id === i.orderId);
         if (o && (!zone || o.zoneId === zone))

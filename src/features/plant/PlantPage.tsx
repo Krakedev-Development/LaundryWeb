@@ -1,6 +1,8 @@
-import { useState } from 'react';
-import { ArrowUpRight, ListFilter, Search } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { ArrowUpRight, ListFilter, RefreshCw, Search } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import type { Order } from '../../types';
+import { fetchPlantOrders } from '../../services/api/plantOrdersApi';
 import { PageHeader } from '../../components/common/PageHeader';
 import { TablePagination, usePagination } from '../../shared/ui/TablePagination';
 import { SLABadge } from '../../components/common/PriorityBadge';
@@ -8,7 +10,26 @@ import { isPlantOrder, plantPhase, PlantProgress } from './plantProgress';
 import { PlantOrderModal } from './PlantOrderModal';
 
 export const PlantPage = () => {
-  const { orders, facilities } = useApp();
+  const { orders: known, customers, facilities, drivers } = useApp();
+  // La lista sale del servidor; lo local solo aporta nombres ya conocidos para mostrar.
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [loadError, setLoadError] = useState('');
+  const load = useCallback(async () => {
+    setLoadState('loading');
+    try {
+      setOrders(await fetchPlantOrders(known, customers, facilities, drivers));
+      setLoadState('ready');
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : 'No se pudo conectar con el servidor.');
+      setLoadState('error');
+    }
+    // Se consulta al abrir y al pedirlo; no en cada cambio de los datos locales.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    void load();
+  }, [load]);
   const [selectedFacility, setSelectedFacility] = useState('ALL');
   const [query, setQuery] = useState('');
   const [phase, setPhase] = useState('ALL');
@@ -29,7 +50,7 @@ export const PlantPage = () => {
         (held || String(plantPhase(order)) !== phase)
       )
         return false;
-      return `${order.id} ${order.customerName} ${order.trackingNumber} ${order.serviceType}`
+      return `${order.trackingNumber} ${order.customerName} ${order.serviceType}`
         .toLocaleLowerCase()
         .includes(query.trim().toLocaleLowerCase());
     })
@@ -60,10 +81,21 @@ export const PlantPage = () => {
             </strong>{' '}
             listos para salida
           </p>
-          <span className="inline-flex items-center gap-2 text-xs text-slate-600">
-            <ListFilter size={15} />
-            Los pedidos en riesgo aparecen primero
-          </span>
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="inline-flex items-center gap-2 text-xs text-slate-600">
+              <ListFilter size={15} />
+              Los pedidos en riesgo aparecen primero
+            </span>
+            <button
+              type="button"
+              onClick={() => void load()}
+              disabled={loadState === 'loading'}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            >
+              <RefreshCw size={14} className={loadState === 'loading' ? 'animate-spin' : ''} />
+              Actualizar
+            </button>
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-3 border-b border-slate-200 p-4">
           <div className="relative w-full basis-full sm:min-w-60 sm:flex-1 sm:basis-auto">
@@ -123,7 +155,24 @@ export const PlantPage = () => {
             Solo riesgo SLA
           </label>
         </div>
-        {visible.length ? (
+        {loadState === 'error' && (
+          <div role="alert" className="m-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900">
+            <p className="font-semibold">No se pudieron cargar los pedidos de planta del servidor.</p>
+            <p className="mt-1">{loadError}</p>
+            <button
+              type="button"
+              onClick={() => void load()}
+              className="mt-3 rounded-lg border border-rose-300 px-3 py-1.5 text-xs font-semibold hover:bg-rose-100"
+            >
+              Reintentar
+            </button>
+          </div>
+        )}
+        {loadState === 'loading' && orders.length === 0 ? (
+          <p role="status" className="px-5 py-16 text-center text-sm text-slate-600">
+            Cargando pedidos de planta...
+          </p>
+        ) : loadState === 'error' && orders.length === 0 ? null : visible.length ? (
           <>
             <ul
               aria-label="Pedidos de planta"
@@ -133,11 +182,11 @@ export const PlantPage = () => {
                 <li key={order.id} className="px-5 py-5">
                   <div className="flex items-start justify-between gap-3">
                     <button
-                      aria-label={`Abrir pedido ${order.id}`}
+                      aria-label={`Abrir pedido ${order.trackingNumber || order.id}`}
                       onClick={() => setSelectedId(order.id)}
                       className="text-left font-bold text-[#0F4C81] hover:underline"
                     >
-                      {order.id}
+                      {order.trackingNumber || order.id}
                     </button>
                     <SLABadge risk={order.slaStatus} />
                   </div>
@@ -187,10 +236,10 @@ export const PlantPage = () => {
                             event.stopPropagation();
                             setSelectedId(order.id);
                           }}
-                          aria-label={`Abrir pedido ${order.id}`}
+                          aria-label={`Abrir pedido ${order.trackingNumber || order.id}`}
                           className="font-bold text-[#0F4C81] hover:underline"
                         >
-                          {order.id}
+                          {order.trackingNumber || order.id}
                         </button>
                         <p className="mt-1 text-slate-800">
                           {order.customerName}
@@ -221,7 +270,7 @@ export const PlantPage = () => {
                       </td>
                       <td className="px-5 py-5">
                         <button
-                          aria-label={`Ver historial de ${order.id}`}
+                          aria-label={`Ver historial de ${order.trackingNumber || order.id}`}
                           onClick={(event) => {
                             event.stopPropagation();
                             setSelectedId(order.id);
@@ -270,6 +319,7 @@ export const PlantPage = () => {
           key={selected.id}
           order={selected}
           onClose={() => setSelectedId(null)}
+          onChanged={() => void load()}
         />
       )}
     </div>

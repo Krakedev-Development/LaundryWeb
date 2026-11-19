@@ -12,7 +12,7 @@ test('MVP uses icons even when stored records contain legacy image URLs', async 
   });
   await page.goto('/dashboard');
   await expect(page.locator('main')).toBeVisible();
-  const incident = await page.evaluate(() => {
+  await page.evaluate(() => {
     const url = 'https://example.invalid/legacy-photo.png';
     for (const key of [
       'lw_drivers',
@@ -36,11 +36,26 @@ test('MVP uses icons even when stored records contain legacy image URLs', async 
       replaceImages(data);
       localStorage.setItem(key, JSON.stringify(data));
     }
-    const workflow = JSON.parse(localStorage.getItem('lw_workflow_v2') || '{}');
-    const incidents =
-      workflow.incidents || JSON.parse(localStorage.getItem('lw_incidents'));
-    return incidents.find((item) => item.evidences.length > 0);
   });
+  // Las incidencias vienen del servidor; una evidencia con URL de foto se muestra como conteo.
+  const cors = { 'access-control-allow-origin': '*' };
+  await page.route(/\/api\/v1\/incidents(\?.*)?$/, (route) =>
+    route.request().method() === 'OPTIONS'
+      ? route.fulfill({ status: 204, headers: { ...cors, 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' } })
+      : route.fulfill({
+          status: 200,
+          headers: cors,
+          contentType: 'application/json',
+          body: JSON.stringify([
+            {
+              id: 'inc-1', orderId: 'SOL-HOME-001', type: 'PRENDA_DANADA', severity: 'HIGH',
+              status: 'OPEN', description: 'Camisa con rotura', previousStatus: null,
+              evidenceRefs: ['https://example.invalid/legacy-photo.png'],
+              createdAt: '2026-11-19T15:00:00.000Z',
+            },
+          ]),
+        }),
+  );
   for (const path of ['/dashboard', '/logistics/drivers']) {
     await page.goto(path);
     await expect(page.locator('main [role="img"]').first()).toBeVisible();
@@ -51,21 +66,13 @@ test('MVP uses icons even when stored records contain legacy image URLs', async 
   await page.goto('/customers/kyc');
   await expect(page.locator('main img')).toHaveCount(0);
   await page.goto('/operations/incidents');
-  await page
-    .locator('tr')
-    .filter({ hasText: incident.id })
-    .getByRole('button', { name: 'Gestionar' })
-    .click();
-  await expect(
-    page.getByRole('img', { name: incident.evidences[0].caption, exact: true }),
-  ).toBeVisible();
+  await page.locator('tbody tr').first().getByRole('button', { name: 'Gestionar' }).click();
+  await expect(page.getByRole('dialog')).toContainText('Evidencias registradas: 1');
   await expect(page.locator('img[src*="legacy-photo"]')).toHaveCount(0);
-  await page.goto(`/operations/orders/${incident.orderId}`);
-  // Las incidencias y sus evidencias están en la pestaña Actividad del detalle.
+  await page.keyboard.press('Escape');
+  await page.goto('/operations/orders/SOL-HOME-001');
   await page.getByRole('button', { name: /^Actividad/ }).click();
-  await expect(
-    page.getByRole('img', { name: incident.evidences[0].caption, exact: true }),
-  ).toBeVisible();
+  await expect(page.getByText('Camisa con rotura')).toBeVisible();
   await expect(page.locator('main img:not(.leaflet-tile)')).toHaveCount(0);
   expect(photoRequests).toEqual([]);
 });

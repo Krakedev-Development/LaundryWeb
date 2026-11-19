@@ -1,10 +1,7 @@
 import React from 'react';
 import {
   Sparkles,
-  ClipboardCheck,
-  CheckCircle2,
   Truck,
-  Building2,
   AlertTriangle,
   ArrowRight,
   ShieldCheck,
@@ -15,7 +12,7 @@ import {
   AlertCircle,
   HelpCircle,
 } from 'lucide-react';
-import type { Order, OrderStatus } from '../../../types';
+import type { Order } from '../../../types';
 import { operationalStage } from '../../../services/fulfillment';
 import { PlantProgress } from '../../plant/plantProgress';
 import { FacilityReceptionPanel } from '../FacilityReceptionPanel';
@@ -25,9 +22,7 @@ import { PlantProcessPanel } from '../../plant/PlantProcessPanel';
 
 interface OperationTabProps {
   order: Order;
-  onAdvanceStatus: (nextStatus: OrderStatus, noteText?: string) => Promise<void> | void;
   onOpenAssign: (type: 'pickup' | 'delivery') => void;
-  onOpenInspection: () => void;
   onOpenQuarantine: () => void;
   onOpenIncident: () => void;
   onSwitchTab: (tab: 'operation' | 'order' | 'logistics' | 'activity') => void;
@@ -42,9 +37,7 @@ interface OperationTabProps {
 
 export const OperationTab: React.FC<OperationTabProps> = ({
   order,
-  onAdvanceStatus,
   onOpenAssign,
-  onOpenInspection,
   onOpenQuarantine,
   onSwitchTab,
   refreshFromServer,
@@ -57,7 +50,6 @@ export const OperationTab: React.FC<OperationTabProps> = ({
   const stage = operationalStage(order);
   // Con una solicitud del servidor en planta, el panel "Proceso en planta" guía cada paso con sus
   // validaciones (pesaje, ajustes, pago). Mientras esté activo no se repiten aquí sus acciones.
-  const [serverPlantActive, setServerPlantActive] = React.useState(false);
   // Cada paso (en este u otro panel) cambia la versión: los paneles vuelven a consultar el servidor
   // para mostrar el paso siguiente sin recargar la página.
   const versionKey = `${order.version ?? order.workflowVersion ?? 0}:${order.status}`;
@@ -69,268 +61,68 @@ export const OperationTab: React.FC<OperationTabProps> = ({
   let stageDescription = 'Gestión del ciclo de vida y estado actual de la solicitud.';
   let primaryCTA: React.ReactNode = null;
 
+  // Aquí solo quedan las acciones que el personal hace contra el servidor sin evidencia extra
+  // (asignar chofer, retener). Lo que confirma el chofer ocurre en su app; la custodia, el
+  // proceso en planta y el cierre tienen su panel propio debajo. Nada se avanza en local.
+  const byDriver = 'Lo registra el chofer desde su app; aquí se actualiza solo.';
   switch (stage) {
     case 'CONFIRMED':
     case 'PICKUP_PENDING':
       stageTitle = 'Recogida pendiente de asignación';
       stageDescription =
         'La solicitud está confirmada y requiere asignar un conductor para el retiro a domicilio.';
-      if (order.fulfillment?.inbound.method === 'DRIVER' && !order.pickupNeedsScheduling) {
+      if (order.fulfillment?.inbound.method === 'DRIVER' && !order.pickupNeedsScheduling)
         primaryCTA = (
-          <button
-            onClick={() => onOpenAssign('pickup')}
-            className="px-5 py-2.5 text-xs font-bold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
-          >
-            <Truck className="w-4 h-4" />
-            <span>Asignar chofer de recogida</span>
-          </button>
-        );
-      }
+        <button
+          onClick={() => onOpenAssign('pickup')}
+          className="px-5 py-2.5 text-xs font-bold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
+        >
+          <Truck className="w-4 h-4" />
+          <span>Asignar chofer de recogida</span>
+        </button>
+      );
       break;
 
     case 'PICKUP_ASSIGNED':
       stageTitle = 'Chofer asignado para recogida';
-      stageDescription = `Conductor ${
-        order.pickup.driverName || 'asignado'
-      } programado para iniciar la recogida en el domicilio.`;
-      primaryCTA = (
-        <button
-          onClick={() =>
-            onAdvanceStatus('HEADING_TO_PICKUP', 'Conductor inició recorrido hacia el domicilio')
-          }
-          className="px-5 py-2.5 text-xs font-bold text-white bg-teal-700 hover:bg-teal-800 rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
-        >
-          <CheckCircle2 className="w-4 h-4" />
-          <span>Iniciar recorrido de recogida</span>
-        </button>
-      );
+      stageDescription = `Conductor ${order.pickup.driverName || 'asignado'} programado para la recogida. ${byDriver}`;
       break;
 
     case 'HEADING_TO_PICKUP':
       stageTitle = 'Conductor en camino a recoger';
-      stageDescription = 'El conductor se encuentra en ruta hacia la dirección del cliente.';
-      primaryCTA = (
-        <button
-          onClick={() =>
-            onAdvanceStatus('ARRIVED_FOR_PICKUP', 'Conductor llegó al domicilio del cliente')
-          }
-          className="px-5 py-2.5 text-xs font-bold text-white bg-teal-700 hover:bg-teal-800 rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
-        >
-          <CheckCircle2 className="w-4 h-4" />
-          <span>Marcar llegada al domicilio</span>
-        </button>
-      );
+      stageDescription = `El conductor va hacia la dirección del cliente. ${byDriver}`;
       break;
 
     case 'ARRIVED_FOR_PICKUP':
       stageTitle = 'Conductor en domicilio';
-      stageDescription =
-        'El conductor se encuentra en el domicilio realizando la verificación de bultos y prendas.';
-      primaryCTA = (
-        <button
-          onClick={() =>
-            onAdvanceStatus('PICKED_UP', 'Prendas recibidas conforme por el conductor')
-          }
-          className="px-5 py-2.5 text-xs font-bold text-white bg-teal-700 hover:bg-teal-800 rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
-        >
-          <CheckCircle2 className="w-4 h-4" />
-          <span>Confirmar prendas recogidas</span>
-        </button>
-      );
+      stageDescription = `El conductor recibe las prendas validando el código del cliente. ${byDriver}`;
       break;
 
     case 'PICKED_UP':
       stageTitle = 'Prendas recogidas por el chofer';
-      stageDescription = 'Prendas bajo custodia del chofer, listas para su traslado a la planta.';
-      primaryCTA = (
-        <button
-          onClick={() =>
-            onAdvanceStatus('HEADING_TO_FACILITY', 'Traslado en curso hacia la planta')
-          }
-          className="px-5 py-2.5 text-xs font-bold text-white bg-sky-700 hover:bg-sky-800 rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
-        >
-          <Building2 className="w-4 h-4" />
-          <span>Trasladar a planta</span>
-        </button>
-      );
+      stageDescription = `Prendas bajo custodia del chofer, listas para su traslado a la planta. ${byDriver}`;
       break;
 
     case 'HEADING_TO_FACILITY':
       stageTitle = 'En traslado hacia la planta';
       stageDescription =
-        'El vehículo se encuentra en ruta hacia la sede de lavado. La recepción en planta debe registrar el ingreso.';
+        'El vehículo va hacia la sede. Al llegar, la sede valida el código del chofer para registrar el ingreso.';
       break;
 
     case 'ARRIVED_AT_FACILITY':
     case 'AT_FACILITY':
-      stageTitle = 'Pedido recibido en planta';
-      stageDescription =
-        'Prendas ingresadas a instalaciones. Siguiente acción operativa: realizar la inspección técnica de cada prenda recibida.';
-      primaryCTA = (
-        <button
-          onClick={onOpenInspection}
-          className="px-5 py-2.5 text-xs font-bold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
-        >
-          <ClipboardCheck className="w-4 h-4" />
-          <span>Iniciar inspección de prendas ({order.itemCount} prendas)</span>
-        </button>
-      );
+    case 'WEIGHING':
+    case 'INSPECTION':
+    case 'PRICING_PENDING':
+    case 'CUSTOMER_APPROVAL_PENDING':
+      stageTitle = 'Pedido en planta';
+      stageDescription = 'Sigue los pasos del panel "Proceso en planta": pesaje, inspección, precio y pago.';
       break;
 
     case 'IN_PROCESS':
-      stageTitle = 'En ciclo de lavado y cuidado';
-      stageDescription =
-        'Las prendas se encuentran en procesamiento técnico en máquinas de lavado y secado.';
-      primaryCTA = (
-        <div className="flex items-center gap-2.5 flex-wrap">
-          <button
-            onClick={onOpenQuarantine}
-            className="px-4 py-2.5 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer"
-          >
-            <AlertTriangle className="w-3.5 h-3.5" />
-            <span>Retener para revisión técnica</span>
-          </button>
-          <button
-            onClick={() =>
-              onAdvanceStatus('QUALITY_CONTROL', 'Lavado completado, pasando a control de calidad')
-            }
-            className="px-5 py-2.5 text-xs font-bold text-white bg-purple-700 hover:bg-purple-800 rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
-          >
-            <CheckCircle2 className="w-4 h-4" />
-            <span>Pasar a control de calidad</span>
-          </button>
-        </div>
-      );
-      break;
-
     case 'QUALITY_CONTROL':
-      stageTitle = 'Control de calidad final';
-      stageDescription =
-        'Inspección de acabado, planchado y empaque de prendas para autorizar el despacho.';
-      primaryCTA = (
-        <button
-          onClick={() =>
-            onAdvanceStatus('READY_FOR_DELIVERY', 'Control de calidad aprobado sin observaciones')
-          }
-          className="px-5 py-2.5 text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
-        >
-          <CheckCircle2 className="w-4 h-4" />
-          <span>Marcar lista para entrega</span>
-        </button>
-      );
-      break;
-
-    case 'READY_FOR_DELIVERY':
-    case 'DELIVERY_SCHEDULED':
-      stageTitle = 'Lista para despacho y entrega';
-      stageDescription =
-        'Prendas listas y empaquetadas. Asignar un conductor para la entrega al cliente.';
-      if (order.fulfillment?.outbound.method === 'DRIVER') {
-        primaryCTA = (
-          <button
-            onClick={() => onOpenAssign('delivery')}
-            className="px-5 py-2.5 text-xs font-bold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
-          >
-            <Truck className="w-4 h-4" />
-            <span>Asignar chofer de entrega</span>
-          </button>
-        );
-      }
-      break;
-
-    case 'DELIVERY_ASSIGNED':
-      stageTitle = 'Chofer asignado para reparto';
-      stageDescription = `Conductor ${
-        order.delivery.driverName || 'asignado'
-      } listo para iniciar el recorrido de reparto.`;
-      primaryCTA = (
-        <button
-          onClick={() =>
-            onAdvanceStatus('OUT_FOR_DELIVERY', 'Chofer inició recorrido de reparto a domicilio')
-          }
-          className="px-5 py-2.5 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
-        >
-          <Truck className="w-4 h-4" />
-          <span>Iniciar reparto a domicilio</span>
-        </button>
-      );
-      break;
-
-    case 'OUT_FOR_DELIVERY':
-      stageTitle = 'En reparto a domicilio';
-      stageDescription = 'El conductor se encuentra en camino a la dirección de entrega del cliente.';
-      primaryCTA = (
-        <button
-          onClick={() =>
-            onAdvanceStatus('ARRIVED_FOR_DELIVERY', 'Llegada a la dirección de entrega')
-          }
-          className="px-5 py-2.5 text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
-        >
-          <CheckCircle2 className="w-4 h-4" />
-          <span>Confirmar llegada al domicilio</span>
-        </button>
-      );
-      break;
-
-    case 'ARRIVED_FOR_DELIVERY':
-      stageTitle = 'Conductor en dirección de entrega';
-      stageDescription = 'Conductor entregando las prendas limpias y solicitando firma/recepción.';
-      primaryCTA = (
-        <button
-          onClick={() =>
-            onAdvanceStatus('DELIVERED', 'Entrega realizada con satisfacción del cliente')
-          }
-          className="px-5 py-2.5 text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
-        >
-          <CheckCircle2 className="w-4 h-4" />
-          <span>Confirmar entrega completada</span>
-        </button>
-      );
-      break;
-
-    case 'DELIVERED':
-      stageTitle = 'Pedido entregado';
-      stageDescription = 'Prendas entregadas satisfactoriamente al cliente.';
-      primaryCTA = (
-        <button
-          disabled={hasActiveIncidents}
-          onClick={() =>
-            onAdvanceStatus('CLOSED', 'Solicitud cerrada con conformidad completa')
-          }
-          className="px-5 py-2.5 text-xs font-bold text-white bg-slate-800 hover:bg-slate-900 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
-          title={
-            hasActiveIncidents
-              ? 'No puede cerrarse con incidencias abiertas'
-              : 'Finalizar y cerrar solicitud'
-          }
-        >
-          <CheckCircle2 className="w-4 h-4" />
-          <span>Cerrar solicitud</span>
-        </button>
-      );
-      break;
-
-    case 'CLOSED':
-      stageTitle = 'Solicitud completada y cerrada';
-      stageDescription = 'El ciclo de servicio concluyó con éxito y sin pendientes.';
-      break;
-
-    case 'QUARANTINE':
-      stageTitle = 'En retención técnica especializada';
-      stageDescription = `Motivo: ${
-        order.quarantineReason || 'Revisión técnica en curso'
-      }. Requiere tratamiento especializado antes de continuar.`;
-      break;
-
-    default:
-      break;
-  }
-
-  // Acciones que el panel del servidor ya ofrece. La retención para revisión técnica no la
-  // ofrece el panel, así que se conserva durante el lavado.
-  if (serverPlantActive) {
-    if (['ARRIVED_AT_FACILITY', 'AT_FACILITY', 'QUALITY_CONTROL'].includes(stage)) primaryCTA = null;
-    else if (stage === 'IN_PROCESS')
+      stageTitle = stage === 'IN_PROCESS' ? 'En ciclo de lavado y cuidado' : 'Control de calidad final';
+      stageDescription = 'El avance se registra en el panel "Proceso en planta".';
       primaryCTA = (
         <button
           onClick={onOpenQuarantine}
@@ -340,6 +132,62 @@ export const OperationTab: React.FC<OperationTabProps> = ({
           <span>Retener para revisión técnica</span>
         </button>
       );
+      break;
+
+    case 'READY_FOR_DELIVERY':
+    case 'DELIVERY_SCHEDULED':
+      if (order.fulfillment?.outbound.method === 'DRIVER') {
+        stageTitle = 'Lista para despacho y entrega';
+        stageDescription = 'Prendas listas y empaquetadas. Asigna un conductor para la entrega al cliente.';
+        primaryCTA = (
+        <button
+          onClick={() => onOpenAssign('delivery')}
+          className="px-5 py-2.5 text-xs font-bold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
+        >
+          <Truck className="w-4 h-4" />
+          <span>Asignar chofer de entrega</span>
+        </button>
+      );
+      } else {
+        stageTitle = 'Lista para retiro en sede';
+        stageDescription = 'El cliente retira en la sede mostrando su código: valídalo en el panel de retiro.';
+      }
+      break;
+
+    case 'DELIVERY_ASSIGNED':
+      stageTitle = 'Chofer asignado para reparto';
+      stageDescription = `Conductor ${order.delivery.driverName || 'asignado'} asignado. La salida se registra validando su código en la sede.`;
+      break;
+
+    case 'OUT_FOR_DELIVERY':
+      stageTitle = 'En reparto a domicilio';
+      stageDescription = `El conductor va hacia la dirección de entrega. ${byDriver}`;
+      break;
+
+    case 'ARRIVED_FOR_DELIVERY':
+      stageTitle = 'Conductor en dirección de entrega';
+      stageDescription = `El conductor entrega validando el código del cliente. ${byDriver}`;
+      break;
+
+    case 'DELIVERED':
+      stageTitle = 'Pedido entregado';
+      stageDescription = hasActiveIncidents
+        ? 'Prendas entregadas. Resuelve las incidencias abiertas antes de cerrar la solicitud.'
+        : 'Prendas entregadas. Ciérrala en el panel de cierre cuando no haya saldo pendiente.';
+      break;
+
+    case 'CLOSED':
+      stageTitle = 'Solicitud completada y cerrada';
+      stageDescription = 'El ciclo de servicio concluyó con éxito y sin pendientes.';
+      break;
+
+    case 'INCIDENT':
+      stageTitle = 'Retenida por incidencia';
+      stageDescription = 'La solicitud no avanza hasta resolver su incidencia; luego vuelve a la etapa en que estaba.';
+      break;
+
+    default:
+      break;
   }
 
   // Check if payment verification alert is legitimately needed (Fixing Finding H-04)
@@ -469,7 +317,6 @@ export const OperationTab: React.FC<OperationTabProps> = ({
             orderId={order.id}
             onlyInPlant
             refreshKey={versionKey}
-            onActiveChange={setServerPlantActive}
             onChanged={(updated) => void refreshFromServer(updated)}
           />
         </div>
