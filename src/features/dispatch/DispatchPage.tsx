@@ -31,38 +31,40 @@ import { syncDrivers } from '../../services/api/driversApi';
 import { ApiError } from '../../services/api/apiConfig';
 import type { Driver, Order } from '../../types';
 
+// Estados del servidor que esperan chofer: recogida (confirmada) y entrega (lista).
+const DISPATCH_STATUSES = ['CONFIRMED', 'READY_FOR_DELIVERY'] as const;
+
 export function DispatchPage() {
   const navigate = useNavigate();
-  const { orders, drivers, customers, facilities, assignDriver, showToast } =
-    useApp();
+  const { orders, drivers, customers, facilities, showToast } = useApp();
   const [type, setType] = useState<'pickup' | 'delivery'>('pickup'),
     [orderId, setOrderId] = useState(''),
     [driverId, setDriverId] = useState(''),
     [notes, setNotes] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [isAssigning, setIsAssigning] = useState(false);
+  // La cola sale del servidor: solo lo que de verdad espera chofer. Sin servidor no hay cola.
+  const [serverOrders, setServerOrders] = useState<Order[]>([]);
+  const [syncState, setSyncState] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [syncError, setSyncError] = useState('');
 
   const syncData = async () => {
+    setRefreshing(true);
     try {
-      setRefreshing(true);
-      const [remoteOrders, remoteDrivers] = await Promise.all([
-        fetchFullOrders(
-          { pageSize: 50 },
-          orders,
-          customers,
-          facilities,
-          drivers,
-        ).catch(() => [] as Order[]),
+      const [lists, remoteDrivers] = await Promise.all([
+        Promise.all(
+          DISPATCH_STATUSES.map((status) =>
+            fetchFullOrders({ status, pageSize: 100 }, orders, customers, facilities, drivers),
+          ),
+        ),
         syncDrivers(facilities, drivers).catch(() => [] as Driver[]),
       ]);
-      if (remoteOrders.length > 0) {
-        storageService.saveOrders(remoteOrders);
-      }
-      if (remoteDrivers.length > 0) {
-        storageService.saveDrivers(remoteDrivers);
-      }
-    } catch {
-      // Keep offline data
+      setServerOrders(lists.flat());
+      setSyncState('ready');
+      if (remoteDrivers.length > 0) storageService.saveDrivers(remoteDrivers);
+    } catch (err) {
+      setSyncError(err instanceof Error ? err.message : 'No se pudo conectar con el servidor.');
+      setSyncState('error');
     } finally {
       setRefreshing(false);
     }
@@ -72,7 +74,7 @@ export function DispatchPage() {
     void syncData();
   }, []);
 
-  const queue = orders.filter((o) =>
+  const queue = serverOrders.filter((o) =>
     type === 'pickup'
       ? o.status === 'CONFIRMED' ||
         (!o.pickupNeedsScheduling && operationalStage(o) === 'PICKUP_PENDING')
@@ -136,32 +138,33 @@ export function DispatchPage() {
         facilities,
         drivers,
       );
-      const next = orders.map((o) => (o.id === mapped.id ? mapped : o));
-      storageService.saveOrders(next);
+      storageService.saveOrders(
+        orders.some((o) => o.id === mapped.id)
+          ? orders.map((o) => (o.id === mapped.id ? mapped : o))
+          : [...orders, mapped],
+      );
       showToast({
         type: 'success',
         title:
           type === 'pickup'
             ? 'Chofer de recogida asignado'
             : 'Chofer de entrega asignado',
-        message: `La solicitud ${order.id} avanzó a ${mapped.status}.`,
+        message: `La solicitud ${order.trackingNumber || order.id} ya tiene chofer.`,
       });
       setDriverId('');
       setNotes('');
       await syncData();
     } catch (err) {
-      if (err instanceof ApiError && err.status === 0) {
-        if (assignDriver(order.id, driverId, type, notes)) {
-          setDriverId('');
-          setNotes('');
-        }
-        return;
-      }
+      // Nunca se asigna solo en el navegador: sin servidor la asignación no existe.
       showToast({
         type: 'error',
-        title: 'Error de asignación',
+        title: 'No se asignó el chofer',
         message:
-          err instanceof Error ? err.message : 'No se pudo asignar el chofer.',
+          err instanceof ApiError && err.status === 0
+            ? 'No se pudo conectar con el servidor. La solicitud sigue sin chofer; intenta de nuevo.'
+            : err instanceof Error
+              ? err.message
+              : 'No se pudo asignar el chofer.',
       });
     } finally {
       setIsAssigning(false);
@@ -184,6 +187,19 @@ export function DispatchPage() {
           </button>
         }
       />
+      {syncState === 'error' && (
+        <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900">
+          <p className="font-semibold">No se pudo cargar la cola de despacho del servidor.</p>
+          <p className="mt-1">{syncError} Sin conexión no se puede asignar chofer.</p>
+          <button
+            type="button"
+            onClick={() => void syncData()}
+            className="mt-3 rounded-lg border border-rose-300 px-3 py-1.5 text-xs font-semibold hover:bg-rose-100"
+          >
+            Reintentar
+          </button>
+        </div>
+      )}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-xs">
         <div className="flex gap-1 rounded-xl bg-slate-100 p-1">
           {(['pickup', 'delivery'] as const).map((value) => (

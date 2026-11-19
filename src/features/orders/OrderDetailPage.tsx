@@ -6,7 +6,6 @@ import {
   Truck,
   Clock,
   AlertTriangle,
-  ShieldAlert,
   LoaderCircle,
   MoreVertical,
   Copy,
@@ -17,13 +16,11 @@ import { PageHeader } from '../../components/common/PageHeader';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { PriorityBadge, SLABadge } from '../../components/common/PriorityBadge';
 import { AssignDriverModal } from '../../components/common/AssignDriverModal';
-import { OverrideModal } from '../../components/common/OverrideModal';
-import { OrderStatus, Order } from '../../types';
+import { Order } from '../../types';
 import {
   confirmOrderPayment,
   getOrder,
   mapBackendOrderToOrder,
-  transitionOrder,
   type BackendOrderDetail,
 } from '../../services/api/ordersApi';
 import { ApiError } from '../../services/api/apiConfig';
@@ -37,17 +34,10 @@ import { OperationTab } from './components/OperationTab';
 import { OrderInfoTab } from './components/OrderInfoTab';
 import { LogisticsTab } from './components/LogisticsTab';
 import { ActivityTab } from './components/ActivityTab';
-import {
-  GarmentInspectionModal,
-  type GarmentInspectionUnit,
-} from './components/GarmentInspectionModal';
 import { IncidentModal } from './components/IncidentModal';
 import {
-  createIncident,
   isIncidentActive,
-  upsertIncident,
   useServerIncidents,
-  type ServerIncidentSeverity,
 } from '../../services/api/incidentsApi';
 
 export const OrderDetailPage: React.FC = () => {
@@ -60,8 +50,6 @@ export const OrderDetailPage: React.FC = () => {
     customers,
     facilities,
     drivers,
-    currentUser,
-    updateOrderStatus,
     showToast,
   } = useApp();
   const { incidents, refresh: refreshIncidents } = useServerIncidents();
@@ -82,10 +70,8 @@ export const OrderDetailPage: React.FC = () => {
   // Modals state
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [assignType, setAssignType] = useState<'pickup' | 'delivery'>('pickup');
-  const [isOverrideModalOpen, setIsOverrideModalOpen] = useState(false);
   const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false);
   const [isQuarantineModalOpen, setIsQuarantineModalOpen] = useState(false);
-  const [isInspectionModalOpen, setIsInspectionModalOpen] = useState(false);
 
   const contextOrder = orders.find((o) => o.id === id || o.trackingNumber === id);
   const order = liveOrder || contextOrder;
@@ -146,46 +132,9 @@ export const OrderDetailPage: React.FC = () => {
     );
   }
 
-  const isAdmin = currentUser.role === 'ADMIN';
   const orderIncidents = incidents.filter((i) => i.orderId === order.id);
   const activeIncidents = orderIncidents.filter(isIncidentActive);
   const hasActiveIncidents = activeIncidents.length > 0;
-
-  // Transition handler
-  const handleAdvanceStatus = async (nextStatus: OrderStatus, noteText?: string) => {
-    try {
-      const updated = await transitionOrder(order.id, {
-        to: nextStatus,
-        expectedVersion: order.version ?? order.workflowVersion ?? 1,
-        note: noteText,
-      });
-      const mapped = mapBackendOrderToOrder(
-        updated,
-        order,
-        customers,
-        facilities,
-        drivers,
-      );
-      setLiveOrder(mapped);
-      const next = orders.map((o) => (o.id === mapped.id ? mapped : o));
-      storageService.saveOrders(next);
-      showToast({
-        type: 'success',
-        title: 'Estado de solicitud actualizado',
-        message: `Orden ${order.trackingNumber || order.id} ahora en: ${nextStatus}`,
-      });
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 0) {
-        updateOrderStatus(order.id, nextStatus, noteText);
-        return;
-      }
-      showToast({
-        type: 'error',
-        title: 'No se pudo actualizar el estado',
-        message: err instanceof Error ? err.message : 'Revisa los datos.',
-      });
-    }
-  };
 
   const refreshFromServer = async (updated?: BackendOrderDetail) => {
     if (!order) return;
@@ -226,14 +175,16 @@ export const OrderDetailPage: React.FC = () => {
         message: `La solicitud ${order.trackingNumber || order.id} quedó registrada como pagada.`,
       });
     } catch (err) {
-      if (err instanceof ApiError && err.status === 0) {
-        updateOrderStatus(order.id, 'CONFIRMED', 'Pago confirmado localmente');
-        return;
-      }
+      // Sin servidor no se registra nada: el pago solo se confirma en el servidor.
       showToast({
         type: 'error',
         title: 'No se pudo confirmar el pago',
-        message: err instanceof Error ? err.message : 'Intenta nuevamente.',
+        message:
+          err instanceof ApiError && err.status === 0
+            ? 'No se pudo conectar con el servidor. No se registró ningún cambio; intenta de nuevo.'
+            : err instanceof Error
+              ? err.message
+              : 'Intenta nuevamente.',
       });
     } finally {
       setConfirmingPayment(false);
@@ -243,63 +194,6 @@ export const OrderDetailPage: React.FC = () => {
   const handleOpenAssign = (type: 'pickup' | 'delivery') => {
     setAssignType(type);
     setIsAssignModalOpen(true);
-  };
-
-  // Garment Inspection Confirmation callback (Section 10 of audit)
-  const handleConfirmInspection = async (
-    results: GarmentInspectionUnit[],
-    customerMessageDraft?: string,
-  ) => {
-    const hasIncidents = results.some((r) => r.result === 'INCIDENT');
-
-    // Las prendas con incidencia se registran en el servidor como un solo caso que retiene la
-    // solicitud: el lavado no empieza hasta resolverlo.
-    const damaged = results.filter((r) => r.result === 'INCIDENT');
-    if (damaged.length > 0) {
-      const rank: ServerIncidentSeverity[] = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
-      const toServer: Record<string, ServerIncidentSeverity> = {
-        BAJA: 'LOW', MEDIA: 'MEDIUM', ALTA: 'HIGH', CRITICA: 'CRITICAL',
-      };
-      const severity = damaged
-        .map((u) => toServer[u.severity ?? 'MEDIA'] ?? 'MEDIUM')
-        .reduce((a, b) => (rank.indexOf(b) > rank.indexOf(a) ? b : a), 'LOW' as ServerIncidentSeverity);
-      try {
-        const created = await createIncident({
-          orderId: order.id,
-          type: 'PRENDA_DANADA',
-          severity,
-          holdOrder: true,
-          description: damaged
-            .map((u) => `Prenda #${u.unitIndex} (${u.itemName}): ${u.incidentType} - ${u.description}`)
-            .join('\n')
-            .slice(0, 1000),
-        });
-        upsertIncident(created);
-      } catch (err) {
-        showToast({
-          type: 'error',
-          title: 'No se pudo registrar la incidencia',
-          message: err instanceof Error ? err.message : 'Intenta de nuevo.',
-        });
-        return;
-      }
-    }
-
-    // Advance to IN_PROCESS if no blocking incidents
-    if (!hasIncidents) {
-      await handleAdvanceStatus(
-        'IN_PROCESS',
-        `Inspección de ${results.length} prendas finalizada conforme. Iniciando lavado.`,
-      );
-    } else {
-      showToast({
-        type: 'warning',
-        title: 'Inspección finalizada con incidencias',
-        message:
-          'Se registró la incidencia y la solicitud queda retenida hasta resolverla en Incidencias.',
-      });
-      void refreshFromServer();
-    }
   };
 
   const handleCopyIdentifier = () => {
@@ -375,18 +269,6 @@ export const OrderDetailPage: React.FC = () => {
                     <span>Retener para revisión técnica</span>
                   </button>
 
-                  {isAdmin && (
-                    <button
-                      onClick={() => {
-                        setIsOverrideModalOpen(true);
-                        setIsActionsMenuOpen(false);
-                      }}
-                      className="w-full text-left px-3.5 py-2 hover:bg-slate-50 flex items-center gap-2 cursor-pointer text-slate-900 border-t border-slate-100"
-                    >
-                      <ShieldAlert className="w-3.5 h-3.5 text-slate-600" />
-                      <span>Override Admin</span>
-                    </button>
-                  )}
                 </div>
               )}
             </div>
@@ -466,9 +348,7 @@ export const OrderDetailPage: React.FC = () => {
       {activeTab === 'operation' && (
         <OperationTab
           order={order}
-          onAdvanceStatus={handleAdvanceStatus}
           onOpenAssign={handleOpenAssign}
-          onOpenInspection={() => setIsInspectionModalOpen(true)}
           onOpenQuarantine={() => setIsQuarantineModalOpen(true)}
           onOpenIncident={() => setIsIncidentModalOpen(true)}
           onSwitchTab={setActiveTab}
@@ -514,27 +394,10 @@ export const OrderDetailPage: React.FC = () => {
           type={assignType}
           isOpen={true}
           onClose={() => setIsAssignModalOpen(false)}
+          onAssigned={(updated) => void refreshFromServer(updated)}
         />
       )}
 
-      {/* Garment Inspection Modal (Section 10 of Audit) */}
-      {isInspectionModalOpen && (
-        <GarmentInspectionModal
-          order={order}
-          isOpen={true}
-          onClose={() => setIsInspectionModalOpen(false)}
-          onConfirmInspection={handleConfirmInspection}
-        />
-      )}
-
-      {/* Override Modal */}
-      {isOverrideModalOpen && (
-        <OverrideModal
-          order={order}
-          isOpen={true}
-          onClose={() => setIsOverrideModalOpen(false)}
-        />
-      )}
 
       {/* Incident Modal */}
       {isIncidentModalOpen && (
