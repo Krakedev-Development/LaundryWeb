@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import type { Order } from '../../../types';
 import { operationalStage } from '../../../services/fulfillment';
+import { paymentMethodLabel } from '../../../services/api/ordersApi';
 import { PlantProgress } from '../../plant/plantProgress';
 import { FacilityReceptionPanel } from '../FacilityReceptionPanel';
 import type { HandoffType } from '../../../services/api/handoffsApi';
@@ -32,8 +33,6 @@ interface OperationTabProps {
   onOpenIncident: () => void;
   onSwitchTab: (tab: 'operation' | 'order' | 'logistics' | 'activity') => void;
   refreshFromServer: (updated?: any) => Promise<void>;
-  confirmingPayment: boolean;
-  onConfirmPayment: () => Promise<void>;
   hasActiveIncidents: boolean;
   activeIncidentsCount: number;
   /** Código o QR leído en "Recepción y retiros" para validar en el panel que corresponda. */
@@ -46,8 +45,6 @@ export const OperationTab: React.FC<OperationTabProps> = ({
   order,
   onSwitchTab,
   refreshFromServer,
-  confirmingPayment,
-  onConfirmPayment,
   hasActiveIncidents,
   activeIncidentsCount,
   custodyCode = '',
@@ -203,15 +200,19 @@ export const OperationTab: React.FC<OperationTabProps> = ({
       break;
   }
 
-  // Check if payment verification alert is legitimately needed (Fixing Finding H-04)
+  // Transferencia pendiente según el servidor. El pago se confirma solo en la pestaña Pedido
+  // (decisión P-3): aquí solo se avisa y se lleva hasta allí.
   const isTransferPending =
     order.pricing?.paymentMethod === 'TRANSFERENCIA' && order.pricing?.paymentStatus !== 'PAID';
 
   return (
     <div className="space-y-6">
-      {/* Legitimate Transfer Validation Alert (Only if method is transfer and payment pending) */}
       {isTransferPending && (
-        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 flex flex-wrap items-center justify-between gap-3 text-xs text-amber-900">
+        <div
+          role="status"
+          aria-label="Transferencia pendiente"
+          className="p-4 rounded-2xl bg-amber-50 border border-amber-200 flex flex-wrap items-center justify-between gap-3 text-xs text-amber-900"
+        >
           <div className="flex items-center gap-2">
             <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
             <span>
@@ -220,11 +221,12 @@ export const OperationTab: React.FC<OperationTabProps> = ({
             </span>
           </div>
           <button
-            onClick={() => void onConfirmPayment()}
-            disabled={confirmingPayment}
-            className="px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors cursor-pointer disabled:opacity-50"
+            type="button"
+            onClick={() => onSwitchTab('order')}
+            className="font-bold underline hover:text-amber-950 inline-flex items-center gap-1 cursor-pointer"
           >
-            {confirmingPayment ? 'Confirmando...' : 'Confirmar transferencia'}
+            <span>Confirmar en la pestaña Pedido</span>
+            <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
       )}
@@ -379,7 +381,7 @@ export const OperationTab: React.FC<OperationTabProps> = ({
                       : 'bg-amber-100 text-amber-800'
                   }`}
                 >
-                  {order.pricing?.paymentMethod} ·{' '}
+                  {paymentMethodLabel(order.pricing?.paymentMethod)} ·{' '}
                   {order.pricing?.paymentStatus === 'PAID' ? 'PAGADO' : 'PENDIENTE'}
                 </span>
               </div>

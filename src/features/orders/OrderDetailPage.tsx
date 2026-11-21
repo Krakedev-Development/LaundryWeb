@@ -376,8 +376,6 @@ export const OrderDetailPage: React.FC = () => {
           onOpenIncident={() => setIsIncidentModalOpen(true)}
           onSwitchTab={setActiveTab}
           refreshFromServer={refreshFromServer}
-          confirmingPayment={confirmingPayment}
-          onConfirmPayment={handleConfirmPayment}
           hasActiveIncidents={hasActiveIncidents}
           activeIncidentsCount={activeIncidents.length}
           custodyCode={custody.code}

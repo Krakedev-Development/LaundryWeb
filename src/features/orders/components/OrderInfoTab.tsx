@@ -13,6 +13,7 @@ import {
 import type { Order } from '../../../types';
 import { PaginatedTable } from '../../../shared/ui/TablePagination';
 import { listAdjustments, type StaffAdjustment } from '../../../services/api/plantApi';
+import { paymentMethodLabel } from '../../../services/api/ordersApi';
 
 interface OrderInfoTabProps {
   order: Order;
@@ -336,7 +337,7 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
             <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200">
               <div>
                 <span className="text-[11px] text-slate-400 block">Forma de pago registrada</span>
-                <span className="font-bold text-slate-800 text-sm">{pricing.paymentMethod}</span>
+                <span className="font-bold text-slate-800 text-sm">{paymentMethodLabel(pricing.paymentMethod)}</span>
               </div>
               <div>
                 <span

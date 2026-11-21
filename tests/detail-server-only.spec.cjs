@@ -8,7 +8,7 @@ const ORDER = 'SOL-HOME-001';
 const json = (route, status, body) =>
   route.fulfill({ status, headers: cors, contentType: 'application/json', body: JSON.stringify(body) });
 
-async function mockOrder(page, status) {
+async function mockOrder(page, status, extra = {}) {
   await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
   const facilityId = await page.evaluate((id) => {
     const raw = JSON.parse(localStorage.getItem('lw_workflow_v2') || '{}');
@@ -17,7 +17,7 @@ async function mockOrder(page, status) {
   const order = {
     id: ORDER, number: 3001, status, mode: 'HOME_HOME', facilityId, paymentStatus: 'PAID',
     pricingStatus: 'ESTIMATED', total: '15.00', version: 5, createdAt: '2026-11-19T13:00:00.000Z',
-    items: [], legs: [], events: [], incidents: [],
+    items: [], legs: [], events: [], incidents: [], ...extra,
   };
   await page.route(/\/api\/v1\/(orders|incidents)(\/[^?]*)?(\?.*)?$/, (route) => {
     const req = route.request();
@@ -100,4 +100,25 @@ test('en lavado el detalle tampoco ofrece retener: el enlace lleva a Planta', as
   await expect(page.getByRole('heading', { name: 'En ciclo de lavado y cuidado' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Gestionar en Planta' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Retener para revisión técnica' })).toHaveCount(0);
+});
+
+// T-09b: el pago se confirma solo en Pedido (decisión P-3); Operación avisa y enlaza.
+test('una transferencia pendiente se avisa en Operación y se confirma solo en Pedido', async ({ page }) => {
+  await mockOrder(page, 'IN_PROCESS', { paymentMethodKind: 'TRANSFER', paymentStatus: 'PENDING' });
+  await page.goto(`/operations/orders/${ORDER}`);
+  const notice = page.getByRole('status', { name: 'Transferencia pendiente' });
+  await expect(notice).toContainText('pago por transferencia');
+  await expect(page.getByText('Transferencia · PENDIENTE')).toBeVisible();
+  await expect(page.getByRole('button', { name: /Confirmar transferencia/ })).toHaveCount(0);
+  await notice.getByRole('button', { name: 'Confirmar en la pestaña Pedido' }).click();
+  await expect(page.getByText('Forma de pago registrada')).toBeVisible();
+  await expect(page.getByText('Transferencia', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Confirmar pago verificado/ })).toBeVisible();
+});
+
+test('sin método informado por el servidor se muestra "Sin definir" y no hay aviso de transferencia', async ({ page }) => {
+  await mockOrder(page, 'IN_PROCESS', { paymentStatus: 'PENDING' });
+  await page.goto(`/operations/orders/${ORDER}`);
+  await expect(page.getByText('Sin definir · PENDIENTE')).toBeVisible();
+  await expect(page.getByRole('status', { name: 'Transferencia pendiente' })).toHaveCount(0);
 });

@@ -7,9 +7,11 @@ import type {
   Facility,
   Order,
   OrderItem,
+  OrderPricing,
   OrderPriority,
   OrderStatus,
   OrderTimelineEvent,
+  PaymentMethod,
   SLARisk,
 } from '../../types';
 import type { LegStatus, Milestone } from '../fulfillment';
@@ -288,6 +290,41 @@ export function localStateFromServer(
   return { status: status as OrderStatus, inbound: pending(hasInboundDriver), outbound: pending(hasOutboundDriver) };
 }
 
+const METHOD_BY_KIND: Record<string, PaymentMethod> = {
+  WALLET: 'BILLETERA',
+  CARD: 'TARJETA',
+  TRANSFER: 'TRANSFERENCIA',
+};
+
+/** `paymentMethodKind` del servidor (WALLET, CARD, TRANSFER). Sin dato no se supone ninguno. */
+export const paymentMethodFromKind = (kind?: string | null): PaymentMethod | undefined =>
+  kind ? METHOD_BY_KIND[kind] : undefined;
+
+const PAYMENT_STATUSES: OrderPricing['paymentStatus'][] = [
+  'PENDING_AMOUNT',
+  'PENDING',
+  'PAID',
+  'FAILED',
+  'REFUNDED',
+  'PARTIALLY_REFUNDED',
+];
+
+/** Estado de pago del servidor. Si falta o no se reconoce, queda pendiente: nunca se da por pagado. */
+export const paymentStatusFromServer = (status?: string | null): OrderPricing['paymentStatus'] =>
+  PAYMENT_STATUSES.includes(status as OrderPricing['paymentStatus'])
+    ? (status as OrderPricing['paymentStatus'])
+    : 'PENDING';
+
+const METHOD_LABEL: Record<PaymentMethod, string> = {
+  TARJETA: 'Tarjeta',
+  TRANSFERENCIA: 'Transferencia',
+  BILLETERA: 'Billetera',
+  EFECTIVO: 'Efectivo',
+};
+
+export const paymentMethodLabel = (method?: PaymentMethod) =>
+  method ? METHOD_LABEL[method] : 'Sin definir';
+
 export function mapBackendOrderToOrder(
   raw: BackendOrderDetail | BackendOrderSummary,
   existing?: Order,
@@ -498,8 +535,9 @@ export function mapBackendOrderToOrder(
       deliveryFee,
       total: totalAmount,
       currency: 'USD',
-      paymentMethod: 'TARJETA',
-      paymentStatus: (raw.paymentStatus as any) ?? 'PAID',
+      // Lo que dice el servidor, sin suponer: sin método queda sin definir y sin estado, pendiente.
+      paymentMethod: paymentMethodFromKind(detail?.paymentMethodKind),
+      paymentStatus: paymentStatusFromServer(raw.paymentStatus),
       pricingModel: ((detail?.pricingModel || existing?.pricing?.pricingModel) as any) ?? 'FIXED',
       pricingStatus: (raw.pricingStatus as any) ?? 'CALCULATED',
       amountKnown: raw.pricingStatus !== 'PENDING_WEIGHT',
