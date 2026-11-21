@@ -18,6 +18,7 @@ import type { Order } from '../../../types';
 import { operationalStage } from '../../../services/fulfillment';
 import { PlantProgress } from '../../plant/plantProgress';
 import { FacilityReceptionPanel } from '../FacilityReceptionPanel';
+import type { HandoffType } from '../../../services/api/handoffsApi';
 import { DispatchCustodyPanel } from '../DispatchCustodyPanel';
 import { FailedPickupPanel } from '../FailedPickupPanel';
 import { PlantProcessPanel } from '../../plant/PlantProcessPanel';
@@ -34,6 +35,8 @@ interface OperationTabProps {
   activeIncidentsCount: number;
   /** Código o QR leído en "Recepción y retiros" para validar en el panel que corresponda. */
   custodyCode?: string;
+  /** Traspaso de la columna donde se eligió la solicitud: el código solo va a ese panel. */
+  custodyType?: HandoffType | '';
 }
 
 export const OperationTab: React.FC<OperationTabProps> = ({
@@ -46,6 +49,7 @@ export const OperationTab: React.FC<OperationTabProps> = ({
   hasActiveIncidents,
   activeIncidentsCount,
   custodyCode = '',
+  custodyType = '',
 }) => {
   const stage = operationalStage(order);
   // Con una solicitud del servidor en planta, el panel "Proceso en planta" guía cada paso con sus
@@ -289,8 +293,9 @@ export const OperationTab: React.FC<OperationTabProps> = ({
           {stage === 'HEADING_TO_FACILITY' && (
             <FacilityReceptionPanel
               orderId={order.id}
-              version={order.version ?? order.workflowVersion ?? 1}
-              initialCode={custodyCode}
+              initialCode={
+                !custodyType || custodyType === 'DRIVER_TO_FACILITY' ? custodyCode : ''
+              }
               onChanged={(updated) => void refreshFromServer(updated)}
             />
           )}
@@ -310,7 +315,8 @@ export const OperationTab: React.FC<OperationTabProps> = ({
           <DispatchCustodyPanel
             orderId={order.id}
             refreshKey={versionKey}
-            initialCode={custodyCode}
+            initialCode={custodyType === 'DRIVER_TO_FACILITY' ? '' : custodyCode}
+            initialType={custodyType}
             onChanged={(updated) => void refreshFromServer(updated)}
           />
 

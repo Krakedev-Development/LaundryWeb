@@ -72,10 +72,11 @@ test('un QR abre la solicitud con el código ya cargado en su panel', async ({ p
   const qr = `LDH1:${ORDER}:DRIVER_TO_FACILITY:${TOKEN}`;
   await scan.fill(qr);
   await scan.press('Enter');
-  await expect(page).toHaveURL(new RegExp(`/operations/orders/${ORDER}\\?custodia=`));
   const panel = page.getByRole('region', { name: 'Recepción en planta' });
   await expect(panel.getByRole('textbox', { name: 'Código del chofer' })).toHaveValue(qr);
   await expect(panel.getByText('QR del chofer leído')).toBeVisible();
+  // El código no queda en la URL (historial, enlaces compartidos): el detalle lo quita al leerlo.
+  await expect(page).toHaveURL((url) => url.pathname === `/operations/orders/${ORDER}` && url.search === '');
 });
 
 test('con el código de 6 dígitos se elige la solicitud y el código llega al detalle', async ({ page }) => {
@@ -85,9 +86,29 @@ test('con el código de 6 dígitos se elige la solicitud y el código llega al d
   await page.getByRole('button', { name: 'Continuar', exact: true }).click();
   await expect(page.getByRole('status').filter({ hasText: 'Código 482910 listo' })).toBeVisible();
   await page.getByRole('button', { name: 'Validar SOL-1001', exact: true }).click();
-  await expect(page).toHaveURL(new RegExp(`/operations/orders/${ORDER}\\?custodia=482910`));
+  // Antes de llevar el código se confirma la solicitud: en la equivocada gastaría sus intentos.
+  const dialog = page.getByRole('dialog', { name: 'Confirmar la solicitud' });
+  await expect(dialog).toContainText('Vas a validar el código 482910 en SOL-1001');
+  await expect(dialog).toContainText('Ana Torres (Llegan a planta)');
+  await dialog.getByRole('button', { name: 'Validar en SOL-1001', exact: true }).click();
   const panel = page.getByRole('region', { name: 'Recepción en planta' });
   await expect(panel.getByRole('textbox', { name: 'Código del chofer' })).toHaveValue('482910');
+  await expect(page).toHaveURL((url) => url.pathname === `/operations/orders/${ORDER}` && url.search === '');
+});
+
+test('al cancelar la confirmación no se abre ninguna solicitud y el código sigue listo', async ({ page }) => {
+  await mockServer(page);
+  await page.goto('/operations/handoffs', { waitUntil: 'domcontentloaded' });
+  await page.getByRole('textbox', { name: 'QR o código de 6 dígitos' }).fill('482910');
+  await page.getByRole('button', { name: 'Continuar', exact: true }).click();
+  await page.getByRole('button', { name: 'Validar SOL-1002', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Confirmar la solicitud' });
+  await expect(dialog).toContainText('SOL-1002');
+  await expect(dialog).toContainText('(Salen a reparto)');
+  await dialog.getByRole('button', { name: 'Cancelar', exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page).toHaveURL(/\/operations\/handoffs$/);
+  await expect(page.getByRole('status').filter({ hasText: 'Código 482910 listo' })).toBeVisible();
 });
 
 test('en móvil la pantalla no se desborda', async ({ page }) => {

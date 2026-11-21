@@ -6,7 +6,9 @@ const preflight = { ...cors, 'access-control-allow-headers': '*', 'access-contro
 const ORDER = 'SOL-HOME-001';
 const TOKEN = 'AbCdEfGhIjKlMnOpQrStUvWxYz012345';
 
-async function mockServer(page, { verifyError } = {}) {
+async function mockServer(page, { verifyError, handoffsFailures = 0, conflictOnce = false } = {}) {
+  let handoffsLeftToFail = handoffsFailures;
+  let conflictPending = conflictOnce;
   const state = {
     order: {
       id: ORDER,
@@ -31,6 +33,10 @@ async function mockServer(page, { verifyError } = {}) {
     const req = route.request();
     if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: preflight });
     const path = new URL(req.url()).pathname.replace(/^.*\/api\/v1/, '');
+    if (path === `/orders/${ORDER}/handoffs` && req.method() === 'GET' && handoffsLeftToFail > 0) {
+      handoffsLeftToFail -= 1;
+      return json(route, 429, { message: 'Demasiadas solicitudes. Espera un momento.' });
+    }
     if (path === `/orders/${ORDER}/handoffs` && req.method() === 'GET')
       return json(route, 200, [
         { id: 'h1', type: 'CUSTOMER_TO_DRIVER', status: 'USED', generation: 1, expiresAt: null, usedAt: new Date().toISOString(), declaredCount: 7, receivedCount: null },
@@ -38,6 +44,12 @@ async function mockServer(page, { verifyError } = {}) {
     if (path === `/orders/${ORDER}/handoffs/verify`) {
       verifications.push(req.postDataJSON());
       if (verifyError) return json(route, verifyError.status, { message: verifyError.message });
+      if (conflictPending) {
+        // Otro dispositivo cambió la solicitud: su versión avanzó.
+        conflictPending = false;
+        state.order = { ...state.order, version: state.order.version + 1 };
+        return json(route, 409, { message: 'La solicitud cambió. Recarga e intenta de nuevo.' });
+      }
       state.order = { ...state.order, status: 'AT_FACILITY', version: state.order.version + 1 };
       return json(route, 201, state.order);
     }
@@ -115,4 +127,53 @@ test('el mensaje del servidor sobre el código se muestra en el formulario', asy
   await panel.getByRole('button', { name: 'Confirmar recepción en planta', exact: true }).click();
   await expect(panel.getByText('Código incorrecto. Intentos restantes: 2.')).toBeVisible();
   await expect(panel).toBeVisible();
+});
+
+// R-HO-3: sin el conteo declarado no se puede comparar, así que no se confirma.
+test('si no se obtiene el conteo declarado no se puede confirmar y Reintentar lo vuelve a consultar', async ({ page }) => {
+  const verifications = await mockServer(page, { handoffsFailures: 1 });
+  const panel = await openOrder(page);
+  const alert = panel.getByRole('alert');
+  await expect(alert).toContainText('No se pudo obtener el conteo declarado en la recogida.');
+  await expect(alert).toContainText('Demasiadas solicitudes. Espera un momento.');
+  const confirm = panel.getByRole('button', { name: 'Confirmar recepción en planta', exact: true });
+  await panel.getByRole('textbox', { name: 'Código del chofer' }).fill('482910');
+  await panel.getByRole('textbox', { name: 'Prendas recibidas' }).fill('7');
+  await expect(confirm).toBeDisabled();
+  expect(verifications).toEqual([]);
+
+  await alert.getByRole('button', { name: 'Reintentar' }).click();
+  await expect(panel).toContainText('Prendas declaradas en la recogida: 7');
+  await expect(panel.getByRole('alert')).toHaveCount(0);
+  await expect(confirm).toBeEnabled();
+});
+
+// Contrato 4: un 423 no se arregla reintentando el mismo código.
+test('con el traspaso bloqueado (423) se pide un código nuevo al chofer', async ({ page }) => {
+  await mockServer(page, { verifyError: { status: 423, message: 'El código está bloqueado por demasiados intentos.' } });
+  const panel = await openOrder(page);
+  await panel.getByRole('textbox', { name: 'Código del chofer' }).fill('111111');
+  await panel.getByRole('textbox', { name: 'Prendas recibidas' }).fill('7');
+  await panel.getByRole('button', { name: 'Confirmar recepción en planta', exact: true }).click();
+  await expect(
+    panel.getByText(
+      'El código está bloqueado por demasiados intentos. Pide al chofer que genere un código nuevo en su app.',
+    ),
+  ).toBeVisible();
+});
+
+// R-HO-4: si la versión cambió, se vuelve a consultar y la siguiente confirmación usa la vigente.
+test('ante un conflicto de versión se recarga y se confirma con la versión vigente', async ({ page }) => {
+  const verifications = await mockServer(page, { conflictOnce: true });
+  const panel = await openOrder(page);
+  await expect(panel).toContainText('Prendas declaradas en la recogida: 7');
+  await panel.getByRole('textbox', { name: 'Código del chofer' }).fill('482910');
+  await panel.getByRole('textbox', { name: 'Prendas recibidas' }).fill('7');
+  const confirm = panel.getByRole('button', { name: 'Confirmar recepción en planta', exact: true });
+  await confirm.click();
+  await expect(panel.getByText(/La solicitud cambió mientras validabas/)).toBeVisible();
+  await expect(confirm).toBeEnabled();
+  await confirm.click();
+  await expect(page.getByRole('status').getByText('Ropa recibida en planta', { exact: true })).toBeVisible();
+  expect(verifications.map((v) => v.expectedVersion)).toEqual([6, 7]);
 });

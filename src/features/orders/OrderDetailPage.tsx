@@ -23,6 +23,7 @@ import {
   type BackendOrderDetail,
 } from '../../services/api/ordersApi';
 import { ApiError } from '../../services/api/apiConfig';
+import { parseHandoffType } from '../../services/api/handoffsApi';
 import { storageService } from '../../services/storage';
 import { MODE_LABELS } from '../../services/BusinessService';
 import { operationalStage } from '../../services/fulfillment';
@@ -41,9 +42,25 @@ import {
 
 export const OrderDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  // Código o QR leído en "Recepción y retiros": el panel de la etapa lo trae ya cargado.
-  const [searchParams] = useSearchParams();
-  const custodyCode = searchParams.get('custodia') ?? '';
+  // Código o QR leído en "Recepción y retiros" (`?custodia=`) y traspaso de la columna elegida
+  // (`?traspaso=`): el panel de la etapa los trae cargados. Se guardan en memoria y se quitan de
+  // la URL de inmediato, para que el código no quede en el historial ni en un enlace compartido.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [custody, setCustody] = useState(() => ({
+    code: searchParams.get('custodia') ?? '',
+    type: parseHandoffType(searchParams.get('traspaso')),
+  }));
+  useEffect(() => {
+    if (!searchParams.has('custodia') && !searchParams.has('traspaso')) return;
+    setCustody({
+      code: searchParams.get('custodia') ?? '',
+      type: parseHandoffType(searchParams.get('traspaso')),
+    });
+    const next = new URLSearchParams(searchParams);
+    next.delete('custodia');
+    next.delete('traspaso');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
   const {
     orders,
     customers,
@@ -348,7 +365,8 @@ export const OrderDetailPage: React.FC = () => {
           onConfirmPayment={handleConfirmPayment}
           hasActiveIncidents={hasActiveIncidents}
           activeIncidentsCount={activeIncidents.length}
-          custodyCode={custodyCode}
+          custodyCode={custody.code}
+          custodyType={custody.type}
         />
       )}
 

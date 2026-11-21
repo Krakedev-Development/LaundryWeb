@@ -1,4 +1,4 @@
-import { apiRequest } from './apiConfig';
+import { ApiError, apiRequest } from './apiConfig';
 import { session } from '../auth/session';
 import type { BackendOrderDetail } from './ordersApi';
 
@@ -88,4 +88,32 @@ export function validateReception(received: string, declared: number | null, not
   else if (declared !== null && n !== declared && !notes.trim())
     errors.notes = `Recibes ${n} y se declararon ${declared}: explica la diferencia.`;
   return errors;
+}
+
+const HANDOFF_TYPES: HandoffType[] = [
+  'CUSTOMER_TO_DRIVER',
+  'DRIVER_TO_FACILITY',
+  'FACILITY_TO_DRIVER',
+  'DRIVER_TO_CUSTOMER',
+  'FACILITY_TO_CUSTOMER',
+];
+
+/** `?traspaso=` de la URL: solo se acepta un tipo conocido. */
+export const parseHandoffType = (value: string | null): HandoffType | '' =>
+  HANDOFF_TYPES.includes(value as HandoffType) ? (value as HandoffType) : '';
+
+/**
+ * Mensaje para un error al validar la custodia (contrato 4). El 423 significa que el traspaso
+ * quedó bloqueado por intentos fallidos: hace falta un código nuevo, no reintentar el mismo.
+ */
+export function custodyErrorMessage(e: unknown, who: 'del chofer' | 'del cliente' = 'del chofer'): string {
+  if (e instanceof ApiError) {
+    if (e.status === 423)
+      return `${e.message} Pide ${who === 'del cliente' ? 'al cliente' : 'al chofer'} que genere un código nuevo en su app.`;
+    if (e.status === 0)
+      return 'No se pudo conectar con el servidor. No se registró ningún cambio; intenta de nuevo.';
+    if (e.status === 409)
+      return 'La solicitud cambió mientras validabas. Ya se actualizó: revisa los datos y vuelve a confirmar.';
+  }
+  return e instanceof Error ? e.message : 'No se pudo completar la operación. Intenta de nuevo.';
 }

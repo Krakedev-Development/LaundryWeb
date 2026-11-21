@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { LoaderCircle, PackageOpen, QrCode } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { parseCustodyInput, verifyHandoff, type HandoffType } from '../../services/api/handoffsApi';
+import { ApiError } from '../../services/api/apiConfig';
+import {
+  custodyErrorMessage,
+  parseCustodyInput,
+  verifyHandoff,
+  type HandoffType,
+} from '../../services/api/handoffsApi';
 import { completeOrder, getPlantOrder, type PlantOrder } from '../../services/api/plantApi';
 
 const field =
@@ -48,6 +54,7 @@ export function DispatchCustodyPanel({
   onChanged,
   refreshKey,
   initialCode = '',
+  initialType = '',
 }: {
   orderId: string;
   onChanged(updated: PlantOrder): void;
@@ -55,6 +62,8 @@ export function DispatchCustodyPanel({
   refreshKey?: string | number;
   /** Código o QR leído en "Recepción y retiros", para no tener que volver a escanearlo. */
   initialCode?: string;
+  /** Traspaso de la columna donde se eligió la solicitud (`?traspaso=`). */
+  initialType?: HandoffType | '';
 }) {
   const { showToast } = useApp();
   const [order, setOrder] = useState<PlantOrder | null>(null);
@@ -78,6 +87,22 @@ export function DispatchCustodyPanel({
   useEffect(() => {
     void load();
   }, [load, refreshKey]);
+
+  // El código traído de "Recepción y retiros" solo sirve para la etapa en la que se eligió. Si la
+  // solicitud está en otra (o en ninguna de este panel), se descarta para no gastar un intento
+  // del traspaso equivocado.
+  const initialChecked = useRef(false);
+  useEffect(() => {
+    if (!order || initialChecked.current || !initialCode) return;
+    initialChecked.current = true;
+    const current = STEPS[order.status];
+    if (current && (!initialType || current.type === initialType)) return;
+    setCode('');
+    if (current)
+      setErrors({
+        code: 'El código leído en Recepción y retiros era para otra etapa. Pide el código de esta etapa.',
+      });
+  }, [order, initialCode, initialType]);
 
   // Lectura del QR con la cámara (requiere HTTPS o localhost).
   useEffect(() => {
@@ -169,11 +194,14 @@ export function DispatchCustodyPanel({
         notes: notes.trim() || undefined,
         ...input,
       });
+      setCode('');
       showToast({ type: 'success', title: step.done });
       onChanged(updated as PlantOrder);
       await load();
     } catch (err) {
-      setErrors({ code: messageOf(err) });
+      setErrors({ code: custodyErrorMessage(err, step.recipient ? 'del cliente' : 'del chofer') });
+      // La versión quedó vieja: se vuelve a consultar para confirmar con la vigente.
+      if (err instanceof ApiError && err.status === 409) void load();
     } finally {
       setBusy(false);
     }

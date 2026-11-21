@@ -13,6 +13,7 @@ import { PageHeader } from '../../components/common/PageHeader';
 import { listOrders, type BackendOrderSummary } from '../../services/api/ordersApi';
 import { getFacilities, type FacilityResponse } from '../../services/api/geoApi';
 import { ApiError } from '../../services/api/apiConfig';
+import { Modal } from '../../shared/ui/Modal';
 
 /*
  * Puerta de entrada del mostrador. La validación de los traspasos (código, prendas, quién retira)
@@ -89,6 +90,8 @@ export function interpretScan(raw: string): ScanResult {
 
 type Row = BackendOrderSummary & { customer?: { user?: { name?: string | null } | null } | null };
 
+const solLabel = (r: Row) => `SOL-${String(r.number).padStart(4, '0')}`;
+
 export function HandoffsPage() {
   const navigate = useNavigate();
   const [rows, setRows] = useState<Record<QueueKey, Row[]>>({
@@ -102,6 +105,9 @@ export function HandoffsPage() {
   const [loadError, setLoadError] = useState('');
   const [input, setInput] = useState('');
   const [pendingCode, setPendingCode] = useState('');
+  // Con un código de 6 dígitos no se sabe de qué solicitud es: antes de llevarlo al detalle se
+  // confirma la solicitud elegida, porque un código en la solicitud equivocada gasta sus intentos.
+  const [confirming, setConfirming] = useState<{ row: Row; queue: (typeof QUEUES)[number] } | null>(null);
   const [scanError, setScanError] = useState('');
   const [camera, setCamera] = useState(false);
   const video = useRef<HTMLVideoElement>(null);
@@ -137,8 +143,14 @@ export function HandoffsPage() {
       .catch(() => setFacilities([]));
   }, [load]);
 
-  const openOrder = (orderId: string, code = '') =>
-    navigate(`/operations/orders/${orderId}${code ? `?custodia=${encodeURIComponent(code)}` : ''}`);
+  // El detalle quita `custodia` y `traspaso` de la URL en cuanto los lee.
+  const openOrder = (orderId: string, code = '', type = '') => {
+    const params = new URLSearchParams();
+    if (code) params.set('custodia', code);
+    if (type) params.set('traspaso', type);
+    const query = params.toString();
+    navigate(`/operations/orders/${orderId}${query ? `?${query}` : ''}`);
+  };
 
   const submit = (value: string) => {
     const result = interpretScan(value);
@@ -148,7 +160,7 @@ export function HandoffsPage() {
     }
     setScanError('');
     if (result.kind === 'qr') {
-      openOrder(result.orderId, result.raw);
+      openOrder(result.orderId, result.raw, result.raw.match(QR)?.[2]);
       return;
     }
     // El código de 6 dígitos no dice a qué solicitud pertenece: se elige en la cola.
@@ -339,7 +351,9 @@ export function HandoffsPage() {
                         type="button"
                         className={secondary}
                         aria-label={`Validar SOL-${String(r.number).padStart(4, '0')}`}
-                        onClick={() => openOrder(r.id, pendingCode)}
+                        onClick={() =>
+                          pendingCode ? setConfirming({ row: r, queue: q }) : openOrder(r.id, '', q.type)
+                        }
                       >
                         Validar
                         <ArrowUpRight className="size-3.5" aria-hidden="true" />
@@ -351,6 +365,44 @@ export function HandoffsPage() {
             );
           })}
         </div>
+      )}
+
+      {confirming && (
+        <Modal
+          title="Confirmar la solicitud"
+          description="El código se validará en el detalle de esta solicitud."
+          onClose={() => setConfirming(null)}
+        >
+          <div className="space-y-4 p-5 text-sm text-slate-700 sm:p-6">
+            <p>
+              Vas a validar el código <strong className="font-mono">{pendingCode}</strong> en{' '}
+              <strong>{solLabel(confirming.row)}</strong> ·{' '}
+              {confirming.row.customer?.user?.name ?? 'Cliente'} ({confirming.queue.title}).
+            </p>
+            <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+              Si el código no es de esta solicitud, el intento fallido cuenta y el traspaso puede
+              quedar bloqueado. Verifica la solicitud con quien entrega antes de seguir.
+            </p>
+            <div className="flex flex-wrap justify-end gap-2">
+              <button type="button" className={secondary} onClick={() => setConfirming(null)}>
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className={button}
+                onClick={() => {
+                  const { row, queue } = confirming;
+                  const code = pendingCode;
+                  setConfirming(null);
+                  setPendingCode('');
+                  openOrder(row.id, code, queue.type);
+                }}
+              >
+                Validar en {solLabel(confirming.row)}
+              </button>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );

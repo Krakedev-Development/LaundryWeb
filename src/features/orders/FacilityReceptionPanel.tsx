@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { LoaderCircle, PackageCheck, QrCode } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import { LoaderCircle, PackageCheck, QrCode, RefreshCw } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import type { BackendOrderDetail } from '../../services/api/ordersApi';
+import { ApiError } from '../../services/api/apiConfig';
+import { getOrder, type BackendOrderDetail } from '../../services/api/ordersApi';
 import {
+  custodyErrorMessage,
   declaredAtPickup,
   listHandoffs,
   parseCustodyInput,
@@ -21,24 +23,32 @@ const secondary =
 const messageOf = (e: unknown) =>
   e instanceof Error ? e.message : 'No se pudo completar la operación. Intenta de nuevo.';
 
+/** Lo que el panel necesita del servidor antes de poder confirmar. */
+type ServerState =
+  | { status: 'loading' }
+  | { status: 'error'; message: string }
+  | { status: 'ready'; declared: number | null; version: number };
+
 /**
  * Llegada a planta: el chofer muestra su código o QR y la sede lo valida aquí, junto con las
  * prendas recibidas. Al validarse, el servidor pasa la solicitud a "En planta".
+ *
+ * Antes de confirmar se consultan al servidor el conteo declarado en la recogida y la versión
+ * vigente de la solicitud. Sin ellos no se confirma: sin el conteo, una diferencia de prendas
+ * pasaría sin explicación.
  */
 export function FacilityReceptionPanel({
   orderId,
-  version,
   onChanged,
   initialCode = '',
 }: {
   orderId: string;
-  version: number;
   onChanged(updated: BackendOrderDetail): void;
   /** Código o QR leído en "Recepción y retiros", para no tener que volver a escanearlo. */
   initialCode?: string;
 }) {
   const { showToast } = useApp();
-  const [declared, setDeclared] = useState<number | null>(null);
+  const [server, setServer] = useState<ServerState>({ status: 'loading' });
   const [code, setCode] = useState(initialCode);
   const [received, setReceived] = useState('');
   const [notes, setNotes] = useState('');
@@ -46,20 +56,31 @@ export function FacilityReceptionPanel({
   const [busy, setBusy] = useState(false);
   const [camera, setCamera] = useState(false);
   const video = useRef<HTMLVideoElement>(null);
+  const mounted = useRef(true);
+
+  const load = useCallback(async () => {
+    setServer({ status: 'loading' });
+    try {
+      const [rows, detail] = await Promise.all([listHandoffs(orderId), getOrder(orderId)]);
+      if (mounted.current)
+        setServer({ status: 'ready', declared: declaredAtPickup(rows), version: detail.version });
+    } catch (e) {
+      if (mounted.current)
+        setServer({
+          status: 'error',
+          message:
+            e instanceof ApiError && e.status === 0 ? 'Sin conexión con el servidor.' : messageOf(e),
+        });
+    }
+  }, [orderId]);
 
   useEffect(() => {
-    let active = true;
-    listHandoffs(orderId)
-      .then((rows) => {
-        if (active) setDeclared(declaredAtPickup(rows));
-      })
-      .catch(() => {
-        // Sin el conteo declarado igual se puede recibir: solo no se compara.
-      });
+    mounted.current = true;
+    void load();
     return () => {
-      active = false;
+      mounted.current = false;
     };
-  }, [orderId]);
+  }, [load]);
 
   // Lectura del QR con la cámara (requiere HTTPS o localhost).
   useEffect(() => {
@@ -95,7 +116,8 @@ export function FacilityReceptionPanel({
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    const found: typeof errors = validateReception(received, declared, notes);
+    if (server.status !== 'ready') return;
+    const found: typeof errors = validateReception(received, server.declared, notes);
     let input;
     try {
       input = parseCustodyInput(code, orderId, 'DRIVER_TO_FACILITY');
@@ -108,11 +130,12 @@ export function FacilityReceptionPanel({
     try {
       const updated = await verifyHandoff(orderId, {
         type: 'DRIVER_TO_FACILITY',
-        expectedVersion: version,
+        expectedVersion: server.version,
         receivedCount: Number(received),
         notes: notes.trim() || undefined,
         ...input,
       });
+      setCode('');
       showToast({
         type: 'success',
         title: 'Ropa recibida en planta',
@@ -120,7 +143,9 @@ export function FacilityReceptionPanel({
       });
       onChanged(updated);
     } catch (err) {
-      setErrors({ code: messageOf(err) });
+      setErrors({ code: custodyErrorMessage(err) });
+      // La versión quedó vieja: se vuelve a consultar para confirmar con la vigente.
+      if (err instanceof ApiError && err.status === 409) void load();
     } finally {
       setBusy(false);
     }
@@ -140,13 +165,34 @@ export function FacilityReceptionPanel({
             El chofer está en camino a la planta. Al recibir la ropa, valida su código o QR y registra
             las prendas recibidas.
           </p>
-          {declared !== null && (
+          {server.status === 'ready' && (
             <p className="mt-1 text-xs font-semibold text-slate-800">
-              Prendas declaradas en la recogida: {declared}
+              {server.declared !== null
+                ? `Prendas declaradas en la recogida: ${server.declared}`
+                : 'El chofer no declaró un conteo en la recogida.'}
+            </p>
+          )}
+          {server.status === 'loading' && (
+            <p role="status" className="mt-1 text-xs text-slate-600">
+              Consultando el conteo declarado en la recogida…
             </p>
           )}
         </div>
       </div>
+
+      {server.status === 'error' && (
+        <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800">
+          <p className="font-semibold">No se pudo obtener el conteo declarado en la recogida.</p>
+          <p className="mt-1">
+            {server.message} Sin ese dato no se puede confirmar la recepción, porque una diferencia de
+            prendas pasaría sin registrar.
+          </p>
+          <button type="button" className={`${secondary} mt-2`} onClick={() => void load()}>
+            <RefreshCw className="h-4 w-4" aria-hidden />
+            Reintentar
+          </button>
+        </div>
+      )}
 
       <form className="grid gap-4 lg:grid-cols-3" onSubmit={submit} noValidate>
         <div>
@@ -225,7 +271,7 @@ export function FacilityReceptionPanel({
           )}
         </div>
         <div className="lg:col-span-3">
-          <button type="submit" className={primary} disabled={busy}>
+          <button type="submit" className={primary} disabled={busy || server.status !== 'ready'}>
             {busy ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> : null}
             Confirmar recepción en planta
           </button>
