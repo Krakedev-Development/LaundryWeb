@@ -16,6 +16,11 @@ interface IncidentModalProps {
   onSuccess?: () => void;
   /** Abre con "Retener la solicitud" marcado (retención para revisión técnica). */
   defaultHold?: boolean;
+  /**
+   * Si es false, oculta la casilla de retención y nunca envía holdOrder.
+   * Default true (compatible hacia atrás). Usado por el detalle en etapas de planta (T-08d / T-07).
+   */
+  allowHold?: boolean;
 }
 
 const TYPES: { value: string; label: string }[] = [
@@ -43,17 +48,19 @@ export const IncidentModal: React.FC<IncidentModalProps> = ({
   onClose,
   onSuccess,
   defaultHold = false,
+  allowHold = true,
 }) => {
   const { showToast } = useApp();
   const [type, setType] = useState(TYPES[0].value);
   const [severity, setSeverity] = useState<ServerIncidentSeverity>('MEDIUM');
   const [description, setDescription] = useState('');
-  const [holdOrder, setHoldOrder] = useState(defaultHold);
+  const [holdOrder, setHoldOrder] = useState(allowHold && defaultHold);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   if (!isOpen) return null;
   const label = order.trackingNumber || order.id;
+  const willHold = allowHold && holdOrder;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,13 +73,13 @@ export const IncidentModal: React.FC<IncidentModalProps> = ({
         type,
         severity,
         description: description.trim(),
-        holdOrder,
+        holdOrder: willHold,
       });
       upsertIncident(created);
       showToast({
         type: 'success',
         title: 'Incidencia registrada',
-        message: holdOrder
+        message: willHold
           ? `La solicitud ${label} queda retenida hasta resolver la incidencia.`
           : `Se abrió una incidencia en la solicitud ${label}.`,
       });
@@ -160,18 +167,20 @@ export const IncidentModal: React.FC<IncidentModalProps> = ({
             />
           </label>
 
-          <label className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 p-3 text-amber-950">
-            <input
-              type="checkbox"
-              checked={holdOrder}
-              onChange={(e) => setHoldOrder(e.target.checked)}
-              className="mt-0.5"
-            />
-            <span>
-              <span className="block font-bold">Retener la solicitud</span>
-              La solicitud no avanza hasta resolver la incidencia y luego vuelve a su etapa actual.
-            </span>
-          </label>
+          {allowHold ? (
+            <label className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 p-3 text-amber-950">
+              <input
+                type="checkbox"
+                checked={holdOrder}
+                onChange={(e) => setHoldOrder(e.target.checked)}
+                className="mt-0.5"
+              />
+              <span>
+                <span className="block font-bold">Retener la solicitud</span>
+                La solicitud no avanza hasta resolver la incidencia y luego vuelve a su etapa actual.
+              </span>
+            </label>
+          ) : null}
 
           {error && (
             <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-rose-900">

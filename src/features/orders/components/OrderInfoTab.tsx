@@ -1,21 +1,18 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   User,
   Phone,
   Mail,
   Receipt,
   CreditCard,
-  Building2,
   CheckCircle2,
-  PlusCircle,
   LoaderCircle,
   AlertCircle,
   Tag,
 } from 'lucide-react';
 import type { Order } from '../../../types';
 import { PaginatedTable } from '../../../shared/ui/TablePagination';
-import { storageService } from '../../../services/storage';
-import { PaymentAdjustmentModal } from './PaymentAdjustmentModal';
+import { listAdjustments, type StaffAdjustment } from '../../../services/api/plantApi';
 
 interface OrderInfoTabProps {
   order: Order;
@@ -24,19 +21,44 @@ interface OrderInfoTabProps {
   onConfirmPayment: () => Promise<void>;
 }
 
+const ADJ_STATUS: Record<StaffAdjustment['status'], string> = {
+  PENDING_CUSTOMER: 'Pendiente del cliente',
+  APPROVED: 'Aprobado',
+  REJECTED: 'Rechazado',
+};
+
+function formatAmount(value: string | number): string {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return '$0.00';
+  const sign = n > 0 ? '+' : '';
+  return `${sign}$${n.toFixed(2)}`;
+}
+
 export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
   order,
-  onRefresh,
   confirmingPayment,
   onConfirmPayment,
 }) => {
-  const [isAdjModalOpen, setIsAdjModalOpen] = useState(false);
+  const [adjustments, setAdjustments] = useState<StaffAdjustment[]>([]);
+  const [adjState, setAdjState] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [adjError, setAdjError] = useState('');
 
-  // Retrieve adjustments from workflow state
-  const workflowState = storageService.getWorkflow();
-  const adjustments = (workflowState?.adjustments || []).filter(
-    (a) => a.orderId === order.id,
-  );
+  const loadAdjustments = useCallback(async () => {
+    setAdjState('loading');
+    setAdjError('');
+    try {
+      setAdjustments(await listAdjustments(order.id));
+      setAdjState('ready');
+    } catch (err) {
+      setAdjustments([]);
+      setAdjError(err instanceof Error ? err.message : 'No se pudieron cargar los ajustes.');
+      setAdjState('error');
+    }
+  }, [order.id]);
+
+  useEffect(() => {
+    void loadAdjustments();
+  }, [loadAdjustments]);
 
   const pricing = order.pricing || {
     subtotal: 0,
@@ -353,67 +375,83 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
             )}
           </div>
 
-          {/* Adjustments Action */}
+          {/* Adjustments: read-only from server (T-01) */}
           <div className="pt-2 border-t border-slate-100">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-slate-700">
-                Ajustes de precio registrados ({adjustments.length})
-              </span>
-              <button
-                onClick={() => setIsAdjModalOpen(true)}
-                className="text-xs font-semibold text-[#0F4C81] hover:underline flex items-center gap-1 cursor-pointer"
-              >
-                <PlusCircle className="w-3.5 h-3.5" />
-                <span>+ Proponer ajuste</span>
-              </button>
-            </div>
+            <span className="text-xs font-bold text-slate-700 block mb-2">
+              Ajustes de precio registrados
+              {adjState === 'ready' ? ` (${adjustments.length})` : ''}
+            </span>
+            <p className="text-[11px] text-slate-500 mb-2">
+              Solo lectura. Los ajustes se gestionan en Planta.
+            </p>
 
-            {adjustments.length === 0 ? (
+            {adjState === 'loading' && (
+              <p role="status" className="text-xs text-slate-400 flex items-center gap-1.5">
+                <LoaderCircle className="w-3.5 h-3.5 animate-spin" />
+                Cargando ajustes...
+              </p>
+            )}
+
+            {adjState === 'error' && (
+              <div
+                role="alert"
+                className="p-3 rounded-xl border border-rose-200 bg-rose-50 text-rose-900 space-y-2"
+              >
+                <p className="font-semibold">No se pudieron cargar los ajustes.</p>
+                <p className="text-[11px]">{adjError}</p>
+                <button
+                  type="button"
+                  onClick={() => void loadAdjustments()}
+                  className="px-3 py-1.5 text-xs font-bold text-white bg-rose-700 hover:bg-rose-800 rounded-xl cursor-pointer"
+                >
+                  Reintentar
+                </button>
+              </div>
+            )}
+
+            {adjState === 'ready' && adjustments.length === 0 && (
               <p className="text-xs text-slate-400 italic">
                 Sin ajustes de precio en esta solicitud.
               </p>
-            ) : (
-              <div className="space-y-2 text-xs">
-                {adjustments.map((adj) => (
-                  <div
-                    key={adj.id}
-                    className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between"
-                  >
-                    <div>
-                      <span className="font-semibold text-slate-800">{adj.reason}</span>
-                      <span className="block text-[10px] text-slate-500">
-                        {adj.customerMessage}
-                      </span>
+            )}
+
+            {adjState === 'ready' && adjustments.length > 0 && (
+              <div className="space-y-2 text-xs" aria-label="Ajustes de precio">
+                {adjustments.map((adj) => {
+                  const amount = Number(adj.amountDifference);
+                  return (
+                    <div
+                      key={adj.id}
+                      className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between gap-2"
+                    >
+                      <div>
+                        <span className="font-semibold text-slate-800">{adj.customerMessage}</span>
+                        {adj.internalReason && (
+                          <span className="block text-[10px] text-slate-500">
+                            {adj.internalReason}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span
+                          className={`font-mono font-bold block ${
+                            amount > 0 ? 'text-amber-700' : 'text-emerald-700'
+                          }`}
+                        >
+                          {formatAmount(adj.amountDifference)}
+                        </span>
+                        <span className="text-[10px] font-semibold text-slate-400">
+                          {ADJ_STATUS[adj.status] ?? adj.status}
+                        </span>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <span
-                        className={`font-mono font-bold block ${
-                          adj.amount > 0 ? 'text-amber-700' : 'text-emerald-700'
-                        }`}
-                      >
-                        {adj.amount > 0 ? '+' : ''}${adj.amount.toFixed(2)}
-                      </span>
-                      <span className="text-[10px] font-semibold text-slate-400">
-                        {adj.status}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
         </section>
       </div>
-
-      {/* Payment Adjustment Modal */}
-      {isAdjModalOpen && (
-        <PaymentAdjustmentModal
-          order={order}
-          isOpen={true}
-          onClose={() => setIsAdjModalOpen(false)}
-          onSuccess={onRefresh}
-        />
-      )}
     </div>
   );
 };
