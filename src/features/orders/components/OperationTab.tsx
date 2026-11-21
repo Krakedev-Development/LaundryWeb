@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { dispatchHref } from '../../../services/operationsLinks';
+import { deliveriesHref, dispatchHref } from '../../../services/operationsLinks';
 import {
   Sparkles,
   Truck,
@@ -24,7 +24,6 @@ import { PlantProcessPanel } from '../../plant/PlantProcessPanel';
 
 interface OperationTabProps {
   order: Order;
-  onOpenAssign: (type: 'pickup' | 'delivery') => void;
   onOpenQuarantine: () => void;
   onOpenIncident: () => void;
   onSwitchTab: (tab: 'operation' | 'order' | 'logistics' | 'activity') => void;
@@ -39,7 +38,6 @@ interface OperationTabProps {
 
 export const OperationTab: React.FC<OperationTabProps> = ({
   order,
-  onOpenAssign,
   onOpenQuarantine,
   onSwitchTab,
   refreshFromServer,
@@ -141,15 +139,16 @@ export const OperationTab: React.FC<OperationTabProps> = ({
     case 'DELIVERY_SCHEDULED':
       if (order.fulfillment?.outbound.method === 'DRIVER') {
         stageTitle = 'Lista para despacho y entrega';
-        stageDescription = 'Prendas listas y empaquetadas. Asigna un conductor para la entrega al cliente.';
+        stageDescription = 'Prendas listas y empaquetadas. El chofer de entrega se asigna en Entregas.';
+        // La entrega se asigna solo en Entregas; aquí solo se navega hasta allí.
         primaryCTA = (
-        <button
-          onClick={() => onOpenAssign('delivery')}
-          className="px-5 py-2.5 text-xs font-bold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
+        <Link
+          to={deliveriesHref(order.id)}
+          className="px-5 py-2.5 text-xs font-bold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-xl shadow-xs transition-colors flex items-center gap-2"
         >
           <Truck className="w-4 h-4" />
-          <span>Asignar chofer de entrega</span>
-        </button>
+          <span>Asignar en Entregas</span>
+        </Link>
       );
       } else {
         stageTitle = 'Lista para retiro en sede';

@@ -15,7 +15,6 @@ import { useApp } from '../../context/AppContext';
 import { PageHeader } from '../../components/common/PageHeader';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { PriorityBadge, SLABadge } from '../../components/common/PriorityBadge';
-import { AssignDriverModal } from '../../components/common/AssignDriverModal';
 import { Order } from '../../types';
 import {
   confirmOrderPayment,
@@ -68,8 +67,6 @@ export const OrderDetailPage: React.FC = () => {
   const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false);
 
   // Modals state
-  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
-  const [assignType, setAssignType] = useState<'pickup' | 'delivery'>('pickup');
   const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false);
   const [isQuarantineModalOpen, setIsQuarantineModalOpen] = useState(false);
 
@@ -189,11 +186,6 @@ export const OrderDetailPage: React.FC = () => {
     } finally {
       setConfirmingPayment(false);
     }
-  };
-
-  const handleOpenAssign = (type: 'pickup' | 'delivery') => {
-    setAssignType(type);
-    setIsAssignModalOpen(true);
   };
 
   const handleCopyIdentifier = () => {
@@ -348,7 +340,6 @@ export const OrderDetailPage: React.FC = () => {
       {activeTab === 'operation' && (
         <OperationTab
           order={order}
-          onOpenAssign={handleOpenAssign}
           onOpenQuarantine={() => setIsQuarantineModalOpen(true)}
           onOpenIncident={() => setIsIncidentModalOpen(true)}
           onSwitchTab={setActiveTab}
@@ -373,7 +364,6 @@ export const OrderDetailPage: React.FC = () => {
       {activeTab === 'logistics' && (
         <LogisticsTab
           order={order}
-          onOpenAssign={handleOpenAssign}
         />
       )}
 
@@ -386,18 +376,6 @@ export const OrderDetailPage: React.FC = () => {
       )}
 
       {/* 5. Modals & Drawers */}
-      {/* Assign Driver Modal */}
-      {isAssignModalOpen && (
-        <AssignDriverModal
-          order={order}
-          type={assignType}
-          isOpen={true}
-          onClose={() => setIsAssignModalOpen(false)}
-          onAssigned={(updated) => void refreshFromServer(updated)}
-        />
-      )}
-
-
       {/* Incident Modal */}
       {isIncidentModalOpen && (
         <IncidentModal

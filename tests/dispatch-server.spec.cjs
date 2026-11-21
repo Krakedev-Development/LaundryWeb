@@ -38,6 +38,7 @@ async function mockServer(page) {
       state.queue = [];
       return json(route, 201, { ...summary('PICKUP_ASSIGNED', facilityId), version: 4, legs: [] });
     }
+    if (path === `/orders/${ORDER}` && state.detail) return json(route, 200, state.detail);
     // Sin detalle: la cola se arma con el resumen del servidor.
     return json(route, 404, { message: 'No existe.' });
   });
@@ -105,7 +106,6 @@ test('con ?pedido= Despacho preselecciona esa solicitud y no pide notas de asign
   await page.goto(`/operations/dispatch?pedido=${ORDER}`);
   await expect(page.getByRole('button', { name: /SOL-3001/ })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByRole('button', { name: /SOL-3002/ })).toHaveAttribute('aria-pressed', 'false');
-  await expect(page.getByRole('button', { name: 'Recogidas' })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByLabel('Notas de asignación')).toHaveCount(0);
 });
 
@@ -123,10 +123,22 @@ test('con ?pedido= de una solicitud que ya no espera chofer se avisa', async ({ 
   await expect(notice).toHaveCount(0);
 });
 
-test('con ?pedido= de una solicitud lista para entrega se abre la pestaña Entregas', async ({ page }) => {
+// Decisión P-2: Despacho ya no tiene pestaña Entregas. Una solicitud lista para entrega se
+// asigna en Entregas, así que el enlace redirige allí con la misma preselección.
+test('con ?pedido= de una solicitud lista para entrega se redirige a Entregas', async ({ page }) => {
   const { state } = await mockServer(page);
-  state.queue = [summary('READY_FOR_DELIVERY', state.queue[0].facilityId)];
+  state.detail = { ...summary('READY_FOR_DELIVERY', state.queue[0].facilityId), items: [], legs: [], events: [] };
+  state.queue = [];
   await page.goto(`/operations/dispatch?pedido=${ORDER}`);
-  await expect(page.getByRole('button', { name: 'Entregas' })).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.getByRole('button', { name: /SOL-3001/ })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page).toHaveURL((url) => url.pathname === '/operations/deliveries' && url.search === `?pedido=${ORDER}`);
+  await expect(page.getByRole('heading', { name: 'Entregas', exact: true })).toBeVisible();
+});
+
+test('Despacho solo muestra recogidas: no hay selector de Entregas', async ({ page }) => {
+  await mockServer(page);
+  await page.goto('/operations/dispatch');
+  await expect(page.getByRole('button', { name: /SOL-3001/ })).toBeVisible();
+  await expect(page.getByText(/recogidas pendientes de chofer/)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Entregas', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Recogidas', exact: true })).toHaveCount(0);
 });

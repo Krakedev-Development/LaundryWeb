@@ -1,6 +1,6 @@
 import { operationalStage } from '../../services/fulfillment';
 import { storageService } from '../../services/storage';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { PageHeader } from '../../components/common/PageHeader';
@@ -14,10 +14,7 @@ import {
   Info,
   LoaderCircle,
   MapPin,
-  PackageCheck,
-  Plus,
   RotateCcw,
-  Truck,
   UsersRound,
 } from 'lucide-react';
 import { DriverCandidateCard } from '../../components/common/DriverCandidateCard';
@@ -25,32 +22,31 @@ import { PriorityBadge } from '../../components/common/PriorityBadge';
 import {
   assignDriver as assignDriverApi,
   fetchFullOrders,
+  getOrder,
   mapBackendOrderToOrder,
 } from '../../services/api/ordersApi';
 import { syncDrivers } from '../../services/api/driversApi';
 import { ApiError } from '../../services/api/apiConfig';
+import { deliveriesHref } from '../../services/operationsLinks';
 import type { Driver, Order } from '../../types';
 
-// Estados del servidor que esperan chofer: recogida (confirmada) y entrega (lista).
-const DISPATCH_STATUSES = ['CONFIRMED', 'READY_FOR_DELIVERY'] as const;
+// Despacho asigna solo el chofer de recogida (estado del servidor: confirmada). La entrega se
+// asigna en Entregas.
+const DISPATCH_STATUSES = ['CONFIRMED'] as const;
 
 const waitsForPickup = (o: Order) =>
   o.status === 'CONFIRMED' ||
   (!o.pickupNeedsScheduling && operationalStage(o) === 'PICKUP_PENDING');
-const waitsForDelivery = (o: Order) =>
-  o.status === 'READY_FOR_DELIVERY' ||
-  (o.fulfillment?.outbound.method === 'DRIVER' &&
-    ['READY_FOR_DELIVERY', 'DELIVERY_SCHEDULED'].includes(operationalStage(o)));
 
 export function DispatchPage() {
+  const navigate = useNavigate();
   const { orders, drivers, customers, facilities, showToast } = useApp();
   // `?pedido=<id>` (enlace desde el detalle o la lista): se preselecciona al cargar la cola.
   const [searchParams] = useSearchParams();
   const requestedId = searchParams.get('pedido');
   const requestHandled = useRef(false);
   const [notWaiting, setNotWaiting] = useState('');
-  const [type, setType] = useState<'pickup' | 'delivery'>('pickup'),
-    [orderId, setOrderId] = useState(''),
+  const [orderId, setOrderId] = useState(''),
     [driverId, setDriverId] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [isAssigning, setIsAssigning] = useState(false);
@@ -85,35 +81,36 @@ export function DispatchPage() {
     void syncData();
   }, []);
 
-  // Se aplica una sola vez, con la primera cola cargada del servidor.
+  // Se aplica una sola vez, con la primera cola cargada del servidor. Si la solicitud no espera
+  // recogida pero está lista para entrega, su asignación vive en Entregas: se redirige allí.
   useEffect(() => {
     if (!requestedId || requestHandled.current || syncState !== 'ready') return;
     requestHandled.current = true;
     const target = serverOrders.find((o) => o.id === requestedId);
-    if (target && waitsForPickup(target)) setType('pickup');
-    else if (target && waitsForDelivery(target)) setType('delivery');
-    else {
-      setNotWaiting(requestedId);
+    if (target && waitsForPickup(target)) {
+      setOrderId(target.id);
       return;
     }
-    setOrderId(target.id);
+    getOrder(requestedId)
+      .then((detail) => {
+        if (detail.status === 'READY_FOR_DELIVERY')
+          navigate(deliveriesHref(requestedId), { replace: true });
+        else setNotWaiting(requestedId);
+      })
+      .catch(() => setNotWaiting(requestedId));
   }, [requestedId, syncState, serverOrders]);
 
-  const queue = serverOrders.filter(type === 'pickup' ? waitsForPickup : waitsForDelivery);
+  const queue = serverOrders.filter(waitsForPickup);
   const order = queue.find((o) => o.id === orderId) ?? queue[0];
-  const { candidates, loading, error } = useDriverCandidates(order, type);
+  const { candidates, loading, error } = useDriverCandidates(order, 'pickup');
   const [route, setRoute] = useState<RouteSummary | null>(null),
     [routeError, setRouteError] = useState('');
-  const destination =
-    order &&
-    (type === 'pickup'
-      ? order.customerAddress.coordinates
-      : order.deliveryAddress.coordinates);
+  const destination = order?.customerAddress.coordinates;
   const driver = drivers.find((d) => d.id === driverId);
   useEffect(() => {
     setDriverId('');
     setRoute(null);
-  }, [order?.id, type]);
+  }, [order?.id]);
   useEffect(() => {
     setRoute(null);
     setRouteError('');
@@ -132,17 +129,16 @@ export function DispatchPage() {
         if (!controller.signal.aborted) setRouteError(e.message);
       });
     return () => controller.abort();
-  }, [driverId, order?.id, type]);
+  }, [driverId, order?.id]);
 
   const handleAssignDriver = async () => {
     if (!order || !driverId) return;
     setIsAssigning(true);
-    const leg = type === 'pickup' ? 'INBOUND' : 'OUTBOUND';
     const expectedVersion = order.version ?? order.workflowVersion ?? 1;
 
     try {
       const updated = await assignDriverApi(order.id, {
-        leg,
+        leg: 'INBOUND',
         driverId,
         expectedVersion,
       });
@@ -160,10 +156,7 @@ export function DispatchPage() {
       );
       showToast({
         type: 'success',
-        title:
-          type === 'pickup'
-            ? 'Chofer de recogida asignado'
-            : 'Chofer de entrega asignado',
+        title: 'Chofer de recogida asignado',
         message: `La solicitud ${order.trackingNumber || order.id} ya tiene chofer.`,
       });
       setDriverId('');
@@ -188,7 +181,7 @@ export function DispatchPage() {
     <div className="space-y-6">
       <PageHeader
         title="Despacho"
-        subtitle="Selecciona una solicitud, compara choferes y confirma la asignación."
+        subtitle="Asignación del chofer de recogida: selecciona una solicitud, compara choferes y confirma. La entrega se asigna en Entregas."
         actions={
           <button
             onClick={() => void syncData()}
@@ -236,31 +229,10 @@ export function DispatchPage() {
         </div>
       )}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-xs">
-        <div className="flex gap-1 rounded-xl bg-slate-100 p-1">
-          {(['pickup', 'delivery'] as const).map((value) => (
-            <button
-              key={value}
-              aria-pressed={type === value}
-              onClick={() => setType(value)}
-              className={
-                type === value
-                  ? 'sidebar-focus flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold bg-[#0F4C81] text-white shadow-sm'
-                  : 'sidebar-focus flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold text-slate-500 hover:bg-white hover:text-[#0F4C81]'
-              }
-            >
-              {value === 'pickup' ? (
-                <Truck className="size-4" aria-hidden="true" />
-              ) : (
-                <PackageCheck className="size-4" aria-hidden="true" />
-              )}
-              {value === 'pickup' ? 'Recogidas' : 'Entregas'}
-            </button>
-          ))}
-        </div>
         <span className="flex items-center gap-2 px-2 text-xs text-slate-500">
           <ClipboardList className="size-4 text-[#0F4C81]" aria-hidden="true" />
-          <strong className="text-[#102A43]">{queue.length}</strong> solicitudes
-          pendientes
+          <strong className="text-[#102A43]">{queue.length}</strong> recogidas pendientes
+          de chofer
         </span>
       </div>
       <div className="grid items-start gap-5 lg:grid-cols-[300px_minmax(0,1fr)]">
@@ -337,8 +309,8 @@ export function DispatchPage() {
                     {
                       id: order.id,
                       coordinates: destination,
-                      label: type === 'pickup' ? 'Recogida' : 'Entrega',
-                      kind: type,
+                      label: 'Recogida',
+                      kind: 'pickup' as const,
                     },
                     ...candidates.map((c) => {
                       const d = drivers.find((v) => v.id === c.driverId)!;

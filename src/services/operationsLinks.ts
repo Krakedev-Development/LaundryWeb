@@ -4,3 +4,7 @@
 /** Despacho: asignación del chofer de recogida. */
 export const dispatchHref = (orderId: string) =>
   `/operations/dispatch?pedido=${encodeURIComponent(orderId)}`;
+
+/** Entregas: asignación del chofer de entrega a domicilio. */
+export const deliveriesHref = (orderId: string) =>
+  `/operations/deliveries?pedido=${encodeURIComponent(orderId)}`;

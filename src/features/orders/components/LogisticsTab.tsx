@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { dispatchHref } from '../../../services/operationsLinks';
+import { deliveriesHref, dispatchHref } from '../../../services/operationsLinks';
 import {
   MapPin,
   Truck,
@@ -17,10 +17,9 @@ import { OrderRouteMap } from '../../../components/maps/OrderRouteMap';
 
 interface LogisticsTabProps {
   order: Order;
-  onOpenAssign: (type: 'pickup' | 'delivery') => void;
 }
 
-export const LogisticsTab: React.FC<LogisticsTabProps> = ({ order, onOpenAssign }) => {
+export const LogisticsTab: React.FC<LogisticsTabProps> = ({ order }) => {
   const stage = operationalStage(order);
 
   // Determine actual pickup status (Solving Finding H-03)
@@ -218,13 +217,17 @@ export const LogisticsTab: React.FC<LogisticsTabProps> = ({ order, onOpenAssign 
               </p>
             )}
 
-            {!isDeliveryDelivered && !order.delivery.driverName && isDeliveryReady && (
-              <button
-                onClick={() => onOpenAssign('delivery')}
-                className="w-full mt-2 py-2 text-xs font-semibold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-xl transition-colors cursor-pointer"
+            {/* La entrega se asigna solo en Entregas; aquí solo se navega hasta allí. */}
+            {!isDeliveryDelivered &&
+              !order.delivery.driverName &&
+              isDeliveryReady &&
+              order.fulfillment?.outbound.method === 'DRIVER' && (
+              <Link
+                to={deliveriesHref(order.id)}
+                className="block w-full mt-2 py-2 text-center text-xs font-semibold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-xl transition-colors"
               >
-                Asignar chofer de entrega
-              </button>
+                Asignar en Entregas
+              </Link>
             )}
           </div>
         </section>

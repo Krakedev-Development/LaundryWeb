@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ArrowUpRight,
   Calendar,
@@ -19,6 +19,7 @@ import { ApiError } from '../../services/api/apiConfig';
 import type { BackendDriver } from '../../services/api/driversApi';
 import {
   assignDeliveryDriver,
+  deliveryDriverOptions,
   DELIVERY_STATUS_LABEL,
   fetchDeliveryDrivers,
   fetchDeliveryRows,
@@ -28,6 +29,7 @@ import {
   type DeliveryServerStatus,
 } from '../../services/api/deliveriesApi';
 import { useApp } from '../../context/AppContext';
+import { storageService } from '../../services/storage';
 
 const STATUS_STYLE: Record<DeliveryServerStatus, string> = {
   READY_FOR_DELIVERY: 'bg-sky-50 text-sky-800 border-sky-200',
@@ -69,6 +71,10 @@ export const DeliveriesPage: React.FC = () => {
   const [assignDriverId, setAssignDriverId] = useState('');
   const [assigning, setAssigning] = useState(false);
   const [assignError, setAssignError] = useState('');
+  // `?pedido=<id>` (enlace desde el detalle o Despacho): se preselecciona en la primera carga.
+  const [searchParams] = useSearchParams();
+  const requestedId = useRef(searchParams.get('pedido'));
+  const [notListed, setNotListed] = useState('');
 
   const load = useCallback(async () => {
     setState('loading');
@@ -81,9 +87,13 @@ export const DeliveriesPage: React.FC = () => {
       setRows(deliveryRows);
       setDrivers(driverRows);
       setState('ready');
-      setSelectedOrderId((prev) =>
-        deliveryRows.some((r) => r.id === prev) ? prev : (deliveryRows[0]?.id ?? ''),
-      );
+      const requested = requestedId.current;
+      requestedId.current = null;
+      if (requested && !deliveryRows.some((r) => r.id === requested)) setNotListed(requested);
+      setSelectedOrderId((prev) => {
+        const wanted = requested ?? prev;
+        return deliveryRows.some((r) => r.id === wanted) ? wanted : (deliveryRows[0]?.id ?? '');
+      });
     } catch (e) {
       setLoadError(
         e instanceof ApiError && e.status === 0
@@ -124,8 +134,21 @@ export const DeliveriesPage: React.FC = () => {
     (r) => r.status === 'DELIVERED' && isScheduledToday(r.scheduledDate),
   ).length;
 
+  // Misma regla de elegibilidad que Despacho: no se ofrecen choferes no disponibles, de otra sede
+  // o sin capacidad.
+  const options = useMemo(
+    () =>
+      selected
+        ? deliveryDriverOptions(drivers, selected.facilityId, storageService.getWorkflow().businessPolicy)
+        : { eligible: [], excluded: [] },
+    [drivers, selected?.id, selected?.facilityId],
+  );
+
   const canAssign =
-    selected?.status === 'READY_FOR_DELIVERY' && Boolean(selected.slotId) && !assigning;
+    selected?.status === 'READY_FOR_DELIVERY' &&
+    Boolean(selected.slotId) &&
+    !assigning &&
+    options.eligible.some((d) => d.id === assignDriverId);
 
   const handleAssign = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -192,6 +215,28 @@ export const DeliveriesPage: React.FC = () => {
           icon={<Clock className="w-5 h-5 text-sky-600" />}
         />
       </div>
+
+      {notListed && (
+        <div
+          role="status"
+          className="flex flex-wrap items-start justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
+        >
+          <p>
+            Esta solicitud no está en las entregas a domicilio. Puede que aún no esté lista o que
+            el cliente retire en sede.{' '}
+            <button
+              type="button"
+              className="font-semibold underline cursor-pointer"
+              onClick={() => openDetail(notListed)}
+            >
+              Ver la solicitud
+            </button>
+          </p>
+          <button type="button" className={secondary} onClick={() => setNotListed('')}>
+            Entendido
+          </button>
+        </div>
+      )}
 
       {state === 'error' && (
         <div
@@ -432,22 +477,39 @@ export const DeliveriesPage: React.FC = () => {
                       required
                     >
                       <option value="">Seleccionar chofer…</option>
-                      {drivers
-                        .filter((d) => !selected.facilityId || d.facilityId === selected.facilityId)
-                        .map((d) => (
-                          <option key={d.id} value={d.id}>
-                            {d.name}
-                            {d.status === 'AVAILABLE' ? ' · Disponible' : ` · ${d.status}`}
-                          </option>
-                        ))}
+                      {options.eligible.map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.name}
+                          {d.status === 'AVAILABLE' ? ' · Disponible' : ' · En servicio'}
+                        </option>
+                      ))}
                     </select>
                   </label>
+                  {options.eligible.length === 0 && (
+                    <p className="text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                      No hay choferes elegibles en la sede. Revisa su disponibilidad y capacidad.
+                    </p>
+                  )}
+                  {options.excluded.length > 0 && (
+                    <details className="text-slate-600">
+                      <summary className="cursor-pointer font-semibold">
+                        Choferes no elegibles ({options.excluded.length})
+                      </summary>
+                      <ul aria-label="Choferes no elegibles" className="mt-2 space-y-1">
+                        {options.excluded.map(({ driver, reasons }) => (
+                          <li key={driver.id}>
+                            {driver.name}: {reasons.join(', ')}
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  )}
                   {assignError && (
                     <p role="alert" className="text-rose-700 font-medium">
                       {assignError}
                     </p>
                   )}
-                  <button type="submit" className={`${button} w-full`} disabled={!canAssign || !assignDriverId}>
+                  <button type="submit" className={`${button} w-full`} disabled={!canAssign}>
                     <Send className="w-3.5 h-3.5" />
                     {assigning ? 'Asignando…' : 'Asignar chofer en servidor'}
                   </button>
