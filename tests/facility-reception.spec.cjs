@@ -93,11 +93,14 @@ test('la sede valida el código del chofer y registra las prendas recibidas', as
     },
   ]);
   await expect(panel).toHaveCount(0);
-  // Sin recargar, aparece el proceso en planta del servidor y no el atajo local que saltaba al
-  // lavado ("No se permite pasar de AT_FACILITY a IN_PROCESS").
-  const plant = page.getByRole('region', { name: 'Proceso en planta' });
-  await expect(plant.getByRole('button', { name: 'Iniciar inspección', exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: /^Iniciar inspección de prendas/ })).toHaveCount(0);
+  // Sin recargar, el detalle pasa a "En planta": el proceso se gestiona en Planta (T-07), así que
+  // aquí solo aparece el enlace y ningún botón que avance etapas.
+  await expect(page.getByRole('link', { name: 'Gestionar en Planta' })).toHaveAttribute(
+    'href',
+    `/operations/plant?pedido=${ORDER}&seccion=proceso`,
+  );
+  await expect(page.getByRole('region', { name: 'Proceso en planta' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /^Iniciar inspección/ })).toHaveCount(0);
 });
 
 test('el QR leído con lector o cámara se envía como token; un QR de otra solicitud se rechaza', async ({ page }) => {

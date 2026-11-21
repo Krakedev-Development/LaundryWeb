@@ -69,3 +69,35 @@ test('la agenda en Logística es de solo lectura: no hay reprogramación local',
   await expect(page.getByRole('button', { name: /Reprogramar fecha/ })).toHaveCount(0);
   await expect(page.getByRole('dialog')).toHaveCount(0);
 });
+
+// T-07: en planta el detalle no gestiona el proceso ni retiene; enlaza a Planta.
+test('en planta el detalle muestra la fase y enlaza a Planta, sin botones de proceso ni retención', async ({ page }) => {
+  await mockOrder(page, 'INSPECTION');
+  await page.goto(`/operations/orders/${ORDER}`);
+  await expect(page.getByRole('heading', { name: 'Pedido en planta' })).toBeVisible();
+  const href = `/operations/plant?pedido=${ORDER}&seccion=proceso`;
+  await expect(page.getByRole('link', { name: 'Gestionar en Planta' })).toHaveAttribute('href', href);
+  await expect(page.getByRole('region', { name: 'Proceso en planta' })).toHaveCount(0);
+  for (const action of ['Iniciar inspección', 'Registrar peso', 'Proponer ajuste', 'Confirmar precio', 'Pasar a control de calidad'])
+    await expect(page.getByRole('button', { name: new RegExp(action) })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Retener para revisión técnica' })).toHaveCount(0);
+
+  // Acciones: retener se hace en Planta.
+  await page.getByRole('button', { name: /^Acciones/ }).click();
+  await expect(page.getByRole('link', { name: 'Retener en Planta' })).toHaveAttribute('href', href);
+  await page.getByRole('button', { name: /^Acciones/ }).click();
+
+  // Registrar incidencia sigue disponible, pero sin la casilla de retención.
+  await page.getByRole('button', { name: 'Registrar incidencia' }).click();
+  const modal = page.getByRole('dialog', { name: 'Registrar incidencia operacional' });
+  await expect(modal).toBeVisible();
+  await expect(modal.getByRole('checkbox', { name: /Retener la solicitud/ })).toHaveCount(0);
+});
+
+test('en lavado el detalle tampoco ofrece retener: el enlace lleva a Planta', async ({ page }) => {
+  await mockOrder(page, 'IN_PROCESS');
+  await page.goto(`/operations/orders/${ORDER}`);
+  await expect(page.getByRole('heading', { name: 'En ciclo de lavado y cuidado' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Gestionar en Planta' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Retener para revisión técnica' })).toHaveCount(0);
+});

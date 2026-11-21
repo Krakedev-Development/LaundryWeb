@@ -1,6 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { deliveriesHref, dispatchHref } from '../../../services/operationsLinks';
+import {
+  deliveriesHref,
+  dispatchHref,
+  isPlantStage,
+  plantHref,
+} from '../../../services/operationsLinks';
 import {
   Sparkles,
   Truck,
@@ -21,11 +26,9 @@ import { FacilityReceptionPanel } from '../FacilityReceptionPanel';
 import type { HandoffType } from '../../../services/api/handoffsApi';
 import { DispatchCustodyPanel } from '../DispatchCustodyPanel';
 import { FailedPickupPanel } from '../FailedPickupPanel';
-import { PlantProcessPanel } from '../../plant/PlantProcessPanel';
 
 interface OperationTabProps {
   order: Order;
-  onOpenQuarantine: () => void;
   onOpenIncident: () => void;
   onSwitchTab: (tab: 'operation' | 'order' | 'logistics' | 'activity') => void;
   refreshFromServer: (updated?: any) => Promise<void>;
@@ -41,7 +44,6 @@ interface OperationTabProps {
 
 export const OperationTab: React.FC<OperationTabProps> = ({
   order,
-  onOpenQuarantine,
   onSwitchTab,
   refreshFromServer,
   confirmingPayment,
@@ -52,10 +54,20 @@ export const OperationTab: React.FC<OperationTabProps> = ({
   custodyType = '',
 }) => {
   const stage = operationalStage(order);
-  // Con una solicitud del servidor en planta, el panel "Proceso en planta" guía cada paso con sus
-  // validaciones (pesaje, ajustes, pago). Mientras esté activo no se repiten aquí sus acciones.
-  // Cada paso (en este u otro panel) cambia la versión: los paneles vuelven a consultar el servidor
-  // para mostrar el paso siguiente sin recargar la página.
+  // En planta, el proceso (pesaje, inspección, ajustes, precio, lavado, calidad) y la retención se
+  // gestionan solo en Planta. Aquí se muestra la fase y los totales, con un enlace hasta allí.
+  const inPlant = isPlantStage(stage);
+  const manageInPlant = (
+    <Link
+      to={plantHref(order.id, 'proceso')}
+      className="px-5 py-2.5 text-xs font-bold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-xl shadow-xs transition-colors flex items-center gap-2"
+    >
+      <Sparkles className="w-4 h-4" />
+      <span>Gestionar en Planta</span>
+    </Link>
+  );
+  // Cada paso en otro panel cambia la versión: los paneles vuelven a consultar el servidor para
+  // mostrar el paso siguiente sin recargar la página.
   const versionKey = `${order.version ?? order.workflowVersion ?? 0}:${order.status}`;
   const isPerWeight = order.pricing?.pricingModel === 'PER_WEIGHT';
   const latestEvent = order.timeline[order.timeline.length - 1];
@@ -121,22 +133,17 @@ export const OperationTab: React.FC<OperationTabProps> = ({
     case 'PRICING_PENDING':
     case 'CUSTOMER_APPROVAL_PENDING':
       stageTitle = 'Pedido en planta';
-      stageDescription = 'Sigue los pasos del panel "Proceso en planta": pesaje, inspección, precio y pago.';
+      stageDescription =
+        'El pesaje, la inspección, los ajustes y el precio se gestionan en Planta.';
+      primaryCTA = manageInPlant;
       break;
 
     case 'IN_PROCESS':
     case 'QUALITY_CONTROL':
       stageTitle = stage === 'IN_PROCESS' ? 'En ciclo de lavado y cuidado' : 'Control de calidad final';
-      stageDescription = 'El avance se registra en el panel "Proceso en planta".';
-      primaryCTA = (
-        <button
-          onClick={onOpenQuarantine}
-          className="px-4 py-2.5 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer"
-        >
-          <AlertTriangle className="w-3.5 h-3.5" />
-          <span>Retener para revisión técnica</span>
-        </button>
-      );
+      stageDescription =
+        'El avance y la retención para revisión técnica se gestionan en Planta.';
+      primaryCTA = manageInPlant;
       break;
 
     case 'READY_FOR_DELIVERY':
@@ -278,6 +285,26 @@ export const OperationTab: React.FC<OperationTabProps> = ({
               </p>
             </div>
 
+            {/* Resumen de solo lectura mientras la solicitud está en planta. */}
+            {inPlant && (
+              <dl aria-label="Resumen en planta" className="grid grid-cols-2 gap-3 text-xs">
+                <div className="rounded-xl bg-slate-50 border border-slate-100 p-3">
+                  <dt className="text-slate-500">Importe</dt>
+                  <dd className="mt-0.5 font-bold text-slate-900">
+                    {order.pricing?.amountKnown === false
+                      ? 'Pendiente de pesaje'
+                      : `${order.pricing?.currency ?? 'USD'} ${(order.pricing?.total ?? 0).toFixed(2)}`}
+                  </dd>
+                </div>
+                <div className="rounded-xl bg-slate-50 border border-slate-100 p-3">
+                  <dt className="text-slate-500">Pago</dt>
+                  <dd className="mt-0.5 font-bold text-slate-900">
+                    {order.pricing?.paymentStatus === 'PAID' ? 'Pagado' : 'Pendiente'}
+                  </dd>
+                </div>
+              </dl>
+            )}
+
             {/* Single Primary Contextual CTA */}
             {primaryCTA && (
               <div className="pt-3 border-t border-slate-100 flex items-center justify-between flex-wrap gap-3">
@@ -317,14 +344,6 @@ export const OperationTab: React.FC<OperationTabProps> = ({
             refreshKey={versionKey}
             initialCode={custodyType === 'DRIVER_TO_FACILITY' ? '' : custodyCode}
             initialType={custodyType}
-            onChanged={(updated) => void refreshFromServer(updated)}
-          />
-
-          {/* Proceso en planta con el servidor (solo mientras la solicitud está en planta). */}
-          <PlantProcessPanel
-            orderId={order.id}
-            onlyInPlant
-            refreshKey={versionKey}
             onChanged={(updated) => void refreshFromServer(updated)}
           />
         </div>

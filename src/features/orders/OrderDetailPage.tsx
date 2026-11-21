@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Sparkles,
   Receipt,
@@ -24,6 +24,7 @@ import {
 } from '../../services/api/ordersApi';
 import { ApiError } from '../../services/api/apiConfig';
 import { parseHandoffType } from '../../services/api/handoffsApi';
+import { isPlantStage, plantHref } from '../../services/operationsLinks';
 import { storageService } from '../../services/storage';
 import { MODE_LABELS } from '../../services/BusinessService';
 import { operationalStage } from '../../services/fulfillment';
@@ -205,6 +206,9 @@ export const OrderDetailPage: React.FC = () => {
     }
   };
 
+  // En planta, el proceso y la retención se gestionan solo en Planta (T-07).
+  const inPlant = isPlantStage(operationalStage(order));
+
   const handleCopyIdentifier = () => {
     navigator.clipboard.writeText(order.trackingNumber || order.id);
     showToast({
@@ -267,16 +271,28 @@ export const OrderDetailPage: React.FC = () => {
                     <span>Copiar identificador</span>
                   </button>
 
-                  <button
-                    onClick={() => {
-                      setIsQuarantineModalOpen(true);
-                      setIsActionsMenuOpen(false);
-                    }}
-                    className="w-full text-left px-3.5 py-2 hover:bg-slate-50 flex items-center gap-2 cursor-pointer text-amber-700"
-                  >
-                    <AlertTriangle className="w-3.5 h-3.5" />
-                    <span>Retener para revisión técnica</span>
-                  </button>
+                  {/* En planta la retención se hace en Planta (decisión P-1): aquí solo se navega. */}
+                  {inPlant ? (
+                    <Link
+                      to={plantHref(order.id, 'proceso')}
+                      onClick={() => setIsActionsMenuOpen(false)}
+                      className="w-full text-left px-3.5 py-2 hover:bg-slate-50 flex items-center gap-2 text-amber-700"
+                    >
+                      <AlertTriangle className="w-3.5 h-3.5" />
+                      <span>Retener en Planta</span>
+                    </Link>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setIsQuarantineModalOpen(true);
+                        setIsActionsMenuOpen(false);
+                      }}
+                      className="w-full text-left px-3.5 py-2 hover:bg-slate-50 flex items-center gap-2 cursor-pointer text-amber-700"
+                    >
+                      <AlertTriangle className="w-3.5 h-3.5" />
+                      <span>Retener para revisión técnica</span>
+                    </button>
+                  )}
 
                 </div>
               )}
@@ -357,7 +373,6 @@ export const OrderDetailPage: React.FC = () => {
       {activeTab === 'operation' && (
         <OperationTab
           order={order}
-          onOpenQuarantine={() => setIsQuarantineModalOpen(true)}
           onOpenIncident={() => setIsIncidentModalOpen(true)}
           onSwitchTab={setActiveTab}
           refreshFromServer={refreshFromServer}
@@ -399,6 +414,8 @@ export const OrderDetailPage: React.FC = () => {
         <IncidentModal
           order={order}
           isOpen={true}
+          // En planta se registra la incidencia, pero retener se hace solo en Planta.
+          allowHold={!inPlant}
           onClose={() => setIsIncidentModalOpen(false)}
           onSuccess={() => {
             void refreshFromServer();
@@ -408,7 +425,7 @@ export const OrderDetailPage: React.FC = () => {
       )}
 
       {/* Retención para revisión técnica: incidencia con retención en el servidor */}
-      {isQuarantineModalOpen && (
+      {isQuarantineModalOpen && !inPlant && (
         <IncidentModal
           order={order}
           isOpen={true}
