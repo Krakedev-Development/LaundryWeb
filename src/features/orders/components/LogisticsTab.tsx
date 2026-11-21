@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   MapPin,
   Truck,
@@ -12,20 +12,13 @@ import {
 import type { Order } from '../../../types';
 import { operationalStage } from '../../../services/fulfillment';
 import { OrderRouteMap } from '../../../components/maps/OrderRouteMap';
-import { ScheduleChangeModal } from './ScheduleChangeModal';
 
 interface LogisticsTabProps {
   order: Order;
   onOpenAssign: (type: 'pickup' | 'delivery') => void;
-  onRefresh: () => void;
 }
 
-export const LogisticsTab: React.FC<LogisticsTabProps> = ({
-  order,
-  onOpenAssign,
-  onRefresh,
-}) => {
-  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+export const LogisticsTab: React.FC<LogisticsTabProps> = ({ order, onOpenAssign }) => {
   const stage = operationalStage(order);
 
   // Determine actual pickup status (Solving Finding H-03)
@@ -234,43 +227,30 @@ export const LogisticsTab: React.FC<LogisticsTabProps> = ({
         </section>
       </div>
 
-      {/* Schedule Management Banner */}
-      <section className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-sky-100 text-[#0F4C81]">
-            <Calendar className="w-5 h-5" />
-          </div>
-          <div>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800">
-              Gestión de Agenda y Horarios
-            </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Recogida: {order.pickup.date} ({order.pickup.timeSlot}) · Entrega:{' '}
-              {order.delivery.targetDate} ({order.delivery.timeSlot})
-            </p>
-          </div>
+      {/* Agenda en solo lectura: la reprogramación por el personal (B3) aún no existe en el servidor. */}
+      <section
+        aria-label="Agenda y horarios"
+        className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs flex items-center gap-3"
+      >
+        <div className="p-2.5 rounded-xl bg-sky-100 text-[#0F4C81]">
+          <Calendar className="w-5 h-5" />
         </div>
-
-        <button
-          onClick={() => setIsScheduleModalOpen(true)}
-          className="px-4 py-2 text-xs font-semibold text-[#0F4C81] bg-sky-50 hover:bg-sky-100 border border-sky-200 rounded-xl transition-colors cursor-pointer"
-        >
-          Reprogramar fecha / franja horaria
-        </button>
+        <div>
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800">
+            Agenda y horarios
+          </h3>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Recogida: {order.pickup.date} ({order.pickup.timeSlot}) · Entrega:{' '}
+            {order.delivery.targetDate} ({order.delivery.timeSlot})
+          </p>
+          <p className="text-xs text-slate-600 mt-1">
+            La reprogramación por el personal aún no está disponible.
+          </p>
+        </div>
       </section>
 
       {/* Interactive Route Map */}
       <OrderRouteMap order={order} />
-
-      {/* Schedule Modal */}
-      {isScheduleModalOpen && (
-        <ScheduleChangeModal
-          order={order}
-          isOpen={true}
-          onClose={() => setIsScheduleModalOpen(false)}
-          onSuccess={onRefresh}
-        />
-      )}
     </div>
   );
 };

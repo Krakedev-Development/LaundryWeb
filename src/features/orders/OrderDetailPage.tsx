@@ -374,7 +374,6 @@ export const OrderDetailPage: React.FC = () => {
         <LogisticsTab
           order={order}
           onOpenAssign={handleOpenAssign}
-          onRefresh={() => void refreshFromServer()}
         />
       )}
 

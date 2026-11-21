@@ -57,3 +57,15 @@ test('en planta y en el cierre el detalle no repite los pasos de los paneles del
   await expect(page.getByRole('button', { name: 'Cerrar solicitud' })).toHaveCount(1);
   await expect(page.getByRole('button', { name: 'Confirmar entrega completada' })).toHaveCount(0);
 });
+
+test('la agenda en Logística es de solo lectura: no hay reprogramación local', async ({ page }) => {
+  await mockOrder(page, 'CONFIRMED');
+  await page.goto(`/operations/orders/${ORDER}`);
+  await expect(page.getByRole('heading', { name: 'Recogida pendiente de asignación' })).toBeVisible();
+  await page.getByRole('button', { name: 'Logística', exact: true }).click();
+  const agenda = page.getByRole('region', { name: 'Agenda y horarios' });
+  await expect(agenda).toBeVisible();
+  await expect(agenda.getByText('La reprogramación por el personal aún no está disponible.')).toBeVisible();
+  await expect(page.getByRole('button', { name: /Reprogramar fecha/ })).toHaveCount(0);
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+});
