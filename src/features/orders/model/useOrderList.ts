@@ -1,6 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useApp } from '../../../context/AppContext';
-import { Order } from '../../../types';
 import { countOrderTabs } from '../../../entities/order/model/orderListCounts';
 import { getProblematicOrders } from '../../../entities/order/model/orderListCounts';
 import { filterOrderList } from '../../../entities/order/model/orderListFilters';
@@ -9,7 +8,6 @@ import { useOrderListFilters } from './useOrderListFilters';
 export function useOrderList() {
   const { orders, facilities, drivers } = useApp();
   const filters = useOrderListFilters();
-  const [assigningOrder, setAssigningOrder] = useState<Order | null>(null);
   const tabCounts = useMemo(() => countOrderTabs(orders), [orders]);
   const filteredOrders = useMemo(
     () => filterOrderList(orders, filters),
@@ -34,8 +32,6 @@ export function useOrderList() {
     orders,
     facilities,
     drivers,
-    assigningOrder,
-    setAssigningOrder,
     tabCounts,
     sortedOrders,
     problematicOrders,

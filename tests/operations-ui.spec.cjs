@@ -2,34 +2,20 @@ const { test, expect } = require('./support/fixtures.cjs');
 
 test.use({ viewport: { width: 1440, height: 1000 } });
 
-test('assignment controls, keyboard dismissal and operation screens work at desktop and mobile widths', async ({
+test('la recogida se asigna solo en Despacho y las pantallas de operación funcionan en escritorio y móvil', async ({
   page,
 }) => {
+  // El detalle no asigna: solo enlaza a Despacho con la solicitud preseleccionada (contrato 1).
   await page.goto('/operations/orders/SOL-HOME-001');
-  const trigger = page.getByRole('button', {
-    name: 'Asignar chofer de recogida',
-    exact: true,
-  });
-  await trigger.click();
-  const dialog = page.getByRole('dialog', { name: 'Asignar chofer' });
-  await expect(
-    dialog.getByRole('button', { name: 'Cerrar', exact: true }),
-  ).toBeFocused();
-  const confirm = dialog.getByRole('button', {
-    name: 'Confirmar asignación',
-    exact: true,
-  });
-  await expect(confirm).toBeDisabled();
-  await dialog.getByRole('radio').first().check();
-  await expect(confirm).toBeEnabled();
-  await dialog.getByLabel(/Notas/).fill('Llamar antes de llegar.');
-  await dialog.locator('textarea').evaluate((element) => {
-    element.closest('.overflow-y-auto').scrollTop = 0;
-  });
-  await dialog.screenshot({ path: 'test-results/assignment-desktop.png' });
-  await page.keyboard.press('Escape');
-  await expect(dialog).toHaveCount(0);
-  await expect(trigger).toBeFocused();
+  const link = page.getByRole('link', { name: 'Asignar en Despacho' }).first();
+  await expect(link).toHaveAttribute('href', '/operations/dispatch?pedido=SOL-HOME-001');
+  await expect(page.getByRole('button', { name: 'Asignar chofer de recogida', exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Logística', exact: true }).click();
+  await expect(page.getByRole('link', { name: 'Asignar en Despacho' })).toHaveAttribute(
+    'href',
+    '/operations/dispatch?pedido=SOL-HOME-001',
+  );
+  await expect(page.getByRole('button', { name: 'Asignar chofer de recogida', exact: true })).toHaveCount(0);
 
   // La cola de Despacho sale del servidor: se simula una recogida confirmada en la sede del pedido.
   const facilityId = await page.evaluate(() => {
@@ -77,65 +63,70 @@ test('assignment controls, keyboard dismissal and operation screens work at desk
       fullPage: true,
     });
   }
+  // En móvil el enlace del detalle lleva a Despacho con la solicitud preseleccionada.
   await page.goto('/operations/orders/SOL-HOME-001');
-  await trigger.click();
-  await expect(dialog.getByRole('radio').first()).toBeVisible();
-  await dialog.getByRole('radio').first().check();
-  await expect(confirm).toBeVisible();
-  const bounds = await dialog.boundingBox();
-  expect(bounds.x).toBeGreaterThanOrEqual(0);
-  expect(bounds.x + bounds.width).toBeLessThanOrEqual(375);
-  expect(bounds.y + bounds.height).toBeLessThanOrEqual(812);
-  await dialog.screenshot({ path: 'test-results/assignment-mobile.png' });
-  await dialog.getByRole('button', { name: 'Cancelar', exact: true }).click();
-  await expect(dialog).toHaveCount(0);
+  await page.getByRole('link', { name: 'Asignar en Despacho' }).first().click();
+  await expect(page).toHaveURL(/\/operations\/dispatch\?pedido=SOL-HOME-001$/);
+  await expect(page.getByRole('button', { name: /SOL-3001/ })).toHaveAttribute('aria-pressed', 'true');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
 });
 
-test('sin GPS reciente el chofer sigue elegible; solo el estado, la sede o la capacidad lo excluyen', async ({ page }) => {
+test('en Despacho, sin GPS reciente el chofer sigue elegible; el estado lo excluye', async ({ page }) => {
   const cors = { 'access-control-allow-origin': '*' };
+  const preflight = { ...cors, 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' };
+  const json = (route, body) =>
+    route.fulfill({ status: 200, headers: cors, contentType: 'application/json', body: JSON.stringify(body) });
   let serverDrivers = [];
-  // El primero está desconectado; los demás nunca enviaron ubicación o la última es de hace 2 h.
+  let facilityId = 'f1';
   await page.route(/\/api\/v1\/drivers(\?.*)?$/, (route) =>
-    route.request().method() === 'OPTIONS'
-      ? route.fulfill({
-          status: 204,
-          headers: { ...cors, 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' },
-        })
-      : route.fulfill({ status: 200, headers: cors, contentType: 'application/json', body: JSON.stringify(serverDrivers) }),
+    route.request().method() === 'OPTIONS' ? route.fulfill({ status: 204, headers: preflight }) : json(route, serverDrivers),
   );
-  await page.goto('/operations/orders/SOL-HOME-001');
+  await page.route(/\/api\/v1\/orders(\?.*)?$/, (route) => {
+    if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: preflight });
+    const confirmed = new URL(route.request().url()).searchParams.get('status') === 'CONFIRMED';
+    return json(route, {
+      page: 1, pageSize: 100, total: confirmed ? 1 : 0,
+      data: confirmed
+        ? [{ id: 'SOL-HOME-001', number: 3001, status: 'CONFIRMED', mode: 'HOME_HOME', facilityId, paymentStatus: 'PAID', pricingStatus: 'ESTIMATED', total: '15.00', version: 3, createdAt: '2026-11-19T13:00:00.000Z' }]
+        : [],
+    });
+  });
+  await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
   const twoHoursAgo = new Date(Date.now() - 2 * 3600 * 1000).toISOString();
-  serverDrivers = await page.evaluate((at) => {
+  // En la sede del pedido: el primero está desconectado; los demás nunca enviaron ubicación o la
+  // última es de hace 2 h.
+  ({ facilityId, serverDrivers } = await page.evaluate((at) => {
     const raw = JSON.parse(localStorage.getItem('lw_workflow_v2') || '{}');
-    return (raw.drivers || []).map((d, i) => ({
-      id: d.id,
-      userId: `u-${d.id}`,
-      name: d.name,
-      email: d.email,
-      phone: d.phone,
-      status: i === 0 ? 'OFFLINE' : 'AVAILABLE',
-      vehicle: d.vehicleType,
-      plate: d.vehiclePlate,
-      facilityId: d.facilityId,
-      facilityName: d.facilityName,
-      latitude: d.location.lat,
-      longitude: d.location.lng,
-      locationAt: i === 1 ? null : at,
-      activeLegsCount: 0,
-    }));
-  }, twoHoursAgo);
+    const facility = (raw.orders || []).find((o) => o.id === 'SOL-HOME-001')?.facilityId ?? 'f1';
+    const local = (raw.drivers || []).filter((d) => d.facilityId === facility);
+    return {
+      facilityId: facility,
+      serverDrivers: local.map((d, i) => ({
+        id: d.id,
+        userId: `u-${d.id}`,
+        name: d.name,
+        email: d.email,
+        phone: d.phone,
+        status: i === 0 ? 'OFFLINE' : 'AVAILABLE',
+        vehicle: d.vehicleType,
+        plate: d.vehiclePlate,
+        facilityId: d.facilityId,
+        facilityName: d.facilityName,
+        latitude: d.location.lat,
+        longitude: d.location.lng,
+        locationAt: i === 1 ? null : at,
+        activeLegsCount: 0,
+      })),
+    };
+  }, twoHoursAgo));
   expect(serverDrivers.length).toBeGreaterThan(2);
 
-  await page.getByRole('button', { name: 'Asignar chofer de recogida', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: 'Asignar chofer' });
+  await page.goto('/operations/dispatch?pedido=SOL-HOME-001');
+  await expect(page.getByRole('button', { name: /SOL-3001/ })).toHaveAttribute('aria-pressed', 'true');
   // Sin ubicación reciente no se inventa un tiempo de llegada: se muestra "GPS pendiente".
-  await expect(dialog.getByText('GPS pendiente', { exact: true }).first()).toBeVisible();
-  await expect(dialog.getByText('No hay choferes elegibles con una ruta disponible.')).toHaveCount(0);
-  await dialog.locator('summary', { hasText: 'Choferes no elegibles' }).click();
-  const list = dialog.getByRole('list', { name: 'Choferes no elegibles' });
-  await expect(list).toBeVisible();
-  await expect(list).toContainText(serverDrivers[0].name);
-  await expect(list).toContainText('Chofer no disponible');
-  await expect(list).not.toContainText('Ubicación desactualizada');
-  await expect(list).not.toContainText('Sin ubicación registrada');
+  await expect(page.getByText('GPS pendiente', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText(/No hay choferes elegibles/)).toHaveCount(0);
+  for (const d of serverDrivers.slice(1))
+    await expect(page.getByRole('radio', { name: d.name, exact: true })).toHaveCount(1);
+  await expect(page.getByRole('radio', { name: serverDrivers[0].name, exact: true })).toHaveCount(0);
 });

@@ -1,7 +1,7 @@
 import { operationalStage } from '../../services/fulfillment';
 import { storageService } from '../../services/storage';
-import { useNavigate } from 'react-router-dom';
-import React, { useEffect, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { PageHeader } from '../../components/common/PageHeader';
 import { BaseMap } from '../../components/maps/BaseMap';
@@ -34,13 +34,24 @@ import type { Driver, Order } from '../../types';
 // Estados del servidor que esperan chofer: recogida (confirmada) y entrega (lista).
 const DISPATCH_STATUSES = ['CONFIRMED', 'READY_FOR_DELIVERY'] as const;
 
+const waitsForPickup = (o: Order) =>
+  o.status === 'CONFIRMED' ||
+  (!o.pickupNeedsScheduling && operationalStage(o) === 'PICKUP_PENDING');
+const waitsForDelivery = (o: Order) =>
+  o.status === 'READY_FOR_DELIVERY' ||
+  (o.fulfillment?.outbound.method === 'DRIVER' &&
+    ['READY_FOR_DELIVERY', 'DELIVERY_SCHEDULED'].includes(operationalStage(o)));
+
 export function DispatchPage() {
-  const navigate = useNavigate();
   const { orders, drivers, customers, facilities, showToast } = useApp();
+  // `?pedido=<id>` (enlace desde el detalle o la lista): se preselecciona al cargar la cola.
+  const [searchParams] = useSearchParams();
+  const requestedId = searchParams.get('pedido');
+  const requestHandled = useRef(false);
+  const [notWaiting, setNotWaiting] = useState('');
   const [type, setType] = useState<'pickup' | 'delivery'>('pickup'),
     [orderId, setOrderId] = useState(''),
-    [driverId, setDriverId] = useState(''),
-    [notes, setNotes] = useState('');
+    [driverId, setDriverId] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [isAssigning, setIsAssigning] = useState(false);
   // La cola sale del servidor: solo lo que de verdad espera chofer. Sin servidor no hay cola.
@@ -74,16 +85,21 @@ export function DispatchPage() {
     void syncData();
   }, []);
 
-  const queue = serverOrders.filter((o) =>
-    type === 'pickup'
-      ? o.status === 'CONFIRMED' ||
-        (!o.pickupNeedsScheduling && operationalStage(o) === 'PICKUP_PENDING')
-      : o.status === 'READY_FOR_DELIVERY' ||
-        (o.fulfillment?.outbound.method === 'DRIVER' &&
-          ['READY_FOR_DELIVERY', 'DELIVERY_SCHEDULED'].includes(
-            operationalStage(o),
-          )),
-  );
+  // Se aplica una sola vez, con la primera cola cargada del servidor.
+  useEffect(() => {
+    if (!requestedId || requestHandled.current || syncState !== 'ready') return;
+    requestHandled.current = true;
+    const target = serverOrders.find((o) => o.id === requestedId);
+    if (target && waitsForPickup(target)) setType('pickup');
+    else if (target && waitsForDelivery(target)) setType('delivery');
+    else {
+      setNotWaiting(requestedId);
+      return;
+    }
+    setOrderId(target.id);
+  }, [requestedId, syncState, serverOrders]);
+
+  const queue = serverOrders.filter(type === 'pickup' ? waitsForPickup : waitsForDelivery);
   const order = queue.find((o) => o.id === orderId) ?? queue[0];
   const { candidates, loading, error } = useDriverCandidates(order, type);
   const [route, setRoute] = useState<RouteSummary | null>(null),
@@ -97,7 +113,6 @@ export function DispatchPage() {
   useEffect(() => {
     setDriverId('');
     setRoute(null);
-    setNotes('');
   }, [order?.id, type]);
   useEffect(() => {
     setRoute(null);
@@ -152,7 +167,6 @@ export function DispatchPage() {
         message: `La solicitud ${order.trackingNumber || order.id} ya tiene chofer.`,
       });
       setDriverId('');
-      setNotes('');
       await syncData();
     } catch (err) {
       // Nunca se asigna solo en el navegador: sin servidor la asignación no existe.
@@ -197,6 +211,27 @@ export function DispatchPage() {
             className="mt-3 rounded-lg border border-rose-300 px-3 py-1.5 text-xs font-semibold hover:bg-rose-100"
           >
             Reintentar
+          </button>
+        </div>
+      )}
+      {notWaiting && (
+        <div role="status" className="flex flex-wrap items-start justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          <div className="flex gap-2">
+            <Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+            <p>
+              Esta solicitud ya no espera chofer. Puede que ya tenga uno asignado o que haya
+              cambiado de estado.{' '}
+              <Link className="font-semibold underline" to={`/operations/orders/${notWaiting}`}>
+                Ver la solicitud
+              </Link>
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setNotWaiting('')}
+            className="rounded-lg border border-amber-300 px-3 py-1.5 text-xs font-semibold hover:bg-amber-100"
+          >
+            Entendido
           </button>
         </div>
       )}
@@ -391,18 +426,7 @@ export function DispatchPage() {
           })}
         </div>
         {order && (
-          <div className="flex flex-wrap items-end gap-3 border-t border-slate-200 pt-4">
-            <label className="min-w-[180px] flex-1 text-xs font-semibold text-slate-600">
-              Notas de asignación{' '}
-              <span className="font-normal text-slate-400">(opcional)</span>
-              <input
-                aria-label="Notas de asignación"
-                className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-normal outline-none focus:border-[#0F4C81] focus:bg-white focus:ring-2 focus:ring-[#0F4C81]/10"
-                placeholder="Notas de asignación"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-              />
-            </label>
+          <div className="flex flex-wrap items-end justify-end gap-3 border-t border-slate-200 pt-4">
             <button
               disabled={
                 loading ||

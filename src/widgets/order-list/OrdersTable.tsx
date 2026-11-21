@@ -8,11 +8,7 @@ export function OrdersTable({
   sortedOrders,
   filterKey,
   resetFilters,
-  setAssigningOrder,
-}: Pick<
-  OrderListModel,
-  'orders' | 'sortedOrders' | 'resetFilters' | 'setAssigningOrder'
-> & {
+}: Pick<OrderListModel, 'orders' | 'sortedOrders' | 'resetFilters'> & {
   // Cambia con los filtros: vuelve a la primera página sin reaccionar a cada actualización.
   filterKey: string;
 }) {
@@ -36,11 +32,7 @@ export function OrdersTable({
                 <OrderTableHeader />
                 <tbody className="divide-y divide-slate-100">
                   {pagination.rows.map((order) => (
-                    <OrderTableRow
-                      key={order.id}
-                      order={order}
-                      setAssigningOrder={setAssigningOrder}
-                    />
+                    <OrderTableRow key={order.id} order={order} />
                   ))}
                 </tbody>
               </table>

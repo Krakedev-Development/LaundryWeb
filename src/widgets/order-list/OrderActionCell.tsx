@@ -1,14 +1,9 @@
 import { operationalStage } from '../../services/fulfillment';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Order } from '../../types';
 import { Truck, Eye } from 'lucide-react';
-export function OrderActionCell({
-  order,
-  setAssigningOrder,
-}: {
-  order: Order;
-  setAssigningOrder(order: Order | null): void;
-}) {
+import { dispatchHref } from '../../services/operationsLinks';
+export function OrderActionCell({ order }: { order: Order }) {
   const navigate = useNavigate();
   return (
     <td
@@ -16,15 +11,16 @@ export function OrderActionCell({
       onClick={(e) => e.stopPropagation()}
     >
       <div className="flex items-center justify-end gap-2">
+        {/* La recogida se asigna solo en Despacho: aquí solo se navega hasta allí. */}
         {operationalStage(order) === 'PICKUP_PENDING' && (
-          <button
-            onClick={() => setAssigningOrder(order)}
-            className="px-3 py-1.5 text-xs font-semibold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-lg transition-colors flex items-center gap-1 shadow-xs cursor-pointer"
-            title="Asignar chofer"
+          <Link
+            to={dispatchHref(order.id)}
+            className="px-3 py-1.5 text-xs font-semibold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-lg transition-colors flex items-center gap-1 shadow-xs"
+            title="Asignar chofer en Despacho"
           >
             <Truck className="w-3.5 h-3.5" />
-            <span>Asignar</span>
-          </button>
+            <span>Asignar en Despacho</span>
+          </Link>
         )}
         <button
           onClick={() => navigate(`/operations/orders/${order.id}`)}

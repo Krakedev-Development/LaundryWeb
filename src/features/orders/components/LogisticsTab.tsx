@@ -1,4 +1,6 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
+import { dispatchHref } from '../../../services/operationsLinks';
 import {
   MapPin,
   Truck,
@@ -142,13 +144,14 @@ export const LogisticsTab: React.FC<LogisticsTabProps> = ({ order, onOpenAssign 
               </p>
             )}
 
+            {/* La recogida se asigna solo en Despacho; aquí solo se navega hasta allí. */}
             {!isPickupCompleted && !order.pickup.driverName && (
-              <button
-                onClick={() => onOpenAssign('pickup')}
-                className="w-full mt-2 py-2 text-xs font-semibold text-[#0F4C81] bg-sky-50 hover:bg-sky-100 rounded-xl transition-colors cursor-pointer"
+              <Link
+                to={dispatchHref(order.id)}
+                className="block w-full mt-2 py-2 text-center text-xs font-semibold text-[#0F4C81] bg-sky-50 hover:bg-sky-100 rounded-xl transition-colors"
               >
-                Asignar chofer de recogida
-              </button>
+                Asignar en Despacho
+              </Link>
             )}
           </div>
         </section>

@@ -1,4 +1,6 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
+import { dispatchHref } from '../../../services/operationsLinks';
 import {
   Sparkles,
   Truck,
@@ -71,15 +73,16 @@ export const OperationTab: React.FC<OperationTabProps> = ({
       stageTitle = 'Recogida pendiente de asignación';
       stageDescription =
         'La solicitud está confirmada y requiere asignar un conductor para el retiro a domicilio.';
+      // La recogida se asigna solo en Despacho; aquí solo se navega hasta allí.
       if (order.fulfillment?.inbound.method === 'DRIVER' && !order.pickupNeedsScheduling)
         primaryCTA = (
-        <button
-          onClick={() => onOpenAssign('pickup')}
-          className="px-5 py-2.5 text-xs font-bold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
+        <Link
+          to={dispatchHref(order.id)}
+          className="px-5 py-2.5 text-xs font-bold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-xl shadow-xs transition-colors flex items-center gap-2"
         >
           <Truck className="w-4 h-4" />
-          <span>Asignar chofer de recogida</span>
-        </button>
+          <span>Asignar en Despacho</span>
+        </Link>
       );
       break;
 

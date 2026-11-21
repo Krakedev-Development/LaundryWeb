@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { AssignDriverModal } from '../../components/common/AssignDriverModal';
 import { useOrderList } from '../../features/orders/model/useOrderList';
 import { OrdersListHeader } from '../../widgets/order-list/OrdersListHeader';
 import { OrderExceptionsNotice } from '../../widgets/order-list/OrderExceptionsNotice';
@@ -95,16 +94,7 @@ export const OrdersListPage = () => {
           model.quickTab,
         ].join('|')}
         resetFilters={model.resetFilters}
-        setAssigningOrder={model.setAssigningOrder}
       />
-      {model.assigningOrder && (
-        <AssignDriverModal
-          order={model.assigningOrder}
-          type="pickup"
-          isOpen={true}
-          onClose={() => model.setAssigningOrder(null)}
-        />
-      )}
     </div>
   );
 };

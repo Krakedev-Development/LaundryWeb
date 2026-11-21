@@ -93,3 +93,40 @@ test('si el servidor no responde no hay cola y se puede reintentar', async ({ pa
   await expect(page.getByRole('button', { name: /SOL-3001/ })).toBeVisible();
   await expect(alert).toHaveCount(0);
 });
+
+// Contrato 1: el detalle y la lista enlazan a /operations/dispatch?pedido=<id>.
+test('con ?pedido= Despacho preselecciona esa solicitud y no pide notas de asignación', async ({ page }) => {
+  const { state } = await mockServer(page);
+  const facilityId = state.queue[0].facilityId;
+  state.queue = [
+    { ...summary('CONFIRMED', facilityId), id: 'SOL-STORE-001', number: 3002 },
+    summary('CONFIRMED', facilityId),
+  ];
+  await page.goto(`/operations/dispatch?pedido=${ORDER}`);
+  await expect(page.getByRole('button', { name: /SOL-3001/ })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: /SOL-3002/ })).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.getByRole('button', { name: 'Recogidas' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByLabel('Notas de asignación')).toHaveCount(0);
+});
+
+test('con ?pedido= de una solicitud que ya no espera chofer se avisa', async ({ page }) => {
+  const { state } = await mockServer(page);
+  state.queue = [];
+  await page.goto(`/operations/dispatch?pedido=${ORDER}`);
+  const notice = page.getByRole('status').filter({ hasText: 'Esta solicitud ya no espera chofer' });
+  await expect(notice).toBeVisible();
+  await expect(notice.getByRole('link', { name: 'Ver la solicitud' })).toHaveAttribute(
+    'href',
+    `/operations/orders/${ORDER}`,
+  );
+  await notice.getByRole('button', { name: 'Entendido' }).click();
+  await expect(notice).toHaveCount(0);
+});
+
+test('con ?pedido= de una solicitud lista para entrega se abre la pestaña Entregas', async ({ page }) => {
+  const { state } = await mockServer(page);
+  state.queue = [summary('READY_FOR_DELIVERY', state.queue[0].facilityId)];
+  await page.goto(`/operations/dispatch?pedido=${ORDER}`);
+  await expect(page.getByRole('button', { name: 'Entregas' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: /SOL-3001/ })).toHaveAttribute('aria-pressed', 'true');
+});
