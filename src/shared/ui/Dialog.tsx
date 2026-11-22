@@ -55,7 +55,7 @@ export function Dialog({
             type="button"
             aria-label="Cerrar"
             onClick={onClose}
-            className="flex size-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-700 focus-visible:outline-sky-600 cursor-pointer"
+            className="flex size-8 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-200 hover:text-slate-700 focus-visible:outline-sky-600 cursor-pointer"
           >
             <X size={18} />
           </button>

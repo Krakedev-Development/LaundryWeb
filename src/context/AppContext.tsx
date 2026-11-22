@@ -190,6 +190,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     const id =
       'toast-' + Date.now() + '-' + Math.random().toString(36).substring(2, 5);
     setToasts((prev) => [...prev, { ...toast, id }]);
+    // Los errores y advertencias se quedan hasta que se cierran: suelen pedir una acción y
+    // no deben desaparecer antes de leerlos (WCAG 2.2.1). Los demás se van solos.
+    if (toast.type === 'error' || toast.type === 'warning') return;
     setTimeout(() => {
       dismissToast(id);
     }, 4500);

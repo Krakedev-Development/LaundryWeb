@@ -30,7 +30,7 @@ import {
 } from '../../services/api/deliveriesApi';
 import { useApp } from '../../context/AppContext';
 import { storageService } from '../../services/storage';
-import { btnPrimary, btnSecondarySm } from '../../shared/ui/controls';
+import { btnPrimary, btnSecondarySm, focusRing } from '../../shared/ui/controls';
 import { TONE_STYLE } from '../../shared/ui/statusTone';
 
 // Escala compartida: lista para entrega espera que la sede asigne chofer (ámbar).
@@ -270,7 +270,7 @@ export const DeliveriesPage: React.FC = () => {
                 onChange={(e) =>
                   setStatusFilter(e.target.value as 'ALL' | DeliveryServerStatus)
                 }
-                className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-none"
+                className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-2 focus:-outline-offset-1 focus:outline-primary"
               >
                 <option value="ALL">Todos los estados</option>
                 {(Object.keys(DELIVERY_STATUS_LABEL) as DeliveryServerStatus[]).map((s) => (
@@ -283,7 +283,7 @@ export const DeliveriesPage: React.FC = () => {
                 aria-label="Filtrar por chofer"
                 value={driverFilter}
                 onChange={(e) => setDriverFilter(e.target.value)}
-                className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-none"
+                className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-2 focus:-outline-offset-1 focus:outline-primary"
               >
                 <option value="ALL">Todos los choferes</option>
                 {drivers.map((d) => (
@@ -336,9 +336,19 @@ export const DeliveriesPage: React.FC = () => {
                           }`}
                         >
                           <td className="py-3.5 px-4">
-                            <span className="font-bold text-sky-800 font-mono text-[13px]">
+                            {/* Con teclado se elige la fila con este botón (el clic en la fila es un atajo de ratón). */}
+                            <button
+                              type="button"
+                              aria-pressed={isSelected}
+                              aria-label={`Seleccionar entrega ${ord.trackingNumber}`}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setSelectedOrderId(ord.id);
+                              }}
+                              className={`font-bold text-primary font-mono text-[13px] hover:underline rounded ${focusRing}`}
+                            >
                               {ord.trackingNumber}
-                            </span>
+                            </button>
                             <span className="block font-semibold text-slate-900 truncate max-w-[160px] mt-0.5">
                               {ord.customerName}
                             </span>
@@ -347,7 +357,7 @@ export const DeliveriesPage: React.FC = () => {
                             <span className="font-medium text-slate-800">
                               {formatScheduleDate(ord.scheduledDate)}
                             </span>
-                            <span className="block text-[11px] text-slate-400 font-mono mt-0.5">
+                            <span className="block text-[11px] text-slate-500 font-mono mt-0.5">
                               {ord.slotLabel}
                             </span>
                           </td>
@@ -357,7 +367,7 @@ export const DeliveriesPage: React.FC = () => {
                                 {ord.driverName}
                               </span>
                             ) : (
-                              <span className="text-amber-600 italic">Por asignar</span>
+                              <span className="text-amber-700 italic">Por asignar</span>
                             )}
                           </td>
                           <td className="py-3.5 px-4 whitespace-nowrap">
@@ -434,12 +444,12 @@ export const DeliveriesPage: React.FC = () => {
                   <span>{selected.customerName}</span>
                 </div>
                 <div className="flex items-start gap-2 text-slate-600">
-                  <MapPin className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+                  <MapPin className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
                   <span>{selected.addressText || 'Dirección en el detalle de la solicitud'}</span>
                 </div>
                 {selected.customerPhone && (
                   <div className="flex items-center gap-2 text-slate-600">
-                    <Phone className="w-4 h-4 text-slate-400 shrink-0" />
+                    <Phone className="w-4 h-4 text-slate-500 shrink-0" />
                     <span>{selected.customerPhone}</span>
                   </div>
                 )}
@@ -473,7 +483,7 @@ export const DeliveriesPage: React.FC = () => {
                       aria-label="Chofer de entrega"
                       value={assignDriverId}
                       onChange={(e) => setAssignDriverId(e.target.value)}
-                      className="mt-1 w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-sky-500"
+                      className="mt-1 w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-2 focus:-outline-offset-1 focus:outline-primary"
                       required
                     >
                       <option value="">Seleccionar chofer…</option>
@@ -551,7 +561,7 @@ export const DeliveriesPage: React.FC = () => {
               )}
             </>
           ) : (
-            <div className="py-12 text-center text-xs text-slate-400">
+            <div className="py-12 text-center text-xs text-slate-500">
               {state === 'loading'
                 ? 'Cargando…'
                 : 'Selecciona una entrega en la tabla para gestionarla.'}

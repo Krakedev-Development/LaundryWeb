@@ -1,6 +1,7 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useApp } from '../../context/AppContext';
+import { focusRing } from '../../shared/ui/controls';
 import {
   CheckCircle2,
   AlertCircle,
@@ -64,11 +65,12 @@ export const ToastContainer: React.FC = () => {
                 )}
               </div>
               <button
+                type="button"
                 onClick={() => dismissToast(toast.id)}
                 aria-label={`Cerrar aviso: ${toast.title}`}
-                className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 p-1 rounded-lg transition-colors cursor-pointer"
+                className={`flex size-7 shrink-0 items-center justify-center rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer ${focusRing}`}
               >
-                <X className="w-3.5 h-3.5" />
+                <X className="w-4 h-4" aria-hidden />
               </button>
             </motion.div>
           );

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Sparkles,
@@ -27,6 +27,8 @@ import { parseHandoffType } from '../../services/api/handoffsApi';
 import { isPlantStage, plantHref } from '../../services/operationsLinks';
 import { Tabs, TabPanel } from '../../shared/ui/Tabs';
 import { orderDisplayStage } from './model/orderDisplay';
+import { useDismissable } from '../../shared/ui/useDismissable';
+import { focusRing } from '../../shared/ui/controls';
 import { storageService } from '../../services/storage';
 import { MODE_LABELS } from '../../services/BusinessService';
 import { operationalStage } from '../../services/fulfillment';
@@ -93,6 +95,10 @@ export const OrderDetailPage: React.FC = () => {
     'operation',
   );
   const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false);
+  const actionsMenu = useRef<HTMLDivElement>(null);
+  const actionsTrigger = useRef<HTMLButtonElement>(null);
+  const closeActions = useCallback(() => setIsActionsMenuOpen(false), []);
+  useDismissable(isActionsMenuOpen, closeActions, actionsMenu, actionsTrigger);
 
   // Modals state
   const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false);
@@ -316,23 +322,32 @@ export const OrderDetailPage: React.FC = () => {
             </button>
 
             {/* Actions Menu Dropdown */}
-            <div className="relative">
+            <div className="relative" ref={actionsMenu}>
               <button
+                ref={actionsTrigger}
+                type="button"
+                aria-expanded={isActionsMenuOpen}
+                aria-controls="detail-actions"
                 onClick={() => setIsActionsMenuOpen(!isActionsMenuOpen)}
-                className="px-3 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-xl transition-colors flex items-center gap-1 cursor-pointer"
+                className={`px-3 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-xl transition-colors flex items-center gap-1 cursor-pointer ${focusRing}`}
                 title="Más opciones operacionales y administrativas"
               >
                 <span>Acciones</span>
-                <MoreVertical className="w-3.5 h-3.5" />
+                <MoreVertical className="w-3.5 h-3.5" aria-hidden />
               </button>
 
               {isActionsMenuOpen && (
-                <div className="absolute right-0 mt-1 w-52 bg-white rounded-2xl shadow-xl border border-slate-200 py-1.5 z-40 text-xs text-slate-700 animate-in fade-in">
+                <div
+                  id="detail-actions"
+                  role="group"
+                  aria-label="Acciones de la solicitud"
+                  className="absolute right-0 mt-1 w-52 bg-white rounded-2xl shadow-xl border border-slate-200 py-1.5 z-40 text-xs text-slate-700"
+                >
                   <button
                     onClick={handleCopyIdentifier}
                     className="w-full text-left px-3.5 py-2 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
                   >
-                    <Copy className="w-3.5 h-3.5 text-slate-400" />
+                    <Copy className="w-3.5 h-3.5 text-slate-500" />
                     <span>Copiar identificador</span>
                   </button>
 

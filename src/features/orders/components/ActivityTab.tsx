@@ -98,7 +98,7 @@ export const ActivityTab: React.FC<ActivityTabProps> = ({
                     >
                       {humanLabel}
                     </span>
-                    <span className="text-[11px] text-slate-400 font-mono tabular-nums whitespace-nowrap ml-2">
+                    <span className="text-[11px] text-slate-500 font-mono tabular-nums whitespace-nowrap ml-2">
                       {event.timestamp}
                     </span>
                   </div>
@@ -142,7 +142,7 @@ export const ActivityTab: React.FC<ActivityTabProps> = ({
             </div>
 
             {orderIncidents.length === 0 ? (
-              <div className="py-6 text-center text-xs text-slate-400 italic">
+              <div className="py-6 text-center text-xs text-slate-500 italic">
                 No hay incidencias registradas en esta solicitud.
               </div>
             ) : (

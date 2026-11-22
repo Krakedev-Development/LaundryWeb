@@ -84,28 +84,28 @@ export const LogisticsTab: React.FC<LogisticsTabProps> = ({ order }) => {
 
           <div className="space-y-3 text-xs">
             <div>
-              <span className="text-slate-400 block text-[11px]">Fecha y franja horaria</span>
+              <span className="text-slate-500 block text-[11px]">Fecha y franja horaria</span>
               <span className="font-bold text-slate-800 text-sm flex items-center gap-1.5 mt-0.5">
-                <Clock className="w-3.5 h-3.5 text-slate-400" />
+                <Clock className="w-3.5 h-3.5 text-slate-500" />
                 {order.pickup.date} · {order.pickup.timeSlot}
               </span>
             </div>
 
             <div>
-              <span className="text-slate-400 block text-[11px]">Dirección de recogida</span>
+              <span className="text-slate-500 block text-[11px]">Dirección de recogida</span>
               <span className="font-medium text-slate-700 block mt-0.5">
                 {order.customerAddress.street} #{order.customerAddress.number},{' '}
                 {order.customerAddress.neighborhood}
               </span>
               {order.customerAddress.reference && (
-                <span className="text-[11px] text-slate-400 italic block">
+                <span className="text-[11px] text-slate-500 italic block">
                   Ref: {order.customerAddress.reference}
                 </span>
               )}
             </div>
 
             <div>
-              <span className="text-slate-400 block text-[11px]">Conductor asignado</span>
+              <span className="text-slate-500 block text-[11px]">Conductor asignado</span>
               <span className="font-semibold text-slate-900 block mt-0.5">
                 {order.pickup.driverName
                   ? `${order.pickup.driverName} (${order.pickup.vehiclePlate || 'Vehículo asignado'})`
@@ -164,15 +164,15 @@ export const LogisticsTab: React.FC<LogisticsTabProps> = ({ order }) => {
 
           <div className="space-y-3 text-xs">
             <div>
-              <span className="text-slate-400 block text-[11px]">Fecha objetivo y franja horaria</span>
+              <span className="text-slate-500 block text-[11px]">Fecha objetivo y franja horaria</span>
               <span className="font-bold text-slate-800 text-sm flex items-center gap-1.5 mt-0.5">
-                <Clock className="w-3.5 h-3.5 text-slate-400" />
+                <Clock className="w-3.5 h-3.5 text-slate-500" />
                 {order.delivery.targetDate} · {order.delivery.timeSlot}
               </span>
             </div>
 
             <div>
-              <span className="text-slate-400 block text-[11px]">Destinatario de entrega</span>
+              <span className="text-slate-500 block text-[11px]">Destinatario de entrega</span>
               <span className="font-medium text-slate-700 block mt-0.5">
                 {order.delivery.recipientName || order.customerName} (
                 {order.delivery.recipientPhone || order.customerPhone})
@@ -180,7 +180,7 @@ export const LogisticsTab: React.FC<LogisticsTabProps> = ({ order }) => {
             </div>
 
             <div>
-              <span className="text-slate-400 block text-[11px]">Dirección de entrega</span>
+              <span className="text-slate-500 block text-[11px]">Dirección de entrega</span>
               <span className="font-medium text-slate-700 block mt-0.5">
                 {order.deliveryAddress.street} #{order.deliveryAddress.number},{' '}
                 {order.deliveryAddress.neighborhood}
@@ -188,7 +188,7 @@ export const LogisticsTab: React.FC<LogisticsTabProps> = ({ order }) => {
             </div>
 
             <div>
-              <span className="text-slate-400 block text-[11px]">Conductor de entrega</span>
+              <span className="text-slate-500 block text-[11px]">Conductor de entrega</span>
               <span className="font-semibold text-slate-900 block mt-0.5">
                 {order.delivery.driverName
                   ? `${order.delivery.driverName} (${order.delivery.vehiclePlate || 'Vehículo asignado'})`

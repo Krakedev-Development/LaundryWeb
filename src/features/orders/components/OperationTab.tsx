@@ -289,11 +289,11 @@ export const OperationTab: React.FC<OperationTabProps> = ({
                 llegar y después de salir, el progreso general ya lo muestra. */}
             {showPlantPhases && (
             <div className="space-y-1.5 pt-1">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400 block">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block">
                 Fases del proceso en planta
               </span>
               <PlantProgress order={order} />
-              <p className="text-[11px] text-slate-400 mt-1">
+              <p className="text-[11px] text-slate-500 mt-1">
                 {isPerWeight
                   ? 'Servicio por peso: pesaje obligatorio previo a la inspección.'
                   : 'Servicio por prenda: no requiere pesaje inicial, ingresa directo a inspección.'}
@@ -409,7 +409,7 @@ export const OperationTab: React.FC<OperationTabProps> = ({
                 <span className="text-slate-500">Entrega programada:</span>
                 <span className="font-semibold text-slate-800 text-right">
                   {order.delivery.targetDate}
-                  <span className="block text-[10px] text-slate-400">
+                  <span className="block text-[10px] text-slate-500">
                     {order.delivery.timeSlot}
                   </span>
                 </span>
@@ -438,7 +438,7 @@ export const OperationTab: React.FC<OperationTabProps> = ({
                   <Clock className="w-3.5 h-3.5 text-primary" />
                   <span>Último evento registrado</span>
                 </h3>
-                <span className="text-[10px] font-mono text-slate-400">
+                <span className="text-[10px] font-mono text-slate-500">
                   {latestEvent.timestamp}
                 </span>
               </div>

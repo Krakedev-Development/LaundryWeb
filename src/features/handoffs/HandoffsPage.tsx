@@ -318,7 +318,7 @@ export function HandoffsPage() {
                         <p className="font-bold text-ink">SOL-{String(r.number).padStart(4, '0')}</p>
                         <p className="truncate text-slate-600">{r.customer?.user?.name ?? 'Cliente'}</p>
                         {facilityName(r.facilityId) && (
-                          <p className="truncate text-[11px] text-slate-400">{facilityName(r.facilityId)}</p>
+                          <p className="truncate text-[11px] text-slate-500">{facilityName(r.facilityId)}</p>
                         )}
                       </div>
                       <button

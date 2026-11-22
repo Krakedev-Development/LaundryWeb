@@ -288,14 +288,14 @@ export const IncidentsPage: React.FC = () => {
           </div>
           <div className="flex w-full items-center gap-2 lg:w-auto">
             <div className="relative w-full lg:w-72">
-              <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
               <input
                 type="text"
                 aria-label="Buscar incidencia"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Buscar solicitud, cliente o tipo..."
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-xs focus:border-sky-500 focus:outline-none"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-xs focus:outline-2 focus:-outline-offset-1 focus:outline-primary"
               />
             </div>
             <button

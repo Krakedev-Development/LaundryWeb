@@ -70,7 +70,7 @@ export const GlobalProgressStepper: React.FC<{ order: Order }> = ({ order }) => 
         )}
       </div>
 
-      <nav aria-label="Progreso global" className="relative">
+      <div role="region" aria-label="Progreso global" className="relative">
         <ol className="grid grid-cols-5 gap-2 sm:gap-4">
           {MILESTONES.map((step, index) => {
             const isCompleted = index < currentIndex;
@@ -102,7 +102,7 @@ export const GlobalProgressStepper: React.FC<{ order: Order }> = ({ order }) => 
                         ? isHeld
                           ? 'bg-amber-500 text-white ring-4 ring-amber-100'
                           : 'bg-primary text-white ring-4 ring-sky-100'
-                        : 'bg-slate-100 text-slate-400 border border-slate-200'
+                        : 'bg-slate-100 text-slate-500 border border-slate-200'
                   }`}
                 >
                   {isCompleted ? (
@@ -141,7 +141,7 @@ export const GlobalProgressStepper: React.FC<{ order: Order }> = ({ order }) => 
             );
           })}
         </ol>
-      </nav>
+      </div>
     </div>
   );
 };

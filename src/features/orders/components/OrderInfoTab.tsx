@@ -110,7 +110,7 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
           {/* Client Details */}
           <div className="space-y-3">
             <div>
-              <span className="text-slate-400 block text-[11px]">Cliente solicitante</span>
+              <span className="text-slate-500 block text-[11px]">Cliente solicitante</span>
               <div className="flex items-center gap-2 mt-0.5">
                 <span className="font-bold text-sm text-slate-900">
                   {order.customerName || 'Cliente sin nombre registrado'}
@@ -122,12 +122,12 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
             </div>
 
             <div className="flex items-center gap-2 text-slate-600">
-              <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <Phone className="w-3.5 h-3.5 text-slate-500 shrink-0" />
               <span>{order.customerPhone || 'Teléfono no registrado'}</span>
             </div>
 
             <div className="flex items-center gap-2 text-slate-600">
-              <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <Mail className="w-3.5 h-3.5 text-slate-500 shrink-0" />
               <span>{order.customerEmail || 'Correo no registrado'}</span>
             </div>
           </div>
@@ -135,14 +135,14 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
           {/* Facility & Logistics Zone */}
           <div className="space-y-3 border-t md:border-t-0 md:border-l border-slate-100 md:pl-6">
             <div>
-              <span className="text-slate-400 block text-[11px]">Sede de procesamiento asignada</span>
+              <span className="text-slate-500 block text-[11px]">Sede de procesamiento asignada</span>
               <span className="font-bold text-slate-900 text-sm block mt-0.5">
                 {order.facilityName || 'Planta principal'}
               </span>
             </div>
 
             <div>
-              <span className="text-slate-400 block text-[11px]">Zona logística</span>
+              <span className="text-slate-500 block text-[11px]">Zona logística</span>
               <span className="font-semibold text-slate-700">
                 {order.zoneName || 'Zona Centro'}
               </span>
@@ -151,7 +151,7 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
             {/* Sin dato no se muestra la etiqueta vacía. */}
             {order.customerId && (
               <div>
-                <span className="text-slate-400 block text-[11px]">Identificador de cliente</span>
+                <span className="text-slate-500 block text-[11px]">Identificador de cliente</span>
                 <span className="font-mono text-slate-500">{order.customerId}</span>
               </div>
             )}
@@ -188,7 +188,7 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
                 <tbody className="divide-y divide-slate-100">
                   {itemRows.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="py-4 text-center text-slate-400 italic">
+                      <td colSpan={5} className="py-4 text-center text-slate-500 italic">
                         Sin ítems detallados individualmente.
                       </td>
                     </tr>
@@ -232,7 +232,7 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
             Servicios adicionales y extras seleccionados:
           </span>
           {(order.extras || []).length === 0 ? (
-            <p className="text-xs text-slate-400 italic">Sin servicios extras contratados.</p>
+            <p className="text-xs text-slate-500 italic">Sin servicios extras contratados.</p>
           ) : (
             <div className="space-y-1 text-xs">
               {order.extras.map((ext) => (
@@ -339,7 +339,7 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
           <div className="space-y-3 text-xs">
             <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200">
               <div>
-                <span className="text-[11px] text-slate-400 block">Forma de pago registrada</span>
+                <span className="text-[11px] text-slate-500 block">Forma de pago registrada</span>
                 <span className="font-bold text-slate-800 text-sm">{paymentMethodLabel(pricing.paymentMethod)}</span>
               </div>
               <div>
@@ -390,7 +390,7 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
             </p>
 
             {adjState === 'loading' && (
-              <p role="status" className="text-xs text-slate-400 flex items-center gap-1.5">
+              <p role="status" className="text-xs text-slate-500 flex items-center gap-1.5">
                 <LoaderCircle className="w-3.5 h-3.5 animate-spin" />
                 Cargando ajustes...
               </p>
@@ -414,7 +414,7 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
             )}
 
             {adjState === 'ready' && adjustments.length === 0 && (
-              <p className="text-xs text-slate-400 italic">
+              <p className="text-xs text-slate-500 italic">
                 Sin ajustes de precio en esta solicitud.
               </p>
             )}
@@ -444,7 +444,7 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
                         >
                           {formatAmount(adj.amountDifference)}
                         </span>
-                        <span className="text-[10px] font-semibold text-slate-400">
+                        <span className="text-[10px] font-semibold text-slate-500">
                           {ADJ_STATUS[adj.status] ?? adj.status}
                         </span>
                       </div>

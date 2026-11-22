@@ -10,7 +10,7 @@ export function OrderIdentityCells({ order }: { order: Order }) {
           {displayCode}
         </span>
         <span
-          className="block text-[10px] text-slate-400 font-mono mt-0.5"
+          className="block text-[10px] text-slate-500 font-mono mt-0.5"
           title={order.id}
         >
           ID: {order.id.slice(0, 8)}...
