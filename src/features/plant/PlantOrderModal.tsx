@@ -16,6 +16,7 @@ import { PlantProcessPanel } from "./PlantProcessPanel";
 import { OrderHistory, displayDate } from "./OrderHistory";
 import { PlantProgress } from "./plantProgress";
 import { Tabs, TabPanel } from "../../shared/ui/Tabs";
+import { orderDisplayStage } from "../orders/model/orderDisplay";
 
 type PlantTab = "summary" | "process" | "history";
 
@@ -56,7 +57,7 @@ export function PlantOrderModal({
     >
       <div className="border-b border-slate-200 px-5 py-5 sm:px-6">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-          <StatusBadge status={stage} />
+          <StatusBadge status={orderDisplayStage(order)} />
           <Link
             to={`/operations/orders/${order.id}`}
             className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline"

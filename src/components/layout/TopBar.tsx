@@ -136,7 +136,7 @@ export function TopBar({
         )}
       </div>
       <div ref={menus} className="flex shrink-0 items-center gap-2 sm:gap-3">
-        <p className="mr-2 hidden text-xs capitalize text-slate-500 xl:block">
+        <p className="mr-2 hidden text-xs first-letter:uppercase text-slate-500 xl:block">
           {date}
         </p>
         <div className="relative">

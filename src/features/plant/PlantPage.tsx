@@ -8,6 +8,7 @@ import { TablePagination, usePagination } from '../../shared/ui/TablePagination'
 import { SLABadge } from '../../components/common/PriorityBadge';
 import { isPlantOrder, plantPhase, PlantProgress } from './plantProgress';
 import { PlantOrderModal } from './PlantOrderModal';
+import { getOrderNextAction } from '../orders/model/getOrderNextAction';
 
 export const PlantPage = () => {
   const { orders: known, customers, facilities, drivers } = useApp();
@@ -261,8 +262,7 @@ export const PlantPage = () => {
                       <td className="px-5 py-5">
                         <PlantProgress compact order={order} />
                         <p className="mt-2 max-w-xs text-xs leading-relaxed text-slate-600">
-                          {order.nextAction ||
-                            'Abrir para revisar el próximo paso'}
+                          {order.nextAction || getOrderNextAction(order)}
                         </p>
                       </td>
                       <td className="px-5 py-5">

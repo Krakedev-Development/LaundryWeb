@@ -25,7 +25,8 @@ export function OrderActionCell({ order }: { order: Order }) {
         <button
           onClick={() => navigate(`/operations/orders/${order.id}`)}
           className="p-2 text-slate-500 hover:text-sky-800 hover:bg-sky-50 rounded-lg transition-colors cursor-pointer"
-          title="Ver detalle 360°"
+          title="Ver detalle"
+          aria-label={`Ver detalle de ${order.trackingNumber || order.id}`}
         >
           <Eye className="w-4 h-4" />
         </button>

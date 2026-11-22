@@ -26,6 +26,7 @@ import { ApiError } from '../../services/api/apiConfig';
 import { parseHandoffType } from '../../services/api/handoffsApi';
 import { isPlantStage, plantHref } from '../../services/operationsLinks';
 import { Tabs, TabPanel } from '../../shared/ui/Tabs';
+import { orderDisplayStage } from './model/orderDisplay';
 import { storageService } from '../../services/storage';
 import { MODE_LABELS } from '../../services/BusinessService';
 import { operationalStage } from '../../services/fulfillment';
@@ -298,7 +299,7 @@ export const OrderDetailPage: React.FC = () => {
         ]}
         badge={
           <div className="flex items-center gap-2 flex-wrap">
-            <StatusBadge status={operationalStage(order)} />
+            <StatusBadge status={orderDisplayStage(order)} />
             <PriorityBadge priority={order.priority} showIcon />
             <SLABadge risk={order.slaStatus} deadline={order.slaDeadline} />
           </div>

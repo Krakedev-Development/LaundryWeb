@@ -453,7 +453,7 @@ export function mapBackendOrderToOrder(
         {
           id: `TL-${raw.id.slice(0, 4)}`,
           status: raw.status as OrderStatus,
-          label: 'Orden sincronizada con backend',
+          label: 'Datos de la solicitud actualizados',
           timestamp: 'Reciente',
           userName: 'Sistema',
           userRole: 'ADMIN',
@@ -520,7 +520,8 @@ export function mapBackendOrderToOrder(
     zoneName: facility?.zone || existing?.zoneName || 'Guayaquil',
     priority,
     status: local.status,
-    previousStatus: existing?.previousStatus,
+    // Etapa en la que se retuvo (incidencia abierta del servidor); solo se usa para mostrar la fase.
+    previousStatus: (openIncident?.previousStatus as OrderStatus | undefined) ?? existing?.previousStatus,
     slaStatus,
     slaDeadline: existing?.slaDeadline || '24h',
     slaProgressPercent: existing?.slaProgressPercent ?? 20,

@@ -1,39 +1,10 @@
 import type { Order } from '../../types';
 import { operationalStage } from '../../services/fulfillment';
 
-export const PLANT_PHASES = [
-  'Recepción',
-  'Pesaje',
-  'Inspección',
-  'Precio y pago',
-  'Lavado',
-  'Calidad',
-  'Listo',
-] as const;
-export function plantPhase(order: Order) {
-  const stage = operationalStage(order);
-  if (
-    [
-      'READY',
-      'READY_FOR_DELIVERY',
-      'DELIVERY_SCHEDULED',
-      'DELIVERY_ASSIGNED',
-    ].includes(stage)
-  )
-    return 6;
-  if (stage === 'QUALITY_CONTROL') return 5;
-  if (stage === 'QUARANTINE') {
-    const previous: Record<string, number> = { AT_FACILITY: 0, WEIGHING: 1, INSPECTION: 2, PRICING_PENDING: 3, CUSTOMER_APPROVAL_PENDING: 3, IN_PROCESS: 4, QUALITY_CONTROL: 5 };
-    return previous[order.previousStatus ?? ''] ?? 0;
-  }
-  if (stage === 'INCIDENT') return 0;
-  if (stage === 'IN_PROCESS') return 4;
-  if (['PRICING_PENDING', 'CUSTOMER_APPROVAL_PENDING'].includes(stage))
-    return 3;
-  if (stage === 'INSPECTION') return 2;
-  if (stage === 'WEIGHING') return 1;
-  return 0;
-}
+import { AFTER_PLANT, BEFORE_PLANT, PLANT_PHASES, plantPhase } from './plantPhase';
+
+export { AFTER_PLANT, BEFORE_PLANT, PLANT_PHASES, plantPhase };
+
 export function isPlantOrder(order: Order) {
   const stage = operationalStage(order);
   if (
@@ -72,7 +43,13 @@ export function PlantProgress({
     order.status === 'INCIDENT';
   return (
     <div
-      aria-label={`Proceso: ${PLANT_PHASES[phase]}${held ? ', retenido' : ''}`}
+      aria-label={`Proceso: ${
+        phase === BEFORE_PLANT
+          ? 'aún no llega a planta'
+          : phase === AFTER_PLANT
+            ? 'completo'
+            : PLANT_PHASES[phase]
+      }${held ? ', retenido' : ''}`}
     >
       <ol className={`flex ${compact ? 'gap-1' : 'gap-2'}`}>
         {PLANT_PHASES.map((label, index) => {

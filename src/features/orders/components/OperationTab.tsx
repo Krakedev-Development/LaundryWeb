@@ -22,7 +22,7 @@ import {
 import type { Order } from '../../../types';
 import { operationalStage } from '../../../services/fulfillment';
 import { paymentMethodLabel, type BackendOrderDetail } from '../../../services/api/ordersApi';
-import { PlantProgress } from '../../plant/plantProgress';
+import { PlantProgress, plantPhase, AFTER_PLANT, BEFORE_PLANT } from '../../plant/plantProgress';
 import { FacilityReceptionPanel } from '../FacilityReceptionPanel';
 import type { HandoffType } from '../../../services/api/handoffsApi';
 import { DispatchCustodyPanel } from '../DispatchCustodyPanel';
@@ -58,6 +58,8 @@ export const OperationTab: React.FC<OperationTabProps> = ({
   // En planta, el proceso (pesaje, inspección, ajustes, precio, lavado, calidad) y la retención se
   // gestionan solo en Planta. Aquí se muestra la fase y los totales, con un enlace hasta allí.
   const inPlant = isPlantStage(stage);
+  const phase = plantPhase(order);
+  const showPlantPhases = phase !== BEFORE_PLANT && phase !== AFTER_PLANT;
   const manageInPlant = (
     <Link
       to={plantHref(order.id, 'proceso')}
@@ -100,7 +102,11 @@ export const OperationTab: React.FC<OperationTabProps> = ({
 
     case 'PICKUP_ASSIGNED':
       stageTitle = 'Chofer asignado para recogida';
-      stageDescription = `Conductor ${order.pickup.driverName || 'asignado'} programado para la recogida. ${byDriver}`;
+      stageDescription = `${
+        order.pickup.driverName
+          ? `${order.pickup.driverName} tiene asignada la recogida.`
+          : 'La recogida ya tiene chofer asignado.'
+      } ${byDriver}`;
       break;
 
     case 'HEADING_TO_PICKUP':
@@ -167,7 +173,11 @@ export const OperationTab: React.FC<OperationTabProps> = ({
 
     case 'DELIVERY_ASSIGNED':
       stageTitle = 'Chofer asignado para reparto';
-      stageDescription = `Conductor ${order.delivery.driverName || 'asignado'} asignado. La salida se registra validando su código en la sede.`;
+      stageDescription = `${
+        order.delivery.driverName
+          ? `${order.delivery.driverName} tiene asignada la entrega.`
+          : 'La entrega ya tiene chofer asignado.'
+      } La salida se registra validando su código en la sede.`;
       break;
 
     case 'OUT_FOR_DELIVERY':
@@ -184,7 +194,7 @@ export const OperationTab: React.FC<OperationTabProps> = ({
       stageTitle = 'Pedido entregado';
       stageDescription = hasActiveIncidents
         ? 'Prendas entregadas. Resuelve las incidencias abiertas antes de cerrar la solicitud.'
-        : 'Prendas entregadas. Ciérrala en el panel de cierre cuando no haya saldo pendiente.';
+        : 'Prendas entregadas al cliente. Falta cerrar la solicitud.';
       break;
 
     case 'CLOSED':
@@ -275,7 +285,9 @@ export const OperationTab: React.FC<OperationTabProps> = ({
               </span>
             </div>
 
-            {/* Sub-stages Progress Bar in Plant */}
+            {/* Fases de planta: solo mientras la ropa está (o quedó retenida) en planta. Antes de
+                llegar y después de salir, el progreso general ya lo muestra. */}
+            {showPlantPhases && (
             <div className="space-y-1.5 pt-1">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-400 block">
                 Fases del proceso en planta
@@ -287,6 +299,7 @@ export const OperationTab: React.FC<OperationTabProps> = ({
                   : 'Servicio por prenda: no requiere pesaje inicial, ingresa directo a inspección.'}
               </p>
             </div>
+            )}
 
             {/* Resumen de solo lectura mientras la solicitud está en planta. */}
             {inPlant && (
@@ -433,7 +446,13 @@ export const OperationTab: React.FC<OperationTabProps> = ({
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs">
                 <p className="font-bold text-slate-900">{latestEvent.label}</p>
                 <p className="text-[11px] text-slate-500 mt-0.5">
-                  Registrado por: <strong>{latestEvent.userName}</strong> ({latestEvent.userRole})
+                  {latestEvent.userName === 'Sistema' ? (
+                    'Registrado automáticamente'
+                  ) : (
+                    <>
+                      Registrado por: <strong>{latestEvent.userName}</strong>
+                    </>
+                  )}
                 </p>
                 {latestEvent.notes && (
                   <p className="text-xs text-slate-600 mt-1 italic">

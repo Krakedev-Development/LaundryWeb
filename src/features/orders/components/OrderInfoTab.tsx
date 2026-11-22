@@ -148,10 +148,13 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
               </span>
             </div>
 
-            <div>
-              <span className="text-slate-400 block text-[11px]">Identificador de cliente</span>
-              <span className="font-mono text-slate-500">{order.customerId}</span>
-            </div>
+            {/* Sin dato no se muestra la etiqueta vacía. */}
+            {order.customerId && (
+              <div>
+                <span className="text-slate-400 block text-[11px]">Identificador de cliente</span>
+                <span className="font-mono text-slate-500">{order.customerId}</span>
+              </div>
+            )}
           </div>
         </div>
       </section>

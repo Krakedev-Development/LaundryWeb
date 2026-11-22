@@ -184,7 +184,7 @@ export const DeliveriesPage: React.FC = () => {
     <div className="space-y-8 max-w-7xl mx-auto">
       <PageHeader
         title="Entregas"
-        subtitle="Seguimiento y asignación de last mile. La salida a ruta y la entrega se confirman con custodia, no desde esta lista."
+        subtitle="Seguimiento y asignación de las entregas a domicilio. La salida a ruta y la entrega se confirman con custodia, no desde esta lista."
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -423,7 +423,7 @@ export const DeliveriesPage: React.FC = () => {
                   onClick={() => openDetail(selected.id)}
                   className="text-xs text-sky-700 font-semibold hover:underline inline-flex items-center gap-1 cursor-pointer"
                 >
-                  <span>Detalle 360°</span>
+                  <span>Ver detalle</span>
                   <ArrowUpRight className="w-3.5 h-3.5" />
                 </button>
               </div>
@@ -545,7 +545,7 @@ export const DeliveriesPage: React.FC = () => {
 
               {selected.status === 'DELIVERED' && (
                 <p className="text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2">
-                  Entrega confirmada en el servidor. El cierre final (COMPLETED) se hace desde el
+                  Entrega confirmada en el servidor. El cierre de la solicitud se hace desde su
                   detalle si no hay saldo pendiente.
                 </p>
               )}

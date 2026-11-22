@@ -13,6 +13,12 @@ import {
 } from 'lucide-react';
 import type { Order } from '../../../types';
 import { operationalStage } from '../../../services/fulfillment';
+import {
+  deliveryNote,
+  isDeliveryCompleted as isDeliveryDone,
+  isPickupCompleted as isPickupDone,
+  pickupNote,
+} from '../model/orderDisplay';
 import { OrderRouteMap } from '../../../components/maps/OrderRouteMap';
 
 interface LogisticsTabProps {
@@ -22,28 +28,8 @@ interface LogisticsTabProps {
 export const LogisticsTab: React.FC<LogisticsTabProps> = ({ order }) => {
   const stage = operationalStage(order);
 
-  // Determine actual pickup status (Solving Finding H-03)
-  const isPickupCompleted =
-    Boolean(order.pickup.completedAt) ||
-    [
-      'PICKED_UP',
-      'HEADING_TO_FACILITY',
-      'ARRIVED_AT_FACILITY',
-      'AT_FACILITY',
-      'WEIGHING',
-      'INSPECTION',
-      'PRICING_PENDING',
-      'CUSTOMER_APPROVAL_PENDING',
-      'IN_PROCESS',
-      'QUALITY_CONTROL',
-      'READY_FOR_DELIVERY',
-      'DELIVERY_SCHEDULED',
-      'DELIVERY_ASSIGNED',
-      'OUT_FOR_DELIVERY',
-      'ARRIVED_FOR_DELIVERY',
-      'DELIVERED',
-      'CLOSED',
-    ].includes(stage);
+  // Mismas reglas que la lista de Solicitudes (model/orderDisplay).
+  const isPickupCompleted = isPickupDone(order);
 
   const isPickupInRoute = stage === 'HEADING_TO_PICKUP' || stage === 'ARRIVED_FOR_PICKUP';
   const isPickupAssigned = Boolean(order.pickup.driverId) || stage === 'PICKUP_ASSIGNED';
@@ -57,8 +43,7 @@ export const LogisticsTab: React.FC<LogisticsTabProps> = ({ order }) => {
         : 'Pendiente de asignación';
 
   // Determine actual delivery status (Solving Finding H-03)
-  const isDeliveryDelivered =
-    Boolean(order.delivery.completedAt) || stage === 'DELIVERED' || stage === 'CLOSED';
+  const isDeliveryDelivered = isDeliveryDone(order);
   const isDeliveryInRoute = stage === 'OUT_FOR_DELIVERY' || stage === 'ARRIVED_FOR_DELIVERY';
   const isDeliveryAssigned = Boolean(order.delivery.driverId) || stage === 'DELIVERY_ASSIGNED';
   const isDeliveryReady = ['READY_FOR_DELIVERY', 'DELIVERY_SCHEDULED'].includes(stage);
@@ -124,7 +109,7 @@ export const LogisticsTab: React.FC<LogisticsTabProps> = ({ order }) => {
               <span className="font-semibold text-slate-900 block mt-0.5">
                 {order.pickup.driverName
                   ? `${order.pickup.driverName} (${order.pickup.vehiclePlate || 'Vehículo asignado'})`
-                  : 'Sin asignar aún'}
+                  : pickupNote(order).text}
               </span>
             </div>
 
@@ -207,7 +192,7 @@ export const LogisticsTab: React.FC<LogisticsTabProps> = ({ order }) => {
               <span className="font-semibold text-slate-900 block mt-0.5">
                 {order.delivery.driverName
                   ? `${order.delivery.driverName} (${order.delivery.vehiclePlate || 'Vehículo asignado'})`
-                  : 'Pendiente de asignación de entrega'}
+                  : deliveryNote(order).text}
               </span>
             </div>
 

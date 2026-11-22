@@ -13,17 +13,17 @@ export function OrderQuickTabs({
             { key: 'ALL', label: 'Todas', count: tabCounts.ALL },
             {
               key: 'UNASSIGNED',
-              label: 'Sin Asignar',
+              label: 'Sin asignar',
               count: tabCounts.UNASSIGNED,
               alert: tabCounts.UNASSIGNED > 0,
             },
             {
               key: 'PICKUP_TODAY',
-              label: 'Recogida Hoy',
+              label: 'Recogida hoy',
               count: tabCounts.PICKUP_TODAY,
             },
-            { key: 'IN_PLANT', label: 'En Planta', count: tabCounts.IN_PLANT },
-            { key: 'DELIVERY', label: 'En Entrega', count: tabCounts.DELIVERY },
+            { key: 'IN_PLANT', label: 'En planta', count: tabCounts.IN_PLANT },
+            { key: 'DELIVERY', label: 'En entrega', count: tabCounts.DELIVERY },
             { key: 'CLOSED', label: 'Finalizadas', count: tabCounts.CLOSED },
           ] satisfies {
             key: QuickTab;
