@@ -73,7 +73,7 @@ test('MVP uses icons even when stored records contain legacy image URLs', async 
   await page.keyboard.press('Escape');
   await mockServerOrder(page, serverOrder('SOL-HOME-001'));
   await page.goto('/operations/orders/SOL-HOME-001');
-  await page.getByRole('button', { name: /^Actividad/ }).click();
+  await page.getByRole('tab', { name: /^Actividad/ }).click();
   await expect(page.getByText('Camisa con rotura')).toBeVisible();
   await expect(page.locator('main img:not(.leaflet-tile)')).toHaveCount(0);
   expect(photoRequests).toEqual([]);

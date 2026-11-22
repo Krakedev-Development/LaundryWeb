@@ -62,7 +62,7 @@ test('la agenda en Logística es de solo lectura: no hay reprogramación local',
   await mockOrder(page, 'CONFIRMED');
   await page.goto(`/operations/orders/${ORDER}`);
   await expect(page.getByRole('heading', { name: 'Recogida pendiente de asignación' })).toBeVisible();
-  await page.getByRole('button', { name: 'Logística', exact: true }).click();
+  await page.getByRole('tab', { name: 'Logística' }).click();
   const agenda = page.getByRole('region', { name: 'Agenda y horarios' });
   await expect(agenda).toBeVisible();
   await expect(agenda.getByText('La reprogramación por el personal aún no está disponible.')).toBeVisible();
@@ -145,8 +145,9 @@ test('con el servidor caído el detalle muestra el error con Reintentar y ningun
   await expect(alert).toContainText('No se pudo conectar con el servidor.');
   await expect(alert).toContainText('No se muestran datos guardados en este equipo');
   // Aunque la solicitud esté guardada en el equipo, no se ofrece ninguna acción sobre ella.
-  for (const name of ['Registrar incidencia', 'Acciones', 'Logística'])
+  for (const name of ['Registrar incidencia', 'Acciones'])
     await expect(page.getByRole('button', { name, exact: true })).toHaveCount(0);
+  await expect(page.getByRole('tablist', { name: 'Secciones de la solicitud' })).toHaveCount(0);
   await expect(page.getByRole('link', { name: 'Asignar en Despacho' })).toHaveCount(0);
 
   down = false;
@@ -239,4 +240,35 @@ test('tras confirmar la salida a reparto el detalle se actualiza con la respuest
   await expect(page.getByRole('heading', { name: 'En reparto a domicilio' })).toBeVisible();
   await expect(panel).toHaveCount(0);
   expect(gets).toBe(1);
+});
+
+// Paso 1b (UI): pestañas accesibles compartidas; no cambian qué muestra cada sección.
+test('las secciones del detalle son pestañas accesibles con teclado y no desbordan la página', async ({ page }) => {
+  await mockOrder(page, 'CONFIRMED');
+  await page.goto(`/operations/orders/${ORDER}`);
+  const tablist = page.getByRole('tablist', { name: 'Secciones de la solicitud' });
+  await expect(tablist.getByRole('tab')).toHaveCount(4);
+  const operation = tablist.getByRole('tab', { name: 'Operación' });
+  await expect(operation).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tabpanel', { name: 'Operación' })).toBeVisible();
+
+  await operation.focus();
+  await page.keyboard.press('ArrowRight');
+  const pedido = tablist.getByRole('tab', { name: /^Pedido/ });
+  await expect(pedido).toHaveAttribute('aria-selected', 'true');
+  await expect(pedido).toBeFocused();
+  await expect(page.getByRole('tabpanel', { name: /^Pedido/ })).toContainText('Forma de pago registrada');
+  await page.keyboard.press('End');
+  await expect(tablist.getByRole('tab', { name: /^Actividad/ })).toBeFocused();
+  await page.keyboard.press('Home');
+  await expect(operation).toHaveAttribute('aria-selected', 'true');
+
+  // Solo la pestaña activa entra en el orden de tabulación.
+  await expect(tablist.locator('[role="tab"][tabindex="0"]')).toHaveCount(1);
+
+  // En tablet y en una pantalla angosta la fila de pestañas no provoca scroll horizontal.
+  for (const width of [768, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+  }
 });

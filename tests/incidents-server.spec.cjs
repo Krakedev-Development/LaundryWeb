@@ -140,7 +140,7 @@ test('el detalle registra la incidencia en el servidor y puede retener la solici
   const calls = await mockIncidents(page, [], mode);
   await mockServerOrder(page, serverOrder(ORDER));
   await page.goto(`/operations/orders/${ORDER}`);
-  await page.getByRole('button', { name: /^Actividad/ }).click();
+  await page.getByRole('tab', { name: /^Actividad/ }).click();
   await page.getByRole('button', { name: '+ Registrar' }).click();
 
   const modal = page.getByRole('dialog', { name: 'Registrar incidencia operacional' });

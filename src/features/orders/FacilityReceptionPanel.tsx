@@ -12,14 +12,8 @@ import {
   verifyHandoff,
 } from '../../services/api/handoffsApi';
 import { CustodyCodeField } from '../custody/CustodyCodeField';
+import { btnPrimary, btnSecondary, field, fieldInvalid } from '../../shared/ui/controls';
 
-const field =
-  'mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm focus:outline-2 focus:outline-sky-700';
-const invalid = 'border-rose-400 bg-rose-50/40';
-const primary =
-  'inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-white hover:bg-primary-hover disabled:opacity-50';
-const secondary =
-  'inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-primary hover:bg-slate-50';
 
 const messageOf = (e: unknown) =>
   e instanceof Error ? e.message : 'No se pudo completar la operación. Intenta de nuevo.';
@@ -159,7 +153,7 @@ export function FacilityReceptionPanel({
             {server.message} Sin ese dato no se puede confirmar la recepción, porque una diferencia de
             prendas pasaría sin registrar.
           </p>
-          <button type="button" className={`${secondary} mt-2`} onClick={() => void load()}>
+          <button type="button" className={`${btnSecondary} mt-2`} onClick={() => void load()}>
             <RefreshCw className="h-4 w-4" aria-hidden />
             Reintentar
           </button>
@@ -185,7 +179,7 @@ export function FacilityReceptionPanel({
               inputMode="numeric"
               aria-invalid={!!errors.received}
               aria-describedby="reception-received-error"
-              className={`${field} ${errors.received ? invalid : ''}`}
+              className={`${field} ${errors.received ? fieldInvalid : ''}`}
               value={received}
               onChange={(e) => setReceived(e.target.value.replace(/\D/g, ''))}
             />
@@ -204,7 +198,7 @@ export function FacilityReceptionPanel({
               maxLength={300}
               aria-invalid={!!errors.notes}
               aria-describedby="reception-notes-error"
-              className={`${field} ${errors.notes ? invalid : ''}`}
+              className={`${field} ${errors.notes ? fieldInvalid : ''}`}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Obligatorio si el conteo no coincide"
@@ -217,7 +211,7 @@ export function FacilityReceptionPanel({
           )}
         </div>
         <div className="lg:col-span-3">
-          <button type="submit" className={primary} disabled={busy || server.status !== 'ready'}>
+          <button type="submit" className={btnPrimary} disabled={busy || server.status !== 'ready'}>
             {busy ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> : null}
             Confirmar recepción en planta
           </button>

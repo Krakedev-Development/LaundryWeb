@@ -18,13 +18,8 @@ import {
   todayInAgenda,
   type Slot,
 } from '../../services/api/slotsApi';
+import { btnDanger, btnPrimary, field } from '../../shared/ui/controls';
 
-const field =
-  'mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm focus:outline-2 focus:outline-sky-700';
-const primary =
-  'inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-white hover:bg-primary-hover disabled:opacity-50';
-const danger =
-  'inline-flex items-center justify-center gap-2 rounded-xl bg-rose-700 px-4 py-2.5 text-xs font-bold text-white hover:bg-rose-800 disabled:opacity-50';
 
 const messageOf = (e: unknown) =>
   e instanceof Error ? e.message : 'No se pudo completar la operación. Intenta de nuevo.';
@@ -94,7 +89,7 @@ export function FailedPickupPanel({
       <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-xs text-rose-800">
         <p className="font-semibold">No se pudo cargar la incidencia de la solicitud.</p>
         <p className="mt-1">{error}</p>
-        <button type="button" className={`${primary} mt-3`} onClick={() => void load()}>
+        <button type="button" className={`${btnPrimary} mt-3`} onClick={() => void load()}>
           Reintentar
         </button>
       </div>
@@ -197,7 +192,7 @@ export function FailedPickupPanel({
           )}
           <button
             type="button"
-            className={primary}
+            className={btnPrimary}
             disabled={!slots.length || busy !== null}
             onClick={() => void reschedule()}
           >
@@ -227,7 +222,7 @@ export function FailedPickupPanel({
           </p>
           <button
             type="button"
-            className={danger}
+            className={btnDanger}
             disabled={busy !== null}
             onClick={() => void cancel()}
           >

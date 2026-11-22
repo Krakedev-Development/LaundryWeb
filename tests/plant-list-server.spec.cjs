@@ -89,12 +89,12 @@ test('la lista de planta sale del servidor y retener registra una incidencia con
   await expect(modal).toContainText('Ana Ruiz');
 
   // El historial sale de los eventos, la custodia y las incidencias del servidor.
-  await modal.getByRole('button', { name: 'Historial y bitácora' }).click();
+  await modal.getByRole('tab', { name: 'Historial y bitácora' }).click();
   const history = modal.getByRole('region', { name: 'Historial completo y bitácora' });
   await expect(history).toContainText('Recibido en planta');
   await expect(history).toContainText('Recibidas: 5; declaradas: 5');
 
-  await modal.getByRole('button', { name: 'Gestionar proceso' }).click();
+  await modal.getByRole('tab', { name: 'Gestionar proceso' }).click();
   await expect(modal.getByRole('region', { name: 'Proceso en planta' })).toContainText('En lavado y cuidado');
   await expect(modal.getByRole('button', { name: 'Pasar a control de calidad' })).toBeVisible();
   await modal.getByRole('button', { name: 'Retener pedido' }).click();
@@ -124,7 +124,7 @@ test('un pedido retenido indica dónde resolverlo y no ofrece retenerlo otra vez
   await page.goto('/operations/plant');
   await page.locator('table').getByRole('button', { name: 'Abrir pedido SOL-2002' }).click();
   const modal = page.getByRole('dialog', { name: /^Pedido SOL-2002/ });
-  await modal.getByRole('button', { name: 'Gestionar proceso' }).click();
+  await modal.getByRole('tab', { name: 'Gestionar proceso' }).click();
   const panel = modal.getByRole('region', { name: 'Proceso en planta' });
   await expect(panel).toContainText('La solicitud está retenida por una incidencia.');
   await expect(panel.getByRole('link', { name: 'Resolver en Incidencias' })).toHaveAttribute(
@@ -150,7 +150,7 @@ test('si el servidor falla, la planta muestra el error y no usa datos ni botones
   mode.detail = 'fail';
   await page.locator('table').getByRole('button', { name: 'Abrir pedido SOL-2001' }).click();
   const modal = page.getByRole('dialog', { name: /^Pedido SOL-2001/ });
-  await modal.getByRole('button', { name: 'Gestionar proceso' }).click();
+  await modal.getByRole('tab', { name: 'Gestionar proceso' }).click();
   const error = modal.getByRole('alert').filter({ hasText: 'No se pudo cargar el proceso en planta.' });
   await expect(error).toBeVisible();
   await expect(error.getByRole('button', { name: 'Reintentar' })).toBeVisible();

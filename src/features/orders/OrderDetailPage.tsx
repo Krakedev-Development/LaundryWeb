@@ -25,6 +25,7 @@ import {
 import { ApiError } from '../../services/api/apiConfig';
 import { parseHandoffType } from '../../services/api/handoffsApi';
 import { isPlantStage, plantHref } from '../../services/operationsLinks';
+import { Tabs, TabPanel } from '../../shared/ui/Tabs';
 import { storageService } from '../../services/storage';
 import { MODE_LABELS } from '../../services/BusinessService';
 import { operationalStage } from '../../services/fulfillment';
@@ -367,72 +368,39 @@ export const OrderDetailPage: React.FC = () => {
       {/* 2. Global Progress Stepper */}
       <GlobalProgressStepper order={order} />
 
-      {/* 3. Four Functional Tabs Navigation */}
-      <div className="border-b border-slate-200">
-        <nav className="flex space-x-2 sm:space-x-4" aria-label="Secciones de la solicitud">
-          {/* Tab 1: Operación */}
-          <button
-            onClick={() => setActiveTab('operation')}
-            className={`py-3 px-3.5 text-xs font-bold border-b-2 transition-all flex items-center gap-2 cursor-pointer ${
-              activeTab === 'operation'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <Sparkles className="w-4 h-4" />
-            <span>Operación</span>
-          </button>
-
-          {/* Tab 2: Pedido */}
-          <button
-            onClick={() => setActiveTab('order')}
-            className={`py-3 px-3.5 text-xs font-bold border-b-2 transition-all flex items-center gap-2 cursor-pointer ${
-              activeTab === 'order'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <Receipt className="w-4 h-4" />
-            <span>Pedido</span>
-            <span className="text-[10px] font-semibold bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded-full">
-              {order.itemCount}
-            </span>
-          </button>
-
-          {/* Tab 3: Logística */}
-          <button
-            onClick={() => setActiveTab('logistics')}
-            className={`py-3 px-3.5 text-xs font-bold border-b-2 transition-all flex items-center gap-2 cursor-pointer ${
-              activeTab === 'logistics'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <Truck className="w-4 h-4" />
-            <span>Logística</span>
-          </button>
-
-          {/* Tab 4: Actividad */}
-          <button
-            onClick={() => setActiveTab('activity')}
-            className={`py-3 px-3.5 text-xs font-bold border-b-2 transition-all flex items-center gap-2 cursor-pointer ${
-              activeTab === 'activity'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <Clock className="w-4 h-4" />
-            <span>Actividad</span>
-            {orderIncidents.length > 0 && (
-              <span className="text-[10px] font-bold bg-rose-100 text-rose-700 px-1.5 py-0.2 rounded-full">
-                {orderIncidents.length}
-              </span>
-            )}
-          </button>
-        </nav>
-      </div>
+      {/* 3. Secciones de la solicitud (pestañas accesibles compartidas) */}
+      <Tabs<typeof activeTab>
+        label="Secciones de la solicitud"
+        idPrefix="detail"
+        value={activeTab}
+        onChange={setActiveTab}
+        items={[
+          { id: 'operation', label: 'Operación', icon: Sparkles },
+          {
+            id: 'order',
+            label: 'Pedido',
+            icon: Receipt,
+            badge: order.itemCount,
+            badgeLabel: `${order.itemCount} prendas`,
+          },
+          { id: 'logistics', label: 'Logística', icon: Truck },
+          {
+            id: 'activity',
+            label: 'Actividad',
+            icon: Clock,
+            ...(orderIncidents.length > 0
+              ? {
+                  badge: orderIncidents.length,
+                  badgeTone: 'alert' as const,
+                  badgeLabel: `${orderIncidents.length} incidencias`,
+                }
+              : {}),
+          },
+        ]}
+      />
 
       {/* 4. Tab Content Views */}
+      <TabPanel idPrefix="detail" id={activeTab}>
       {activeTab === 'operation' && (
         <OperationTab
           order={order}
@@ -469,6 +437,7 @@ export const OrderDetailPage: React.FC = () => {
           onOpenIncidentModal={() => setIsIncidentModalOpen(true)}
         />
       )}
+      </TabPanel>
 
       {/* 5. Modals & Drawers */}
       {/* Incident Modal */}

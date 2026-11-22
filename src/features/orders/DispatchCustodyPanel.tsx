@@ -10,12 +10,8 @@ import {
 } from '../../services/api/handoffsApi';
 import { completeOrder, type PlantOrder } from '../../services/api/plantApi';
 import { CustodyCodeField } from '../custody/CustodyCodeField';
+import { btnPrimary, field, fieldInvalid } from '../../shared/ui/controls';
 
-const field =
-  'mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm focus:outline-2 focus:outline-sky-700';
-const invalid = 'border-rose-400 bg-rose-50/40';
-const primary =
-  'inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-white hover:bg-primary-hover disabled:opacity-50';
 
 const messageOf = (e: unknown) =>
   e instanceof Error ? e.message : 'No se pudo completar la operación. Intenta de nuevo.';
@@ -104,7 +100,7 @@ export function DispatchCustodyPanel({
             <p className="text-xs text-slate-700">La ropa se entregó y no hay saldo pendiente.</p>
             <button
               type="button"
-              className={primary}
+              className={btnPrimary}
               disabled={busy}
               onClick={async () => {
                 setBusy(true);
@@ -192,7 +188,7 @@ export function DispatchCustodyPanel({
                 <input
                   maxLength={120}
                   aria-invalid={!!errors.name}
-                  className={`${field} ${errors.name ? invalid : ''}`}
+                  className={`${field} ${errors.name ? fieldInvalid : ''}`}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                 />
@@ -205,7 +201,7 @@ export function DispatchCustodyPanel({
                 <input
                   maxLength={80}
                   aria-invalid={!!errors.relationship}
-                  className={`${field} ${errors.relationship ? invalid : ''}`}
+                  className={`${field} ${errors.relationship ? fieldInvalid : ''}`}
                   value={relationship}
                   onChange={(e) => setRelationship(e.target.value)}
                   placeholder="Ej: Titular, familiar"
@@ -220,7 +216,7 @@ export function DispatchCustodyPanel({
           <textarea rows={2} maxLength={300} className={field} value={notes} onChange={(e) => setNotes(e.target.value)} />
         </label>
         <div className="lg:col-span-3">
-          <button type="submit" className={primary} disabled={busy}>
+          <button type="submit" className={btnPrimary} disabled={busy}>
             {busy ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> : null}
             {step.button}
           </button>

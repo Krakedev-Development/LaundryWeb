@@ -15,6 +15,7 @@ import { getFacilities, type FacilityResponse } from '../../services/api/geoApi'
 import { ApiError } from '../../services/api/apiConfig';
 import { Modal } from '../../shared/ui/Modal';
 import { useQrScanner } from '../custody/useQrScanner';
+import { btnPrimary, btnSecondary, field } from '../../shared/ui/controls';
 
 /*
  * Puerta de entrada del mostrador. La validación de los traspasos (código, prendas, quién retira)
@@ -22,12 +23,6 @@ import { useQrScanner } from '../custody/useQrScanner';
  * para abrir la solicitud correcta, o se elige de la cola cuando solo se tiene el código de 6 dígitos.
  */
 
-const button =
-  'sidebar-focus inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-primary-hover disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:cursor-not-allowed cursor-pointer';
-const secondary =
-  'sidebar-focus inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50 cursor-pointer';
-const field =
-  'mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-normal text-slate-800 outline-none transition-colors placeholder:text-slate-400 focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/10';
 
 type QueueKey = 'HEADING_TO_FACILITY' | 'DELIVERY_ASSIGNED' | 'READY_FOR_PICKUP';
 
@@ -210,11 +205,11 @@ export function HandoffsPage() {
               }}
             />
           </label>
-          <button type="submit" className={button}>
+          <button type="submit" className={btnPrimary}>
             <ArrowUpRight className="size-4" aria-hidden="true" />
             Continuar
           </button>
-          <button type="button" className={secondary} onClick={camera.toggle}>
+          <button type="button" className={btnSecondary} onClick={camera.toggle}>
             <ScanLine className="size-4" aria-hidden="true" />
             {camera.active ? 'Cerrar cámara' : 'Escanear con cámara'}
           </button>
@@ -271,7 +266,7 @@ export function HandoffsPage() {
             ))}
           </select>
         </label>
-        <button type="button" className={secondary} onClick={() => void load()}>
+        <button type="button" className={btnSecondary} onClick={() => void load()}>
           <RefreshCw className="size-4" aria-hidden="true" />
           Actualizar
         </button>
@@ -286,7 +281,7 @@ export function HandoffsPage() {
         <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
           <p className="font-semibold">No se pudieron cargar las solicitudes.</p>
           <p className="mt-1">{loadError}</p>
-          <button type="button" className={`${button} mt-3`} onClick={() => void load()}>
+          <button type="button" className={`${btnPrimary} mt-3`} onClick={() => void load()}>
             Reintentar
           </button>
         </div>
@@ -328,7 +323,7 @@ export function HandoffsPage() {
                       </div>
                       <button
                         type="button"
-                        className={secondary}
+                        className={btnSecondary}
                         aria-label={`Validar SOL-${String(r.number).padStart(4, '0')}`}
                         onClick={() =>
                           pendingCode ? setConfirming({ row: r, queue: q }) : openOrder(r.id, '', q.type)
@@ -363,12 +358,12 @@ export function HandoffsPage() {
               quedar bloqueado. Verifica la solicitud con quien entrega antes de seguir.
             </p>
             <div className="flex flex-wrap justify-end gap-2">
-              <button type="button" className={secondary} onClick={() => setConfirming(null)}>
+              <button type="button" className={btnSecondary} onClick={() => setConfirming(null)}>
                 Cancelar
               </button>
               <button
                 type="button"
-                className={button}
+                className={btnPrimary}
                 onClick={() => {
                   const { row, queue } = confirming;
                   const code = pendingCode;

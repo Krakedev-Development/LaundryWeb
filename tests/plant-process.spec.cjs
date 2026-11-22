@@ -59,7 +59,7 @@ const panelOf = async (page) => {
   await page.goto('/operations/plant', { waitUntil: 'domcontentloaded' });
   await page.locator('table').getByRole('button', { name: 'Abrir pedido SOL-1001' }).click();
   const modal = page.getByRole('dialog', { name: /^Pedido SOL-1001/ });
-  await modal.getByRole('button', { name: 'Gestionar proceso' }).click();
+  await modal.getByRole('tab', { name: 'Gestionar proceso' }).click();
   return modal.getByRole('region', { name: 'Proceso en planta' });
 };
 

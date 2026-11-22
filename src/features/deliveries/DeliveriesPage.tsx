@@ -30,6 +30,7 @@ import {
 } from '../../services/api/deliveriesApi';
 import { useApp } from '../../context/AppContext';
 import { storageService } from '../../services/storage';
+import { btnPrimary, btnSecondarySm } from '../../shared/ui/controls';
 
 const STATUS_STYLE: Record<DeliveryServerStatus, string> = {
   READY_FOR_DELIVERY: 'bg-sky-50 text-sky-800 border-sky-200',
@@ -39,10 +40,6 @@ const STATUS_STYLE: Record<DeliveryServerStatus, string> = {
   DELIVERED: 'bg-emerald-50 text-emerald-800 border-emerald-200',
 };
 
-const button =
-  'sidebar-focus inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-primary-hover disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:cursor-not-allowed cursor-pointer';
-const secondary =
-  'sidebar-focus inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50 cursor-pointer';
 
 function StatusPill({ status }: { status: DeliveryServerStatus }) {
   return (
@@ -233,7 +230,7 @@ export const DeliveriesPage: React.FC = () => {
               Ver la solicitud
             </button>
           </p>
-          <button type="button" className={secondary} onClick={() => setNotListed('')}>
+          <button type="button" className={btnSecondarySm} onClick={() => setNotListed('')}>
             Entendido
           </button>
         </div>
@@ -246,7 +243,7 @@ export const DeliveriesPage: React.FC = () => {
         >
           <p className="font-semibold">No se pudieron cargar las entregas.</p>
           <p className="mt-1">{loadError}</p>
-          <button type="button" className={`${button} mt-3`} onClick={() => void load()}>
+          <button type="button" className={`${btnPrimary} mt-3`} onClick={() => void load()}>
             <RefreshCw className="size-4" aria-hidden="true" />
             Reintentar
           </button>
@@ -293,7 +290,7 @@ export const DeliveriesPage: React.FC = () => {
                   </option>
                 ))}
               </select>
-              <button type="button" className={secondary} onClick={() => void load()}>
+              <button type="button" className={btnSecondarySm} onClick={() => void load()}>
                 <RefreshCw className="size-3.5" aria-hidden="true" />
                 Actualizar
               </button>
@@ -371,7 +368,7 @@ export const DeliveriesPage: React.FC = () => {
                             {ord.status === 'DELIVERY_ASSIGNED' ? (
                               <button
                                 type="button"
-                                className={secondary}
+                                className={btnSecondarySm}
                                 onClick={openHandoffs}
                               >
                                 Validar salida
@@ -380,7 +377,7 @@ export const DeliveriesPage: React.FC = () => {
                               ord.status === 'ARRIVED_FOR_DELIVERY' ? (
                               <button
                                 type="button"
-                                className={secondary}
+                                className={btnSecondarySm}
                                 onClick={() => openDetail(ord.id)}
                               >
                                 Ver en detalle
@@ -388,7 +385,7 @@ export const DeliveriesPage: React.FC = () => {
                             ) : (
                               <button
                                 type="button"
-                                className={secondary}
+                                className={btnSecondarySm}
                                 onClick={() => openDetail(ord.id)}
                               >
                                 Abrir
@@ -510,7 +507,7 @@ export const DeliveriesPage: React.FC = () => {
                       {assignError}
                     </p>
                   )}
-                  <button type="submit" className={`${button} w-full`} disabled={!canAssign}>
+                  <button type="submit" className={`${btnPrimary} w-full`} disabled={!canAssign}>
                     <Send className="w-3.5 h-3.5" />
                     {assigning ? 'Asignando…' : 'Asignar chofer en servidor'}
                   </button>
@@ -524,7 +521,7 @@ export const DeliveriesPage: React.FC = () => {
                     La sede valida el código del chofer (traspaso FACILITY_TO_DRIVER) en Recepción
                     y retiros o en el detalle. No se marca “en ruta” solo en el navegador.
                   </p>
-                  <button type="button" className={button} onClick={openHandoffs}>
+                  <button type="button" className={btnPrimary} onClick={openHandoffs}>
                     Ir a recepción y retiros
                   </button>
                 </div>
@@ -538,7 +535,7 @@ export const DeliveriesPage: React.FC = () => {
                     El chofer confirma con el código del cliente en su app. Esta pantalla no puede
                     marcar “Entregada” por su cuenta.
                   </p>
-                  <button type="button" className={secondary} onClick={() => openDetail(selected.id)}>
+                  <button type="button" className={btnSecondarySm} onClick={() => openDetail(selected.id)}>
                     Abrir detalle
                   </button>
                 </div>

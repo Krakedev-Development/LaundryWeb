@@ -15,6 +15,9 @@ import {
 import { PlantProcessPanel } from "./PlantProcessPanel";
 import { OrderHistory, displayDate } from "./OrderHistory";
 import { PlantProgress } from "./plantProgress";
+import { Tabs, TabPanel } from "../../shared/ui/Tabs";
+
+type PlantTab = "summary" | "process" | "history";
 
 // Etapas de planta en las que se puede retener la solicitud para revisión.
 const HOLDABLE = [
@@ -38,7 +41,7 @@ export function PlantOrderModal({
   onChanged?(): void;
 }) {
   const { incidents, refresh: refreshIncidents } = useServerIncidents();
-  const [tab, setTab] = useState("summary");
+  const [tab, setTab] = useState<PlantTab>("summary");
   const [holding, setHolding] = useState(false);
   const stage = operationalStage(order);
   const orderIncidents = incidents.filter((i) => i.orderId === order.id);
@@ -68,28 +71,19 @@ export function PlantOrderModal({
           </div>
         </div>
       </div>
-      <div
-        className="flex gap-1 overflow-x-auto border-b border-slate-200 px-4"
-        aria-label="Secciones del pedido"
-      >
-        {[
-          { id: "summary", label: "Resumen y prendas", Icon: Package },
-          { id: "process", label: "Gestionar proceso", Icon: Workflow },
-          { id: "history", label: "Historial y bitácora", Icon: History },
-        ].map(({ id, label, Icon }) => (
-          <button
-            key={id}
-            type="button"
-            aria-pressed={tab === id}
-            onClick={() => setTab(id)}
-            className={`inline-flex shrink-0 items-center gap-2 border-b-2 px-3 py-4 text-sm font-semibold ${tab === id ? "border-primary text-primary" : "border-transparent text-slate-600 hover:text-primary"}`}
-          >
-            <Icon size={16} />
-            {label}
-          </button>
-        ))}
-      </div>
-      <div className="p-5 sm:p-6">
+      <Tabs<PlantTab>
+        label="Secciones del pedido"
+        idPrefix="plant-order"
+        className="px-4"
+        value={tab}
+        onChange={setTab}
+        items={[
+          { id: "summary", label: "Resumen y prendas", icon: Package },
+          { id: "process", label: "Gestionar proceso", icon: Workflow },
+          { id: "history", label: "Historial y bitácora", icon: History },
+        ]}
+      />
+      <TabPanel idPrefix="plant-order" id={tab} className="p-5 sm:p-6">
         {tab === "summary" && (
           <div className="space-y-6">
             <dl className="grid gap-x-8 gap-y-5 text-sm sm:grid-cols-2">
@@ -230,7 +224,7 @@ export function PlantOrderModal({
         {tab === "history" && (
           <OrderHistory orderId={order.id} customerName={order.customerName} />
         )}
-      </div>
+      </TabPanel>
       {holding && (
         <IncidentModal
           order={order}

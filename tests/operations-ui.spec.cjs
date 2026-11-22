@@ -19,7 +19,7 @@ test('la recogida se asigna solo en Despacho y las pantallas de operación funci
   const link = page.getByRole('link', { name: 'Asignar en Despacho' }).first();
   await expect(link).toHaveAttribute('href', '/operations/dispatch?pedido=SOL-HOME-001');
   await expect(page.getByRole('button', { name: 'Asignar chofer de recogida', exact: true })).toHaveCount(0);
-  await page.getByRole('button', { name: 'Logística', exact: true }).click();
+  await page.getByRole('tab', { name: 'Logística' }).click();
   await expect(page.getByRole('link', { name: 'Asignar en Despacho' })).toHaveAttribute(
     'href',
     '/operations/dispatch?pedido=SOL-HOME-001',
