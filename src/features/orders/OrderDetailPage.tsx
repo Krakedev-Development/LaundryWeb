@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Link, useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Sparkles,
   Receipt,
@@ -15,7 +15,6 @@ import { useApp } from '../../context/AppContext';
 import { PageHeader } from '../../components/common/PageHeader';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { PriorityBadge, SLABadge } from '../../components/common/PriorityBadge';
-import { AssignDriverModal } from '../../components/common/AssignDriverModal';
 import { Order } from '../../types';
 import {
   confirmOrderPayment,
@@ -24,6 +23,12 @@ import {
   type BackendOrderDetail,
 } from '../../services/api/ordersApi';
 import { ApiError } from '../../services/api/apiConfig';
+import { parseHandoffType } from '../../services/api/handoffsApi';
+import { isPlantStage, plantHref } from '../../services/operationsLinks';
+import { Tabs, TabPanel } from '../../shared/ui/Tabs';
+import { orderDisplayStage } from './model/orderDisplay';
+import { useDismissable } from '../../shared/ui/useDismissable';
+import { focusRing } from '../../shared/ui/controls';
 import { storageService } from '../../services/storage';
 import { MODE_LABELS } from '../../services/BusinessService';
 import { operationalStage } from '../../services/fulfillment';
@@ -42,9 +47,25 @@ import {
 
 export const OrderDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  // Código o QR leído en "Recepción y retiros": el panel de la etapa lo trae ya cargado.
-  const [searchParams] = useSearchParams();
-  const custodyCode = searchParams.get('custodia') ?? '';
+  // Código o QR leído en "Recepción y retiros" (`?custodia=`) y traspaso de la columna elegida
+  // (`?traspaso=`): el panel de la etapa los trae cargados. Se guardan en memoria y se quitan de
+  // la URL de inmediato, para que el código no quede en el historial ni en un enlace compartido.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [custody, setCustody] = useState(() => ({
+    code: searchParams.get('custodia') ?? '',
+    type: parseHandoffType(searchParams.get('traspaso')),
+  }));
+  useEffect(() => {
+    if (!searchParams.has('custodia') && !searchParams.has('traspaso')) return;
+    setCustody({
+      code: searchParams.get('custodia') ?? '',
+      type: parseHandoffType(searchParams.get('traspaso')),
+    });
+    const next = new URLSearchParams(searchParams);
+    next.delete('custodia');
+    next.delete('traspaso');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
   const {
     orders,
     customers,
@@ -59,27 +80,40 @@ export const OrderDetailPage: React.FC = () => {
   }, [id, refreshIncidents]);
   const navigate = useNavigate();
 
+  // El detalle solo se muestra con datos del servidor (contrato 4). Sin respuesta no se usa la
+  // copia guardada en este equipo: actuar sobre ella sería actuar sobre datos desactualizados.
   const [liveOrder, setLiveOrder] = useState<Order | null>(null);
-  const [loading, setLoading] = useState(false);
+  // Respuesta del servidor tal cual: los paneles de custodia la reciben por props en vez de volver
+  // a pedir la misma solicitud (T-10).
+  const [serverOrder, setServerOrder] = useState<BackendOrderDetail | null>(null);
+  const [load, setLoad] = useState<
+    { status: 'loading' } | { status: 'ready' } | { status: 'notFound' } | { status: 'error'; message: string }
+  >({ status: 'loading' });
+  const [attempt, setAttempt] = useState(0);
   const [confirmingPayment, setConfirmingPayment] = useState(false);
   const [activeTab, setActiveTab] = useState<'operation' | 'order' | 'logistics' | 'activity'>(
     'operation',
   );
   const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false);
+  const actionsMenu = useRef<HTMLDivElement>(null);
+  const actionsTrigger = useRef<HTMLButtonElement>(null);
+  const closeActions = useCallback(() => setIsActionsMenuOpen(false), []);
+  useDismissable(isActionsMenuOpen, closeActions, actionsMenu, actionsTrigger);
 
   // Modals state
-  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
-  const [assignType, setAssignType] = useState<'pickup' | 'delivery'>('pickup');
   const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false);
   const [isQuarantineModalOpen, setIsQuarantineModalOpen] = useState(false);
 
+  // La copia local solo completa datos que el servidor no envía (p. ej. nombres); no se muestra sola.
   const contextOrder = orders.find((o) => o.id === id || o.trackingNumber === id);
-  const order = liveOrder || contextOrder;
+  const order = liveOrder;
 
   useEffect(() => {
     if (!id) return;
     let active = true;
-    setLoading(true);
+    setLiveOrder(null);
+    setServerOrder(null);
+    setLoad({ status: 'loading' });
     void (async () => {
       try {
         const raw = await getOrder(id);
@@ -92,30 +126,75 @@ export const OrderDetailPage: React.FC = () => {
           drivers,
         );
         setLiveOrder(mapped);
+        setServerOrder(raw);
+        setLoad({ status: 'ready' });
         const next = orders.map((o) => (o.id === mapped.id ? mapped : o));
         if (!next.some((o) => o.id === mapped.id)) next.push(mapped);
         storageService.saveOrders(next);
-      } catch {
-        // Fallback to contextOrder if offline or mock id
-      } finally {
-        if (active) setLoading(false);
+      } catch (e) {
+        if (!active) return;
+        if (e instanceof ApiError && e.status === 404) setLoad({ status: 'notFound' });
+        else
+          setLoad({
+            status: 'error',
+            message:
+              e instanceof ApiError && e.status === 0
+                ? 'No se pudo conectar con el servidor.'
+                : e instanceof Error
+                  ? e.message
+                  : 'Error desconocido.',
+          });
       }
     })();
     return () => {
       active = false;
     };
-  }, [id]);
+  }, [id, attempt]);
 
-  if (loading && !order) {
+  if (load.status === 'loading') {
     return (
-      <div className="flex flex-col items-center justify-center p-16 text-slate-500">
-        <LoaderCircle className="w-8 h-8 animate-spin text-[#0F4C81] mb-3" />
+      <div role="status" className="flex flex-col items-center justify-center p-16 text-slate-500">
+        <LoaderCircle className="w-8 h-8 animate-spin text-primary mb-3" />
         <p className="text-xs font-semibold">Cargando detalles de la solicitud...</p>
       </div>
     );
   }
 
-  if (!order) {
+  if (load.status === 'error') {
+    return (
+      <div
+        role="alert"
+        className="p-8 bg-white rounded-3xl border border-rose-200 shadow-xs max-w-lg mx-auto my-12 space-y-3"
+      >
+        <h2 className="text-base font-bold text-slate-900">
+          No se pudo cargar la solicitud desde el servidor
+        </h2>
+        <p className="text-xs text-rose-800">{load.message}</p>
+        <p className="text-xs text-slate-600">
+          No se muestran datos guardados en este equipo, para no actuar sobre información
+          desactualizada.
+        </p>
+        <div className="flex flex-wrap gap-2 pt-1">
+          <button
+            type="button"
+            onClick={() => setAttempt((n) => n + 1)}
+            className="px-5 py-2.5 text-xs font-semibold text-white bg-primary hover:bg-primary-hover rounded-xl transition-colors cursor-pointer"
+          >
+            Reintentar
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/operations/orders')}
+            className="px-5 py-2.5 text-xs font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl transition-colors cursor-pointer"
+          >
+            Volver a Solicitudes
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (load.status === 'notFound' || !order) {
     return (
       <div className="p-12 text-center bg-white rounded-3xl border border-slate-200/80 shadow-xs max-w-md mx-auto my-12">
         <h2 className="text-base font-bold text-slate-900">Solicitud no encontrada</h2>
@@ -124,7 +203,7 @@ export const OrderDetailPage: React.FC = () => {
         </p>
         <button
           onClick={() => navigate('/operations/orders')}
-          className="mt-5 px-5 py-2.5 text-xs font-semibold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-xl transition-colors cursor-pointer"
+          className="mt-5 px-5 py-2.5 text-xs font-semibold text-white bg-primary hover:bg-primary-hover rounded-xl transition-colors cursor-pointer"
         >
           Volver a Solicitudes
         </button>
@@ -142,11 +221,17 @@ export const OrderDetailPage: React.FC = () => {
       const raw = updated ?? (await getOrder(order.id));
       const mapped = mapBackendOrderToOrder(raw, order, customers, facilities, drivers);
       setLiveOrder(mapped);
+      setServerOrder(raw);
       const next = orders.map((o) => (o.id === mapped.id ? mapped : o));
       if (!next.some((o) => o.id === mapped.id)) next.push(mapped);
       storageService.saveOrders(next);
-    } catch {
-      // Offline fallback
+    } catch (e) {
+      // El cambio ya lo aceptó el servidor (o no hubo cambio); solo falló volver a consultarlo.
+      showToast({
+        type: 'error',
+        title: 'No se pudo actualizar la solicitud',
+        message: `${e instanceof Error ? e.message : 'Error desconocido.'} Recarga la página para ver su estado actual.`,
+      });
     }
   };
 
@@ -166,6 +251,7 @@ export const OrderDetailPage: React.FC = () => {
         drivers,
       );
       setLiveOrder(mapped);
+      setServerOrder(updated);
       const next = orders.map((o) => (o.id === mapped.id ? mapped : o));
       if (!next.some((o) => o.id === mapped.id)) next.push(mapped);
       storageService.saveOrders(next);
@@ -191,10 +277,8 @@ export const OrderDetailPage: React.FC = () => {
     }
   };
 
-  const handleOpenAssign = (type: 'pickup' | 'delivery') => {
-    setAssignType(type);
-    setIsAssignModalOpen(true);
-  };
+  // En planta, el proceso y la retención se gestionan solo en Planta (T-07).
+  const inPlant = isPlantStage(operationalStage(order));
 
   const handleCopyIdentifier = () => {
     navigator.clipboard.writeText(order.trackingNumber || order.id);
@@ -221,7 +305,7 @@ export const OrderDetailPage: React.FC = () => {
         ]}
         badge={
           <div className="flex items-center gap-2 flex-wrap">
-            <StatusBadge status={operationalStage(order)} />
+            <StatusBadge status={orderDisplayStage(order)} />
             <PriorityBadge priority={order.priority} showIcon />
             <SLABadge risk={order.slaStatus} deadline={order.slaDeadline} />
           </div>
@@ -238,36 +322,57 @@ export const OrderDetailPage: React.FC = () => {
             </button>
 
             {/* Actions Menu Dropdown */}
-            <div className="relative">
+            <div className="relative" ref={actionsMenu}>
               <button
+                ref={actionsTrigger}
+                type="button"
+                aria-expanded={isActionsMenuOpen}
+                aria-controls="detail-actions"
                 onClick={() => setIsActionsMenuOpen(!isActionsMenuOpen)}
-                className="px-3 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-xl transition-colors flex items-center gap-1 cursor-pointer"
+                className={`px-3 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-xl transition-colors flex items-center gap-1 cursor-pointer ${focusRing}`}
                 title="Más opciones operacionales y administrativas"
               >
                 <span>Acciones</span>
-                <MoreVertical className="w-3.5 h-3.5" />
+                <MoreVertical className="w-3.5 h-3.5" aria-hidden />
               </button>
 
               {isActionsMenuOpen && (
-                <div className="absolute right-0 mt-1 w-52 bg-white rounded-2xl shadow-xl border border-slate-200 py-1.5 z-40 text-xs text-slate-700 animate-in fade-in">
+                <div
+                  id="detail-actions"
+                  role="group"
+                  aria-label="Acciones de la solicitud"
+                  className="absolute right-0 mt-1 w-52 bg-white rounded-2xl shadow-xl border border-slate-200 py-1.5 z-40 text-xs text-slate-700"
+                >
                   <button
                     onClick={handleCopyIdentifier}
                     className="w-full text-left px-3.5 py-2 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
                   >
-                    <Copy className="w-3.5 h-3.5 text-slate-400" />
+                    <Copy className="w-3.5 h-3.5 text-slate-500" />
                     <span>Copiar identificador</span>
                   </button>
 
-                  <button
-                    onClick={() => {
-                      setIsQuarantineModalOpen(true);
-                      setIsActionsMenuOpen(false);
-                    }}
-                    className="w-full text-left px-3.5 py-2 hover:bg-slate-50 flex items-center gap-2 cursor-pointer text-amber-700"
-                  >
-                    <AlertTriangle className="w-3.5 h-3.5" />
-                    <span>Retener para revisión técnica</span>
-                  </button>
+                  {/* En planta la retención se hace en Planta (decisión P-1): aquí solo se navega. */}
+                  {inPlant ? (
+                    <Link
+                      to={plantHref(order.id, 'proceso')}
+                      onClick={() => setIsActionsMenuOpen(false)}
+                      className="w-full text-left px-3.5 py-2 hover:bg-slate-50 flex items-center gap-2 text-amber-700"
+                    >
+                      <AlertTriangle className="w-3.5 h-3.5" />
+                      <span>Retener en Planta</span>
+                    </Link>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setIsQuarantineModalOpen(true);
+                        setIsActionsMenuOpen(false);
+                      }}
+                      className="w-full text-left px-3.5 py-2 hover:bg-slate-50 flex items-center gap-2 cursor-pointer text-amber-700"
+                    >
+                      <AlertTriangle className="w-3.5 h-3.5" />
+                      <span>Retener para revisión técnica</span>
+                    </button>
+                  )}
 
                 </div>
               )}
@@ -279,85 +384,50 @@ export const OrderDetailPage: React.FC = () => {
       {/* 2. Global Progress Stepper */}
       <GlobalProgressStepper order={order} />
 
-      {/* 3. Four Functional Tabs Navigation */}
-      <div className="border-b border-slate-200">
-        <nav className="flex space-x-2 sm:space-x-4" aria-label="Secciones de la solicitud">
-          {/* Tab 1: Operación */}
-          <button
-            onClick={() => setActiveTab('operation')}
-            className={`py-3 px-3.5 text-xs font-bold border-b-2 transition-all flex items-center gap-2 cursor-pointer ${
-              activeTab === 'operation'
-                ? 'border-[#0F4C81] text-[#0F4C81]'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <Sparkles className="w-4 h-4" />
-            <span>Operación</span>
-          </button>
-
-          {/* Tab 2: Pedido */}
-          <button
-            onClick={() => setActiveTab('order')}
-            className={`py-3 px-3.5 text-xs font-bold border-b-2 transition-all flex items-center gap-2 cursor-pointer ${
-              activeTab === 'order'
-                ? 'border-[#0F4C81] text-[#0F4C81]'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <Receipt className="w-4 h-4" />
-            <span>Pedido</span>
-            <span className="text-[10px] font-semibold bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded-full">
-              {order.itemCount}
-            </span>
-          </button>
-
-          {/* Tab 3: Logística */}
-          <button
-            onClick={() => setActiveTab('logistics')}
-            className={`py-3 px-3.5 text-xs font-bold border-b-2 transition-all flex items-center gap-2 cursor-pointer ${
-              activeTab === 'logistics'
-                ? 'border-[#0F4C81] text-[#0F4C81]'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <Truck className="w-4 h-4" />
-            <span>Logística</span>
-          </button>
-
-          {/* Tab 4: Actividad */}
-          <button
-            onClick={() => setActiveTab('activity')}
-            className={`py-3 px-3.5 text-xs font-bold border-b-2 transition-all flex items-center gap-2 cursor-pointer ${
-              activeTab === 'activity'
-                ? 'border-[#0F4C81] text-[#0F4C81]'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <Clock className="w-4 h-4" />
-            <span>Actividad</span>
-            {orderIncidents.length > 0 && (
-              <span className="text-[10px] font-bold bg-rose-100 text-rose-700 px-1.5 py-0.2 rounded-full">
-                {orderIncidents.length}
-              </span>
-            )}
-          </button>
-        </nav>
-      </div>
+      {/* 3. Secciones de la solicitud (pestañas accesibles compartidas) */}
+      <Tabs<typeof activeTab>
+        label="Secciones de la solicitud"
+        idPrefix="detail"
+        value={activeTab}
+        onChange={setActiveTab}
+        items={[
+          { id: 'operation', label: 'Operación', icon: Sparkles },
+          {
+            id: 'order',
+            label: 'Pedido',
+            icon: Receipt,
+            badge: order.itemCount,
+            badgeLabel: `${order.itemCount} prendas`,
+          },
+          { id: 'logistics', label: 'Logística', icon: Truck },
+          {
+            id: 'activity',
+            label: 'Actividad',
+            icon: Clock,
+            ...(orderIncidents.length > 0
+              ? {
+                  badge: orderIncidents.length,
+                  badgeTone: 'alert' as const,
+                  badgeLabel: `${orderIncidents.length} incidencias`,
+                }
+              : {}),
+          },
+        ]}
+      />
 
       {/* 4. Tab Content Views */}
+      <TabPanel idPrefix="detail" id={activeTab}>
       {activeTab === 'operation' && (
         <OperationTab
           order={order}
-          onOpenAssign={handleOpenAssign}
-          onOpenQuarantine={() => setIsQuarantineModalOpen(true)}
           onOpenIncident={() => setIsIncidentModalOpen(true)}
           onSwitchTab={setActiveTab}
           refreshFromServer={refreshFromServer}
-          confirmingPayment={confirmingPayment}
-          onConfirmPayment={handleConfirmPayment}
           hasActiveIncidents={hasActiveIncidents}
           activeIncidentsCount={activeIncidents.length}
-          custodyCode={custodyCode}
+          custodyCode={custody.code}
+          custodyType={custody.type}
+          serverOrder={serverOrder}
         />
       )}
 
@@ -373,8 +443,6 @@ export const OrderDetailPage: React.FC = () => {
       {activeTab === 'logistics' && (
         <LogisticsTab
           order={order}
-          onOpenAssign={handleOpenAssign}
-          onRefresh={() => void refreshFromServer()}
         />
       )}
 
@@ -385,25 +453,16 @@ export const OrderDetailPage: React.FC = () => {
           onOpenIncidentModal={() => setIsIncidentModalOpen(true)}
         />
       )}
+      </TabPanel>
 
       {/* 5. Modals & Drawers */}
-      {/* Assign Driver Modal */}
-      {isAssignModalOpen && (
-        <AssignDriverModal
-          order={order}
-          type={assignType}
-          isOpen={true}
-          onClose={() => setIsAssignModalOpen(false)}
-          onAssigned={(updated) => void refreshFromServer(updated)}
-        />
-      )}
-
-
       {/* Incident Modal */}
       {isIncidentModalOpen && (
         <IncidentModal
           order={order}
           isOpen={true}
+          // En planta se registra la incidencia, pero retener se hace solo en Planta.
+          allowHold={!inPlant}
           onClose={() => setIsIncidentModalOpen(false)}
           onSuccess={() => {
             void refreshFromServer();
@@ -413,7 +472,7 @@ export const OrderDetailPage: React.FC = () => {
       )}
 
       {/* Retención para revisión técnica: incidencia con retención en el servidor */}
-      {isQuarantineModalOpen && (
+      {isQuarantineModalOpen && !inPlant && (
         <IncidentModal
           order={order}
           isOpen={true}

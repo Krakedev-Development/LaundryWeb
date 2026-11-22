@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import React, { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowUpRight,
@@ -13,6 +13,9 @@ import { PageHeader } from '../../components/common/PageHeader';
 import { listOrders, type BackendOrderSummary } from '../../services/api/ordersApi';
 import { getFacilities, type FacilityResponse } from '../../services/api/geoApi';
 import { ApiError } from '../../services/api/apiConfig';
+import { Modal } from '../../shared/ui/Modal';
+import { useQrScanner } from '../custody/useQrScanner';
+import { btnPrimary, btnSecondary, field } from '../../shared/ui/controls';
 
 /*
  * Puerta de entrada del mostrador. La validación de los traspasos (código, prendas, quién retira)
@@ -20,12 +23,6 @@ import { ApiError } from '../../services/api/apiConfig';
  * para abrir la solicitud correcta, o se elige de la cola cuando solo se tiene el código de 6 dígitos.
  */
 
-const button =
-  'sidebar-focus inline-flex items-center justify-center gap-2 rounded-xl bg-[#0F4C81] px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-[#0A3660] disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:cursor-not-allowed cursor-pointer';
-const secondary =
-  'sidebar-focus inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50 cursor-pointer';
-const field =
-  'mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-normal text-slate-800 outline-none transition-colors placeholder:text-slate-400 focus:border-[#0F4C81] focus:bg-white focus:ring-2 focus:ring-[#0F4C81]/10';
 
 type QueueKey = 'HEADING_TO_FACILITY' | 'DELIVERY_ASSIGNED' | 'READY_FOR_PICKUP';
 
@@ -89,6 +86,8 @@ export function interpretScan(raw: string): ScanResult {
 
 type Row = BackendOrderSummary & { customer?: { user?: { name?: string | null } | null } | null };
 
+const solLabel = (r: Row) => `SOL-${String(r.number).padStart(4, '0')}`;
+
 export function HandoffsPage() {
   const navigate = useNavigate();
   const [rows, setRows] = useState<Record<QueueKey, Row[]>>({
@@ -102,9 +101,10 @@ export function HandoffsPage() {
   const [loadError, setLoadError] = useState('');
   const [input, setInput] = useState('');
   const [pendingCode, setPendingCode] = useState('');
+  // Con un código de 6 dígitos no se sabe de qué solicitud es: antes de llevarlo al detalle se
+  // confirma la solicitud elegida, porque un código en la solicitud equivocada gasta sus intentos.
+  const [confirming, setConfirming] = useState<{ row: Row; queue: (typeof QUEUES)[number] } | null>(null);
   const [scanError, setScanError] = useState('');
-  const [camera, setCamera] = useState(false);
-  const video = useRef<HTMLVideoElement>(null);
 
   const load = useCallback(async () => {
     setState('loading');
@@ -137,8 +137,14 @@ export function HandoffsPage() {
       .catch(() => setFacilities([]));
   }, [load]);
 
-  const openOrder = (orderId: string, code = '') =>
-    navigate(`/operations/orders/${orderId}${code ? `?custodia=${encodeURIComponent(code)}` : ''}`);
+  // El detalle quita `custodia` y `traspaso` de la URL en cuanto los lee.
+  const openOrder = (orderId: string, code = '', type = '') => {
+    const params = new URLSearchParams();
+    if (code) params.set('custodia', code);
+    if (type) params.set('traspaso', type);
+    const query = params.toString();
+    navigate(`/operations/orders/${orderId}${query ? `?${query}` : ''}`);
+  };
 
   const submit = (value: string) => {
     const result = interpretScan(value);
@@ -148,7 +154,7 @@ export function HandoffsPage() {
     }
     setScanError('');
     if (result.kind === 'qr') {
-      openOrder(result.orderId, result.raw);
+      openOrder(result.orderId, result.raw, result.raw.match(QR)?.[2]);
       return;
     }
     // El código de 6 dígitos no dice a qué solicitud pertenece: se elige en la cola.
@@ -161,35 +167,10 @@ export function HandoffsPage() {
     submit(input);
   };
 
-  // Lectura del QR con la cámara (requiere HTTPS o localhost).
-  useEffect(() => {
-    if (!camera || !video.current) return;
-    let cancelled = false;
-    let controls: { stop(): void } | undefined;
-    import('@zxing/browser')
-      .then(async ({ BrowserQRCodeReader }) => {
-        controls = await new BrowserQRCodeReader().decodeFromVideoDevice(
-          undefined,
-          video.current!,
-          (result) => {
-            if (!result || cancelled) return;
-            setCamera(false);
-            submit(result.getText());
-          },
-        );
-        if (cancelled) controls.stop();
-      })
-      .catch(() => {
-        setScanError('No se pudo abrir la cámara. Usa un lector o escribe el código.');
-        setCamera(false);
-      });
-    return () => {
-      cancelled = true;
-      controls?.stop();
-    };
-    // submit solo navega o guarda el código; no necesita volver a crear el lector.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [camera]);
+  // Lector QR compartido con los paneles de custodia (T-12).
+  const camera = useQrScanner(submit, () =>
+    setScanError('No se pudo abrir la cámara. Usa un lector o escribe el código.'),
+  );
 
   const facilityName = (id: string) => facilities.find((f) => f.id === id)?.name;
   const visible = (status: QueueKey) =>
@@ -224,13 +205,13 @@ export function HandoffsPage() {
               }}
             />
           </label>
-          <button type="submit" className={button}>
+          <button type="submit" className={btnPrimary}>
             <ArrowUpRight className="size-4" aria-hidden="true" />
             Continuar
           </button>
-          <button type="button" className={secondary} onClick={() => setCamera((v) => !v)}>
+          <button type="button" className={btnSecondary} onClick={camera.toggle}>
             <ScanLine className="size-4" aria-hidden="true" />
-            {camera ? 'Cerrar cámara' : 'Escanear con cámara'}
+            {camera.active ? 'Cerrar cámara' : 'Escanear con cámara'}
           </button>
         </form>
         {scanError && (
@@ -255,8 +236,13 @@ export function HandoffsPage() {
             </button>
           </div>
         )}
-        {camera && (
-          <video ref={video} className="w-full max-w-sm rounded-xl border border-slate-200" muted playsInline />
+        {camera.active && (
+          <video
+            ref={camera.videoRef}
+            className="w-full max-w-sm rounded-xl border border-slate-200"
+            muted
+            playsInline
+          />
         )}
       </section>
 
@@ -280,7 +266,7 @@ export function HandoffsPage() {
             ))}
           </select>
         </label>
-        <button type="button" className={secondary} onClick={() => void load()}>
+        <button type="button" className={btnSecondary} onClick={() => void load()}>
           <RefreshCw className="size-4" aria-hidden="true" />
           Actualizar
         </button>
@@ -295,7 +281,7 @@ export function HandoffsPage() {
         <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
           <p className="font-semibold">No se pudieron cargar las solicitudes.</p>
           <p className="mt-1">{loadError}</p>
-          <button type="button" className={`${button} mt-3`} onClick={() => void load()}>
+          <button type="button" className={`${btnPrimary} mt-3`} onClick={() => void load()}>
             Reintentar
           </button>
         </div>
@@ -312,8 +298,8 @@ export function HandoffsPage() {
               >
                 <header className="flex items-start justify-between gap-2 border-b border-slate-200 bg-slate-50 p-4">
                   <div>
-                    <h2 className="flex items-center gap-2 text-sm font-bold text-[#102A43]">
-                      <q.icon className="size-4 text-[#0F4C81]" aria-hidden="true" />
+                    <h2 className="flex items-center gap-2 text-sm font-bold text-ink">
+                      <q.icon className="size-4 text-primary" aria-hidden="true" />
                       {q.title}
                     </h2>
                     <p className="mt-0.5 text-[11px] text-slate-500">{q.hint}</p>
@@ -329,17 +315,19 @@ export function HandoffsPage() {
                   {list.map((r) => (
                     <li key={r.id} className="flex items-center justify-between gap-3 p-4">
                       <div className="min-w-0 text-xs">
-                        <p className="font-bold text-[#102A43]">SOL-{String(r.number).padStart(4, '0')}</p>
+                        <p className="font-bold text-ink">SOL-{String(r.number).padStart(4, '0')}</p>
                         <p className="truncate text-slate-600">{r.customer?.user?.name ?? 'Cliente'}</p>
                         {facilityName(r.facilityId) && (
-                          <p className="truncate text-[11px] text-slate-400">{facilityName(r.facilityId)}</p>
+                          <p className="truncate text-[11px] text-slate-500">{facilityName(r.facilityId)}</p>
                         )}
                       </div>
                       <button
                         type="button"
-                        className={secondary}
+                        className={btnSecondary}
                         aria-label={`Validar SOL-${String(r.number).padStart(4, '0')}`}
-                        onClick={() => openOrder(r.id, pendingCode)}
+                        onClick={() =>
+                          pendingCode ? setConfirming({ row: r, queue: q }) : openOrder(r.id, '', q.type)
+                        }
                       >
                         Validar
                         <ArrowUpRight className="size-3.5" aria-hidden="true" />
@@ -351,6 +339,44 @@ export function HandoffsPage() {
             );
           })}
         </div>
+      )}
+
+      {confirming && (
+        <Modal
+          title="Confirmar la solicitud"
+          description="El código se validará en el detalle de esta solicitud."
+          onClose={() => setConfirming(null)}
+        >
+          <div className="space-y-4 p-5 text-sm text-slate-700 sm:p-6">
+            <p>
+              Vas a validar el código <strong className="font-mono">{pendingCode}</strong> en{' '}
+              <strong>{solLabel(confirming.row)}</strong> ·{' '}
+              {confirming.row.customer?.user?.name ?? 'Cliente'} ({confirming.queue.title}).
+            </p>
+            <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+              Si el código no es de esta solicitud, el intento fallido cuenta y el traspaso puede
+              quedar bloqueado. Verifica la solicitud con quien entrega antes de seguir.
+            </p>
+            <div className="flex flex-wrap justify-end gap-2">
+              <button type="button" className={btnSecondary} onClick={() => setConfirming(null)}>
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className={btnPrimary}
+                onClick={() => {
+                  const { row, queue } = confirming;
+                  const code = pendingCode;
+                  setConfirming(null);
+                  setPendingCode('');
+                  openOrder(row.id, code, queue.type);
+                }}
+              >
+                Validar en {solLabel(confirming.row)}
+              </button>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );

@@ -6,11 +6,11 @@ export function OrderIdentityCells({ order }: { order: Order }) {
   return (
     <>
       <td className="py-4 px-5 whitespace-nowrap">
-        <span className="font-bold text-[#0F4C81] font-mono text-[14px]">
+        <span className="font-bold text-primary font-mono text-[14px]">
           {displayCode}
         </span>
         <span
-          className="block text-[10px] text-slate-400 font-mono mt-0.5"
+          className="block text-[10px] text-slate-500 font-mono mt-0.5"
           title={order.id}
         >
           ID: {order.id.slice(0, 8)}...

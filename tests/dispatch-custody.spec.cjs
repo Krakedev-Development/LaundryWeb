@@ -98,3 +98,61 @@ test('el mensaje del servidor sobre el código se muestra en el formulario', asy
   await panel.getByRole('button', { name: 'Confirmar salida a reparto', exact: true }).click();
   await expect(panel.getByText('El código venció; solicita uno nuevo.')).toBeVisible();
 });
+
+// R-HO-1: el código elegido en otra columna de "Recepción y retiros" no se usa aquí.
+test('un código traído para otra etapa se descarta y se pide el de esta etapa', async ({ page }) => {
+  const calls = await mockServer(page, { status: 'DELIVERY_ASSIGNED' });
+  await page.goto(`/operations/orders/${ORDER}?custodia=482910&traspaso=FACILITY_TO_CUSTOMER`, {
+    waitUntil: 'domcontentloaded',
+  });
+  const panel = page.getByRole('region', { name: 'Entrega al chofer para reparto' });
+  await expect(panel.getByRole('textbox', { name: 'Código del chofer' })).toHaveValue('');
+  await expect(panel.getByText(/era para otra etapa/)).toBeVisible();
+  await expect(page).toHaveURL((url) => url.search === '');
+  expect(calls).toEqual([]);
+});
+
+test('el código traído para esta etapa queda cargado y la URL se limpia', async ({ page }) => {
+  await mockServer(page, { status: 'DELIVERY_ASSIGNED' });
+  await page.goto(`/operations/orders/${ORDER}?custodia=482910&traspaso=FACILITY_TO_DRIVER`, {
+    waitUntil: 'domcontentloaded',
+  });
+  const panel = page.getByRole('region', { name: 'Entrega al chofer para reparto' });
+  await expect(panel.getByRole('textbox', { name: 'Código del chofer' })).toHaveValue('482910');
+  await expect(page).toHaveURL((url) => url.search === '');
+});
+
+test('con el traspaso bloqueado (423) se pide un código nuevo al cliente', async ({ page }) => {
+  await mockServer(page, {
+    status: 'READY_FOR_PICKUP',
+    mode: 'HOME_STORE',
+    verifyError: { status: 423, message: 'Código incorrecto. El traspaso quedó bloqueado.' },
+  });
+  await open(page);
+  const panel = page.getByRole('region', { name: 'Retiro en sede' });
+  await panel.getByRole('textbox', { name: 'Código del cliente' }).fill('111111');
+  await panel.getByRole('textbox', { name: 'Quién retira' }).fill('Ana Torres');
+  await panel.getByRole('textbox', { name: 'Relación con el cliente' }).fill('Titular');
+  await panel.getByRole('button', { name: 'Confirmar retiro', exact: true }).click();
+  await expect(
+    panel.getByText('Código incorrecto. El traspaso quedó bloqueado. Pide al cliente que genere un código nuevo en su app.'),
+  ).toBeVisible();
+});
+
+// T-12: el campo de código y el lector QR son los mismos en todos los paneles de custodia.
+test('el campo de código compartido permite descartar un QR leído y avisa si no hay cámara', async ({ page }) => {
+  await mockServer(page, { status: 'DELIVERY_ASSIGNED' });
+  await open(page);
+  const panel = page.getByRole('region', { name: 'Entrega al chofer para reparto' });
+  const field = panel.getByRole('textbox', { name: 'Código del chofer' });
+  await field.fill(`LDH1:${ORDER}:FACILITY_TO_DRIVER:${TOKEN}`);
+  await expect(panel.getByText('QR leído')).toBeVisible();
+  await panel.getByRole('button', { name: 'Usar otro código' }).click();
+  await expect(field).toHaveValue('');
+  await expect(panel.getByRole('button', { name: 'Usar otro código' })).toHaveCount(0);
+
+  // El navegador de prueba no tiene cámara: se avisa en el campo y el botón vuelve a su estado.
+  await panel.getByRole('button', { name: 'Escanear QR' }).click();
+  await expect(panel.getByText('No se pudo abrir la cámara. Escribe el código o usa el lector de QR.')).toBeVisible();
+  await expect(panel.getByRole('button', { name: 'Escanear QR' })).toBeVisible();
+});

@@ -1,39 +1,10 @@
 import type { Order } from '../../types';
 import { operationalStage } from '../../services/fulfillment';
 
-export const PLANT_PHASES = [
-  'Recepción',
-  'Pesaje',
-  'Inspección',
-  'Precio y pago',
-  'Lavado',
-  'Calidad',
-  'Listo',
-] as const;
-export function plantPhase(order: Order) {
-  const stage = operationalStage(order);
-  if (
-    [
-      'READY',
-      'READY_FOR_DELIVERY',
-      'DELIVERY_SCHEDULED',
-      'DELIVERY_ASSIGNED',
-    ].includes(stage)
-  )
-    return 6;
-  if (stage === 'QUALITY_CONTROL') return 5;
-  if (stage === 'QUARANTINE') {
-    const previous: Record<string, number> = { AT_FACILITY: 0, WEIGHING: 1, INSPECTION: 2, PRICING_PENDING: 3, CUSTOMER_APPROVAL_PENDING: 3, IN_PROCESS: 4, QUALITY_CONTROL: 5 };
-    return previous[order.previousStatus ?? ''] ?? 0;
-  }
-  if (stage === 'INCIDENT') return 0;
-  if (stage === 'IN_PROCESS') return 4;
-  if (['PRICING_PENDING', 'CUSTOMER_APPROVAL_PENDING'].includes(stage))
-    return 3;
-  if (stage === 'INSPECTION') return 2;
-  if (stage === 'WEIGHING') return 1;
-  return 0;
-}
+import { AFTER_PLANT, BEFORE_PLANT, PLANT_PHASES, plantPhase } from './plantPhase';
+
+export { AFTER_PLANT, BEFORE_PLANT, PLANT_PHASES, plantPhase };
+
 export function isPlantOrder(order: Order) {
   const stage = operationalStage(order);
   if (
@@ -72,7 +43,13 @@ export function PlantProgress({
     order.status === 'INCIDENT';
   return (
     <div
-      aria-label={`Proceso: ${PLANT_PHASES[phase]}${held ? ', retenido' : ''}`}
+      aria-label={`Proceso: ${
+        phase === BEFORE_PLANT
+          ? 'aún no llega a planta'
+          : phase === AFTER_PLANT
+            ? 'completo'
+            : PLANT_PHASES[phase]
+      }${held ? ', retenido' : ''}`}
     >
       <ol className={`flex ${compact ? 'gap-1' : 'gap-2'}`}>
         {PLANT_PHASES.map((label, index) => {
@@ -85,11 +62,11 @@ export function PlantProgress({
               className="relative min-w-0 flex-1"
             >
               <div
-                className={`h-2 rounded-full transition-all duration-300 ${skipped ? 'bg-slate-200' : index < phase ? 'bg-emerald-500 shadow-2xs' : index === phase ? (held ? 'bg-amber-500 animate-pulse' : 'bg-[#0F4C81] ring-2 ring-sky-500/20') : 'bg-slate-200'}`}
+                className={`h-2 rounded-full transition-all duration-300 ${skipped ? 'bg-slate-200' : index < phase ? 'bg-emerald-500 shadow-2xs' : index === phase ? (held ? 'bg-amber-500 animate-pulse' : 'bg-primary ring-2 ring-sky-500/20') : 'bg-slate-200'}`}
               />
               {!compact && (
                 <span
-                  className={`mt-2 block text-xs ${index === phase ? 'font-semibold text-[#0F4C81]' : 'text-slate-600'}`}
+                  className={`mt-2 block text-xs ${index === phase ? 'font-semibold text-primary' : 'text-slate-600'}`}
                 >
                   {label}
                   {skipped && (
@@ -115,10 +92,10 @@ export function PlantProgress({
       </ol>
       {compact && (
         <p
-          className={`mt-2 inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[11px] font-semibold ${held ? 'border-amber-200 bg-amber-50 text-amber-800' : phase === 6 ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-sky-200 bg-sky-50 text-[#0F4C81]'}`}
+          className={`mt-2 inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[11px] font-semibold ${held ? 'border-amber-200 bg-amber-50 text-amber-800' : phase === 6 ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-sky-200 bg-sky-50 text-primary'}`}
         >
           <span
-            className={`size-1.5 rounded-full ${held ? 'bg-amber-500' : phase === 6 ? 'bg-emerald-500' : 'bg-[#0F4C81]'}`}
+            className={`size-1.5 rounded-full ${held ? 'bg-amber-500' : phase === 6 ? 'bg-emerald-500' : 'bg-primary'}`}
           />
           {held ? 'Retenido · ' : ''}
           {PLANT_PHASES[phase]}

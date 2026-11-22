@@ -1,4 +1,5 @@
 const { test, expect } = require('./support/fixtures.cjs');
+const { mockServerOrder, serverOrder } = require('./support/serverOrder.cjs');
 
 // El recorrido completo (recogida, custodia, pesaje, pago y entrega) lo ejercita el backend
 // con cada rol actuando por su cuenta (LaundryBackend/test/e2e/lifecycle.test.ts). La Web no
@@ -21,7 +22,9 @@ test('el personal no puede verificar por el chofer ni ve códigos de custodia', 
 test('no existen acciones para simular al cliente o al chofer en el detalle de una solicitud', async ({
   page,
 }) => {
+  await mockServerOrder(page, serverOrder('SOL-HOME-001', 'HEADING_TO_PICKUP'));
   await page.goto('/operations/orders/SOL-HOME-001', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('heading', { name: 'Conductor en camino a recoger' })).toBeVisible();
   await expect(page.getByText(/MVP:|simular/i)).toHaveCount(0);
   await expect(page.getByRole('button', { name: /Marcar llegada/ })).toHaveCount(0);
 });

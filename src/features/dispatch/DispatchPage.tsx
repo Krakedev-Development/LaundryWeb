@@ -1,7 +1,7 @@
 import { operationalStage } from '../../services/fulfillment';
 import { storageService } from '../../services/storage';
-import { useNavigate } from 'react-router-dom';
-import React, { useEffect, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { PageHeader } from '../../components/common/PageHeader';
 import { BaseMap } from '../../components/maps/BaseMap';
@@ -14,10 +14,7 @@ import {
   Info,
   LoaderCircle,
   MapPin,
-  PackageCheck,
-  Plus,
   RotateCcw,
-  Truck,
   UsersRound,
 } from 'lucide-react';
 import { DriverCandidateCard } from '../../components/common/DriverCandidateCard';
@@ -25,22 +22,32 @@ import { PriorityBadge } from '../../components/common/PriorityBadge';
 import {
   assignDriver as assignDriverApi,
   fetchFullOrders,
+  getOrder,
   mapBackendOrderToOrder,
 } from '../../services/api/ordersApi';
 import { syncDrivers } from '../../services/api/driversApi';
 import { ApiError } from '../../services/api/apiConfig';
+import { deliveriesHref } from '../../services/operationsLinks';
 import type { Driver, Order } from '../../types';
 
-// Estados del servidor que esperan chofer: recogida (confirmada) y entrega (lista).
-const DISPATCH_STATUSES = ['CONFIRMED', 'READY_FOR_DELIVERY'] as const;
+// Despacho asigna solo el chofer de recogida (estado del servidor: confirmada). La entrega se
+// asigna en Entregas.
+const DISPATCH_STATUSES = ['CONFIRMED'] as const;
+
+const waitsForPickup = (o: Order) =>
+  o.status === 'CONFIRMED' ||
+  (!o.pickupNeedsScheduling && operationalStage(o) === 'PICKUP_PENDING');
 
 export function DispatchPage() {
   const navigate = useNavigate();
   const { orders, drivers, customers, facilities, showToast } = useApp();
-  const [type, setType] = useState<'pickup' | 'delivery'>('pickup'),
-    [orderId, setOrderId] = useState(''),
-    [driverId, setDriverId] = useState(''),
-    [notes, setNotes] = useState('');
+  // `?pedido=<id>` (enlace desde el detalle o la lista): se preselecciona al cargar la cola.
+  const [searchParams] = useSearchParams();
+  const requestedId = searchParams.get('pedido');
+  const requestHandled = useRef(false);
+  const [notWaiting, setNotWaiting] = useState('');
+  const [orderId, setOrderId] = useState(''),
+    [driverId, setDriverId] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [isAssigning, setIsAssigning] = useState(false);
   // La cola sale del servidor: solo lo que de verdad espera chofer. Sin servidor no hay cola.
@@ -74,31 +81,36 @@ export function DispatchPage() {
     void syncData();
   }, []);
 
-  const queue = serverOrders.filter((o) =>
-    type === 'pickup'
-      ? o.status === 'CONFIRMED' ||
-        (!o.pickupNeedsScheduling && operationalStage(o) === 'PICKUP_PENDING')
-      : o.status === 'READY_FOR_DELIVERY' ||
-        (o.fulfillment?.outbound.method === 'DRIVER' &&
-          ['READY_FOR_DELIVERY', 'DELIVERY_SCHEDULED'].includes(
-            operationalStage(o),
-          )),
-  );
+  // Se aplica una sola vez, con la primera cola cargada del servidor. Si la solicitud no espera
+  // recogida pero está lista para entrega, su asignación vive en Entregas: se redirige allí.
+  useEffect(() => {
+    if (!requestedId || requestHandled.current || syncState !== 'ready') return;
+    requestHandled.current = true;
+    const target = serverOrders.find((o) => o.id === requestedId);
+    if (target && waitsForPickup(target)) {
+      setOrderId(target.id);
+      return;
+    }
+    getOrder(requestedId)
+      .then((detail) => {
+        if (detail.status === 'READY_FOR_DELIVERY')
+          navigate(deliveriesHref(requestedId), { replace: true });
+        else setNotWaiting(requestedId);
+      })
+      .catch(() => setNotWaiting(requestedId));
+  }, [requestedId, syncState, serverOrders]);
+
+  const queue = serverOrders.filter(waitsForPickup);
   const order = queue.find((o) => o.id === orderId) ?? queue[0];
-  const { candidates, loading, error } = useDriverCandidates(order, type);
+  const { candidates, loading, error } = useDriverCandidates(order, 'pickup');
   const [route, setRoute] = useState<RouteSummary | null>(null),
     [routeError, setRouteError] = useState('');
-  const destination =
-    order &&
-    (type === 'pickup'
-      ? order.customerAddress.coordinates
-      : order.deliveryAddress.coordinates);
+  const destination = order?.customerAddress.coordinates;
   const driver = drivers.find((d) => d.id === driverId);
   useEffect(() => {
     setDriverId('');
     setRoute(null);
-    setNotes('');
-  }, [order?.id, type]);
+  }, [order?.id]);
   useEffect(() => {
     setRoute(null);
     setRouteError('');
@@ -117,17 +129,16 @@ export function DispatchPage() {
         if (!controller.signal.aborted) setRouteError(e.message);
       });
     return () => controller.abort();
-  }, [driverId, order?.id, type]);
+  }, [driverId, order?.id]);
 
   const handleAssignDriver = async () => {
     if (!order || !driverId) return;
     setIsAssigning(true);
-    const leg = type === 'pickup' ? 'INBOUND' : 'OUTBOUND';
     const expectedVersion = order.version ?? order.workflowVersion ?? 1;
 
     try {
       const updated = await assignDriverApi(order.id, {
-        leg,
+        leg: 'INBOUND',
         driverId,
         expectedVersion,
       });
@@ -145,14 +156,10 @@ export function DispatchPage() {
       );
       showToast({
         type: 'success',
-        title:
-          type === 'pickup'
-            ? 'Chofer de recogida asignado'
-            : 'Chofer de entrega asignado',
+        title: 'Chofer de recogida asignado',
         message: `La solicitud ${order.trackingNumber || order.id} ya tiene chofer.`,
       });
       setDriverId('');
-      setNotes('');
       await syncData();
     } catch (err) {
       // Nunca se asigna solo en el navegador: sin servidor la asignación no existe.
@@ -174,7 +181,7 @@ export function DispatchPage() {
     <div className="space-y-6">
       <PageHeader
         title="Despacho"
-        subtitle="Selecciona una solicitud, compara choferes y confirma la asignación."
+        subtitle="Asignación del chofer de recogida: selecciona una solicitud, compara choferes y confirma. La entrega se asigna en Entregas."
         actions={
           <button
             onClick={() => void syncData()}
@@ -200,42 +207,42 @@ export function DispatchPage() {
           </button>
         </div>
       )}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-xs">
-        <div className="flex gap-1 rounded-xl bg-slate-100 p-1">
-          {(['pickup', 'delivery'] as const).map((value) => (
-            <button
-              key={value}
-              aria-pressed={type === value}
-              onClick={() => setType(value)}
-              className={
-                type === value
-                  ? 'sidebar-focus flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold bg-[#0F4C81] text-white shadow-sm'
-                  : 'sidebar-focus flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold text-slate-500 hover:bg-white hover:text-[#0F4C81]'
-              }
-            >
-              {value === 'pickup' ? (
-                <Truck className="size-4" aria-hidden="true" />
-              ) : (
-                <PackageCheck className="size-4" aria-hidden="true" />
-              )}
-              {value === 'pickup' ? 'Recogidas' : 'Entregas'}
-            </button>
-          ))}
+      {notWaiting && (
+        <div role="status" className="flex flex-wrap items-start justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          <div className="flex gap-2">
+            <Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+            <p>
+              Esta solicitud ya no espera chofer. Puede que ya tenga uno asignado o que haya
+              cambiado de estado.{' '}
+              <Link className="font-semibold underline" to={`/operations/orders/${notWaiting}`}>
+                Ver la solicitud
+              </Link>
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setNotWaiting('')}
+            className="rounded-lg border border-amber-300 px-3 py-1.5 text-xs font-semibold hover:bg-amber-100"
+          >
+            Entendido
+          </button>
         </div>
+      )}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-xs">
         <span className="flex items-center gap-2 px-2 text-xs text-slate-500">
-          <ClipboardList className="size-4 text-[#0F4C81]" aria-hidden="true" />
-          <strong className="text-[#102A43]">{queue.length}</strong> solicitudes
-          pendientes
+          <ClipboardList className="size-4 text-primary" aria-hidden="true" />
+          <strong className="text-ink">{queue.length}</strong> recogidas pendientes
+          de chofer
         </span>
       </div>
       <div className="grid items-start gap-5 lg:grid-cols-[300px_minmax(0,1fr)]">
         <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
           <div className="flex items-center gap-2 border-b border-slate-200 bg-slate-50 px-4 py-4">
             <ClipboardList
-              className="size-4 text-[#0F4C81]"
+              className="size-4 text-primary"
               aria-hidden="true"
             />
-            <h2 className="text-sm font-bold text-[#102A43]">
+            <h2 className="text-sm font-bold text-ink">
               Solicitudes por asignar
             </h2>
           </div>
@@ -251,19 +258,19 @@ export function DispatchPage() {
                 className={
                   'sidebar-focus block text-left w-full p-4 rounded-xl border transition-colors ' +
                   (o.id === order?.id
-                    ? 'border-[#0F4C81] bg-[#F0F6FC] ring-1 ring-[#0F4C81]/10'
+                    ? 'border-primary bg-primary-soft ring-1 ring-primary/10'
                     : 'border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300')
                 }
                 aria-pressed={o.id === order?.id}
                 onClick={() => setOrderId(o.id)}
               >
                 <span className="flex flex-wrap items-center justify-between gap-2">
-                  <strong className="font-mono text-xs text-[#0F4C81]">
+                  <strong className="font-mono text-xs text-primary">
                     {o.trackingNumber || o.id}
                   </strong>
                   <PriorityBadge priority={o.priority} />
                 </span>
-                <p className="mt-2 text-sm font-semibold text-[#102A43]">
+                <p className="mt-2 text-sm font-semibold text-ink">
                   {o.customerName}
                 </p>
                 <p className="mt-1.5 flex items-center gap-1 text-[11px] text-slate-500">
@@ -277,8 +284,8 @@ export function DispatchPage() {
         <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-xs sm:p-5">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
-              <h2 className="flex items-center gap-2 text-sm font-bold text-[#102A43]">
-                <MapPin className="size-4 text-[#0F4C81]" aria-hidden="true" />
+              <h2 className="flex items-center gap-2 text-sm font-bold text-ink">
+                <MapPin className="size-4 text-primary" aria-hidden="true" />
                 Ruta y ubicación
               </h2>
               <p className="mt-1 text-xs text-slate-500">
@@ -302,8 +309,8 @@ export function DispatchPage() {
                     {
                       id: order.id,
                       coordinates: destination,
-                      label: type === 'pickup' ? 'Recogida' : 'Entrega',
-                      kind: type,
+                      label: 'Recogida',
+                      kind: 'pickup' as const,
                     },
                     ...candidates.map((c) => {
                       const d = drivers.find((v) => v.id === c.driverId)!;
@@ -326,9 +333,9 @@ export function DispatchPage() {
       <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-xs sm:p-5">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="flex items-center gap-2 text-sm font-bold text-[#102A43]">
+            <h2 className="flex items-center gap-2 text-sm font-bold text-ink">
               <UsersRound
-                className="size-4 text-[#0F4C81]"
+                className="size-4 text-primary"
                 aria-hidden="true"
               />
               Choferes disponibles
@@ -391,25 +398,14 @@ export function DispatchPage() {
           })}
         </div>
         {order && (
-          <div className="flex flex-wrap items-end gap-3 border-t border-slate-200 pt-4">
-            <label className="min-w-[180px] flex-1 text-xs font-semibold text-slate-600">
-              Notas de asignación{' '}
-              <span className="font-normal text-slate-400">(opcional)</span>
-              <input
-                aria-label="Notas de asignación"
-                className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-normal outline-none focus:border-[#0F4C81] focus:bg-white focus:ring-2 focus:ring-[#0F4C81]/10"
-                placeholder="Notas de asignación"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-              />
-            </label>
+          <div className="flex flex-wrap items-end justify-end gap-3 border-t border-slate-200 pt-4">
             <button
               disabled={
                 loading ||
                 isAssigning ||
                 !candidates.some((c) => c.driverId === driverId)
               }
-              className="sidebar-focus flex items-center gap-2 rounded-xl bg-[#0F4C81] px-5 py-2.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-[#0A3660] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
+              className="sidebar-focus flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
               onClick={handleAssignDriver}
             >
               {isAssigning ? (

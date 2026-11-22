@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ArrowUpRight,
   Calendar,
@@ -19,6 +19,7 @@ import { ApiError } from '../../services/api/apiConfig';
 import type { BackendDriver } from '../../services/api/driversApi';
 import {
   assignDeliveryDriver,
+  deliveryDriverOptions,
   DELIVERY_STATUS_LABEL,
   fetchDeliveryDrivers,
   fetchDeliveryRows,
@@ -28,19 +29,19 @@ import {
   type DeliveryServerStatus,
 } from '../../services/api/deliveriesApi';
 import { useApp } from '../../context/AppContext';
+import { storageService } from '../../services/storage';
+import { btnPrimary, btnSecondarySm, focusRing } from '../../shared/ui/controls';
+import { TONE_STYLE } from '../../shared/ui/statusTone';
 
+// Escala compartida: lista para entrega espera que la sede asigne chofer (ámbar).
 const STATUS_STYLE: Record<DeliveryServerStatus, string> = {
-  READY_FOR_DELIVERY: 'bg-sky-50 text-sky-800 border-sky-200',
-  DELIVERY_ASSIGNED: 'bg-indigo-50 text-indigo-800 border-indigo-200',
-  OUT_FOR_DELIVERY: 'bg-amber-50 text-amber-900 border-amber-200',
-  ARRIVED_FOR_DELIVERY: 'bg-violet-50 text-violet-800 border-violet-200',
-  DELIVERED: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+  READY_FOR_DELIVERY: TONE_STYLE.action.badge,
+  DELIVERY_ASSIGNED: TONE_STYLE.progress.badge,
+  OUT_FOR_DELIVERY: TONE_STYLE.progress.badge,
+  ARRIVED_FOR_DELIVERY: TONE_STYLE.progress.badge,
+  DELIVERED: TONE_STYLE.done.badge,
 };
 
-const button =
-  'sidebar-focus inline-flex items-center justify-center gap-2 rounded-xl bg-[#0F4C81] px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-[#0A3660] disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:cursor-not-allowed cursor-pointer';
-const secondary =
-  'sidebar-focus inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50 cursor-pointer';
 
 function StatusPill({ status }: { status: DeliveryServerStatus }) {
   return (
@@ -69,6 +70,10 @@ export const DeliveriesPage: React.FC = () => {
   const [assignDriverId, setAssignDriverId] = useState('');
   const [assigning, setAssigning] = useState(false);
   const [assignError, setAssignError] = useState('');
+  // `?pedido=<id>` (enlace desde el detalle o Despacho): se preselecciona en la primera carga.
+  const [searchParams] = useSearchParams();
+  const requestedId = useRef(searchParams.get('pedido'));
+  const [notListed, setNotListed] = useState('');
 
   const load = useCallback(async () => {
     setState('loading');
@@ -81,9 +86,13 @@ export const DeliveriesPage: React.FC = () => {
       setRows(deliveryRows);
       setDrivers(driverRows);
       setState('ready');
-      setSelectedOrderId((prev) =>
-        deliveryRows.some((r) => r.id === prev) ? prev : (deliveryRows[0]?.id ?? ''),
-      );
+      const requested = requestedId.current;
+      requestedId.current = null;
+      if (requested && !deliveryRows.some((r) => r.id === requested)) setNotListed(requested);
+      setSelectedOrderId((prev) => {
+        const wanted = requested ?? prev;
+        return deliveryRows.some((r) => r.id === wanted) ? wanted : (deliveryRows[0]?.id ?? '');
+      });
     } catch (e) {
       setLoadError(
         e instanceof ApiError && e.status === 0
@@ -124,8 +133,21 @@ export const DeliveriesPage: React.FC = () => {
     (r) => r.status === 'DELIVERED' && isScheduledToday(r.scheduledDate),
   ).length;
 
+  // Misma regla de elegibilidad que Despacho: no se ofrecen choferes no disponibles, de otra sede
+  // o sin capacidad.
+  const options = useMemo(
+    () =>
+      selected
+        ? deliveryDriverOptions(drivers, selected.facilityId, storageService.getWorkflow().businessPolicy)
+        : { eligible: [], excluded: [] },
+    [drivers, selected?.id, selected?.facilityId],
+  );
+
   const canAssign =
-    selected?.status === 'READY_FOR_DELIVERY' && Boolean(selected.slotId) && !assigning;
+    selected?.status === 'READY_FOR_DELIVERY' &&
+    Boolean(selected.slotId) &&
+    !assigning &&
+    options.eligible.some((d) => d.id === assignDriverId);
 
   const handleAssign = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -137,6 +159,7 @@ export const DeliveriesPage: React.FC = () => {
         selected.id,
         assignDriverId,
         selected.version,
+        drivers,
       );
       setRows((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
       showToast({
@@ -161,7 +184,7 @@ export const DeliveriesPage: React.FC = () => {
     <div className="space-y-8 max-w-7xl mx-auto">
       <PageHeader
         title="Entregas"
-        subtitle="Seguimiento y asignación de last mile. La salida a ruta y la entrega se confirman con custodia, no desde esta lista."
+        subtitle="Seguimiento y asignación de las entregas a domicilio. La salida a ruta y la entrega se confirman con custodia, no desde esta lista."
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -193,6 +216,28 @@ export const DeliveriesPage: React.FC = () => {
         />
       </div>
 
+      {notListed && (
+        <div
+          role="status"
+          className="flex flex-wrap items-start justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
+        >
+          <p>
+            Esta solicitud no está en las entregas a domicilio. Puede que aún no esté lista o que
+            el cliente retire en sede.{' '}
+            <button
+              type="button"
+              className="font-semibold underline cursor-pointer"
+              onClick={() => openDetail(notListed)}
+            >
+              Ver la solicitud
+            </button>
+          </p>
+          <button type="button" className={btnSecondarySm} onClick={() => setNotListed('')}>
+            Entendido
+          </button>
+        </div>
+      )}
+
       {state === 'error' && (
         <div
           role="alert"
@@ -200,7 +245,7 @@ export const DeliveriesPage: React.FC = () => {
         >
           <p className="font-semibold">No se pudieron cargar las entregas.</p>
           <p className="mt-1">{loadError}</p>
-          <button type="button" className={`${button} mt-3`} onClick={() => void load()}>
+          <button type="button" className={`${btnPrimary} mt-3`} onClick={() => void load()}>
             <RefreshCw className="size-4" aria-hidden="true" />
             Reintentar
           </button>
@@ -225,7 +270,7 @@ export const DeliveriesPage: React.FC = () => {
                 onChange={(e) =>
                   setStatusFilter(e.target.value as 'ALL' | DeliveryServerStatus)
                 }
-                className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-none"
+                className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-2 focus:-outline-offset-1 focus:outline-primary"
               >
                 <option value="ALL">Todos los estados</option>
                 {(Object.keys(DELIVERY_STATUS_LABEL) as DeliveryServerStatus[]).map((s) => (
@@ -238,7 +283,7 @@ export const DeliveriesPage: React.FC = () => {
                 aria-label="Filtrar por chofer"
                 value={driverFilter}
                 onChange={(e) => setDriverFilter(e.target.value)}
-                className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-none"
+                className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-2 focus:-outline-offset-1 focus:outline-primary"
               >
                 <option value="ALL">Todos los choferes</option>
                 {drivers.map((d) => (
@@ -247,7 +292,7 @@ export const DeliveriesPage: React.FC = () => {
                   </option>
                 ))}
               </select>
-              <button type="button" className={secondary} onClick={() => void load()}>
+              <button type="button" className={btnSecondarySm} onClick={() => void load()}>
                 <RefreshCw className="size-3.5" aria-hidden="true" />
                 Actualizar
               </button>
@@ -291,9 +336,19 @@ export const DeliveriesPage: React.FC = () => {
                           }`}
                         >
                           <td className="py-3.5 px-4">
-                            <span className="font-bold text-sky-800 font-mono text-[13px]">
+                            {/* Con teclado se elige la fila con este botón (el clic en la fila es un atajo de ratón). */}
+                            <button
+                              type="button"
+                              aria-pressed={isSelected}
+                              aria-label={`Seleccionar entrega ${ord.trackingNumber}`}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setSelectedOrderId(ord.id);
+                              }}
+                              className={`font-bold text-primary font-mono text-[13px] hover:underline rounded ${focusRing}`}
+                            >
                               {ord.trackingNumber}
-                            </span>
+                            </button>
                             <span className="block font-semibold text-slate-900 truncate max-w-[160px] mt-0.5">
                               {ord.customerName}
                             </span>
@@ -302,7 +357,7 @@ export const DeliveriesPage: React.FC = () => {
                             <span className="font-medium text-slate-800">
                               {formatScheduleDate(ord.scheduledDate)}
                             </span>
-                            <span className="block text-[11px] text-slate-400 font-mono mt-0.5">
+                            <span className="block text-[11px] text-slate-500 font-mono mt-0.5">
                               {ord.slotLabel}
                             </span>
                           </td>
@@ -312,7 +367,7 @@ export const DeliveriesPage: React.FC = () => {
                                 {ord.driverName}
                               </span>
                             ) : (
-                              <span className="text-amber-600 italic">Por asignar</span>
+                              <span className="text-amber-700 italic">Por asignar</span>
                             )}
                           </td>
                           <td className="py-3.5 px-4 whitespace-nowrap">
@@ -325,7 +380,7 @@ export const DeliveriesPage: React.FC = () => {
                             {ord.status === 'DELIVERY_ASSIGNED' ? (
                               <button
                                 type="button"
-                                className={secondary}
+                                className={btnSecondarySm}
                                 onClick={openHandoffs}
                               >
                                 Validar salida
@@ -334,7 +389,7 @@ export const DeliveriesPage: React.FC = () => {
                               ord.status === 'ARRIVED_FOR_DELIVERY' ? (
                               <button
                                 type="button"
-                                className={secondary}
+                                className={btnSecondarySm}
                                 onClick={() => openDetail(ord.id)}
                               >
                                 Ver en detalle
@@ -342,7 +397,7 @@ export const DeliveriesPage: React.FC = () => {
                             ) : (
                               <button
                                 type="button"
-                                className={secondary}
+                                className={btnSecondarySm}
                                 onClick={() => openDetail(ord.id)}
                               >
                                 Abrir
@@ -378,7 +433,7 @@ export const DeliveriesPage: React.FC = () => {
                   onClick={() => openDetail(selected.id)}
                   className="text-xs text-sky-700 font-semibold hover:underline inline-flex items-center gap-1 cursor-pointer"
                 >
-                  <span>Detalle 360°</span>
+                  <span>Ver detalle</span>
                   <ArrowUpRight className="w-3.5 h-3.5" />
                 </button>
               </div>
@@ -389,12 +444,12 @@ export const DeliveriesPage: React.FC = () => {
                   <span>{selected.customerName}</span>
                 </div>
                 <div className="flex items-start gap-2 text-slate-600">
-                  <MapPin className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+                  <MapPin className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
                   <span>{selected.addressText || 'Dirección en el detalle de la solicitud'}</span>
                 </div>
                 {selected.customerPhone && (
                   <div className="flex items-center gap-2 text-slate-600">
-                    <Phone className="w-4 h-4 text-slate-400 shrink-0" />
+                    <Phone className="w-4 h-4 text-slate-500 shrink-0" />
                     <span>{selected.customerPhone}</span>
                   </div>
                 )}
@@ -428,26 +483,43 @@ export const DeliveriesPage: React.FC = () => {
                       aria-label="Chofer de entrega"
                       value={assignDriverId}
                       onChange={(e) => setAssignDriverId(e.target.value)}
-                      className="mt-1 w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-sky-500"
+                      className="mt-1 w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-2 focus:-outline-offset-1 focus:outline-primary"
                       required
                     >
                       <option value="">Seleccionar chofer…</option>
-                      {drivers
-                        .filter((d) => !selected.facilityId || d.facilityId === selected.facilityId)
-                        .map((d) => (
-                          <option key={d.id} value={d.id}>
-                            {d.name}
-                            {d.status === 'AVAILABLE' ? ' · Disponible' : ` · ${d.status}`}
-                          </option>
-                        ))}
+                      {options.eligible.map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.name}
+                          {d.status === 'AVAILABLE' ? ' · Disponible' : ' · En servicio'}
+                        </option>
+                      ))}
                     </select>
                   </label>
+                  {options.eligible.length === 0 && (
+                    <p className="text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                      No hay choferes elegibles en la sede. Revisa su disponibilidad y capacidad.
+                    </p>
+                  )}
+                  {options.excluded.length > 0 && (
+                    <details className="text-slate-600">
+                      <summary className="cursor-pointer font-semibold">
+                        Choferes no elegibles ({options.excluded.length})
+                      </summary>
+                      <ul aria-label="Choferes no elegibles" className="mt-2 space-y-1">
+                        {options.excluded.map(({ driver, reasons }) => (
+                          <li key={driver.id}>
+                            {driver.name}: {reasons.join(', ')}
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  )}
                   {assignError && (
                     <p role="alert" className="text-rose-700 font-medium">
                       {assignError}
                     </p>
                   )}
-                  <button type="submit" className={`${button} w-full`} disabled={!canAssign || !assignDriverId}>
+                  <button type="submit" className={`${btnPrimary} w-full`} disabled={!canAssign}>
                     <Send className="w-3.5 h-3.5" />
                     {assigning ? 'Asignando…' : 'Asignar chofer en servidor'}
                   </button>
@@ -461,7 +533,7 @@ export const DeliveriesPage: React.FC = () => {
                     La sede valida el código del chofer (traspaso FACILITY_TO_DRIVER) en Recepción
                     y retiros o en el detalle. No se marca “en ruta” solo en el navegador.
                   </p>
-                  <button type="button" className={button} onClick={openHandoffs}>
+                  <button type="button" className={btnPrimary} onClick={openHandoffs}>
                     Ir a recepción y retiros
                   </button>
                 </div>
@@ -475,7 +547,7 @@ export const DeliveriesPage: React.FC = () => {
                     El chofer confirma con el código del cliente en su app. Esta pantalla no puede
                     marcar “Entregada” por su cuenta.
                   </p>
-                  <button type="button" className={secondary} onClick={() => openDetail(selected.id)}>
+                  <button type="button" className={btnSecondarySm} onClick={() => openDetail(selected.id)}>
                     Abrir detalle
                   </button>
                 </div>
@@ -483,13 +555,13 @@ export const DeliveriesPage: React.FC = () => {
 
               {selected.status === 'DELIVERED' && (
                 <p className="text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2">
-                  Entrega confirmada en el servidor. El cierre final (COMPLETED) se hace desde el
+                  Entrega confirmada en el servidor. El cierre de la solicitud se hace desde su
                   detalle si no hay saldo pendiente.
                 </p>
               )}
             </>
           ) : (
-            <div className="py-12 text-center text-xs text-slate-400">
+            <div className="py-12 text-center text-xs text-slate-500">
               {state === 'loading'
                 ? 'Cargando…'
                 : 'Selecciona una entrega en la tabla para gestionarla.'}

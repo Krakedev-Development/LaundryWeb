@@ -24,10 +24,10 @@ function Workspace() {
     : 0;
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-900">
+    <div className="min-h-screen bg-canvas text-slate-900">
       <a
         href="#main-content"
-        className="sidebar-focus sr-only fixed left-3 top-3 z-50 rounded-lg bg-white px-4 py-3 text-sm text-[#143F73] focus:not-sr-only"
+        className="sidebar-focus sr-only fixed left-3 top-3 z-50 rounded-lg bg-white px-4 py-3 text-sm text-primary focus:not-sr-only"
       >
         Ir al contenido
       </a>
@@ -48,7 +48,7 @@ function Workspace() {
               <div className="space-y-6 py-4" role="status">
                 <div className="flex items-center gap-2.5 text-sm font-medium text-slate-500">
                   <LoaderCircle
-                    className="size-4 animate-spin text-[#0F4C81] motion-reduce:animate-none"
+                    className="size-4 animate-spin text-primary motion-reduce:animate-none"
                     aria-hidden="true"
                   />
                   <span>Cargando sección…</span>

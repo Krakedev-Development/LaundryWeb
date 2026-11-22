@@ -78,3 +78,20 @@ test('isScheduledToday y formatScheduleDate usan la fecha del servidor', () => {
   assert.equal(api.isScheduledToday(null, now), false);
   assert.equal(api.formatScheduleDate('2026-11-19', now), 'Hoy');
 });
+
+test('deliveryDriverOptions aplica la regla de Despacho: estado, sede y capacidad; el GPS no excluye', () => {
+  const d = (id, status, facilityId = 'f1', activeLegsCount = 0) => ({
+    id, userId: `u-${id}`, name: id, email: '', phone: null, status, vehicle: null, plate: null,
+    facilityId, facilityName: '', latitude: null, longitude: null, locationAt: null, activeLegsCount,
+  });
+  const drivers = [d('ok', 'AVAILABLE'), d('busy', 'ON_SERVICE'), d('off', 'OFFLINE'), d('far', 'AVAILABLE', 'f2'), d('full', 'AVAILABLE', 'f1', 3)];
+  const free = api.deliveryDriverOptions(drivers, 'f1');
+  assert.deepEqual(free.eligible.map((x) => x.id), ['ok', 'busy', 'full']);
+  assert.deepEqual(
+    Object.fromEntries(free.excluded.map((x) => [x.driver.id, x.reasons])),
+    { off: ['Chofer no disponible'], far: ['Sede incompatible'] },
+  );
+  const limited = api.deliveryDriverOptions(drivers, 'f1', { driverLimit: 3, enforceDriverLimit: true });
+  assert.deepEqual(limited.eligible.map((x) => x.id), ['ok', 'busy']);
+  assert.deepEqual(limited.excluded.find((x) => x.driver.id === 'full').reasons, ['Sin capacidad disponible']);
+});

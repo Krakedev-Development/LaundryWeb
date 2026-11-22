@@ -1,4 +1,11 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
+import {
+  deliveriesHref,
+  dispatchHref,
+  isPlantStage,
+  plantHref,
+} from '../../../services/operationsLinks';
 import {
   Sparkles,
   Truck,
@@ -14,45 +21,54 @@ import {
 } from 'lucide-react';
 import type { Order } from '../../../types';
 import { operationalStage } from '../../../services/fulfillment';
-import { PlantProgress } from '../../plant/plantProgress';
+import { paymentMethodLabel, type BackendOrderDetail } from '../../../services/api/ordersApi';
+import { PlantProgress, plantPhase, AFTER_PLANT, BEFORE_PLANT } from '../../plant/plantProgress';
 import { FacilityReceptionPanel } from '../FacilityReceptionPanel';
+import type { HandoffType } from '../../../services/api/handoffsApi';
 import { DispatchCustodyPanel } from '../DispatchCustodyPanel';
+import type { PlantOrder } from '../../../services/api/plantApi';
 import { FailedPickupPanel } from '../FailedPickupPanel';
-import { PlantProcessPanel } from '../../plant/PlantProcessPanel';
 
 interface OperationTabProps {
   order: Order;
-  onOpenAssign: (type: 'pickup' | 'delivery') => void;
-  onOpenQuarantine: () => void;
   onOpenIncident: () => void;
   onSwitchTab: (tab: 'operation' | 'order' | 'logistics' | 'activity') => void;
   refreshFromServer: (updated?: any) => Promise<void>;
-  confirmingPayment: boolean;
-  onConfirmPayment: () => Promise<void>;
   hasActiveIncidents: boolean;
   activeIncidentsCount: number;
   /** Código o QR leído en "Recepción y retiros" para validar en el panel que corresponda. */
   custodyCode?: string;
+  /** Traspaso de la columna donde se eligió la solicitud: el código solo va a ese panel. */
+  custodyType?: HandoffType | '';
+  /** Solicitud tal como la devolvió el servidor; los paneles de custodia la usan sin volver a pedirla. */
+  serverOrder: BackendOrderDetail | null;
 }
 
 export const OperationTab: React.FC<OperationTabProps> = ({
   order,
-  onOpenAssign,
-  onOpenQuarantine,
   onSwitchTab,
   refreshFromServer,
-  confirmingPayment,
-  onConfirmPayment,
   hasActiveIncidents,
   activeIncidentsCount,
   custodyCode = '',
+  custodyType = '',
+  serverOrder,
 }) => {
   const stage = operationalStage(order);
-  // Con una solicitud del servidor en planta, el panel "Proceso en planta" guía cada paso con sus
-  // validaciones (pesaje, ajustes, pago). Mientras esté activo no se repiten aquí sus acciones.
-  // Cada paso (en este u otro panel) cambia la versión: los paneles vuelven a consultar el servidor
-  // para mostrar el paso siguiente sin recargar la página.
-  const versionKey = `${order.version ?? order.workflowVersion ?? 0}:${order.status}`;
+  // En planta, el proceso (pesaje, inspección, ajustes, precio, lavado, calidad) y la retención se
+  // gestionan solo en Planta. Aquí se muestra la fase y los totales, con un enlace hasta allí.
+  const inPlant = isPlantStage(stage);
+  const phase = plantPhase(order);
+  const showPlantPhases = phase !== BEFORE_PLANT && phase !== AFTER_PLANT;
+  const manageInPlant = (
+    <Link
+      to={plantHref(order.id, 'proceso')}
+      className="px-5 py-2.5 text-xs font-bold text-white bg-primary hover:bg-primary-hover rounded-xl shadow-xs transition-colors flex items-center gap-2"
+    >
+      <Sparkles className="w-4 h-4" />
+      <span>Gestionar en Planta</span>
+    </Link>
+  );
   const isPerWeight = order.pricing?.pricingModel === 'PER_WEIGHT';
   const latestEvent = order.timeline[order.timeline.length - 1];
 
@@ -71,21 +87,26 @@ export const OperationTab: React.FC<OperationTabProps> = ({
       stageTitle = 'Recogida pendiente de asignación';
       stageDescription =
         'La solicitud está confirmada y requiere asignar un conductor para el retiro a domicilio.';
+      // La recogida se asigna solo en Despacho; aquí solo se navega hasta allí.
       if (order.fulfillment?.inbound.method === 'DRIVER' && !order.pickupNeedsScheduling)
         primaryCTA = (
-        <button
-          onClick={() => onOpenAssign('pickup')}
-          className="px-5 py-2.5 text-xs font-bold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
+        <Link
+          to={dispatchHref(order.id)}
+          className="px-5 py-2.5 text-xs font-bold text-white bg-primary hover:bg-primary-hover rounded-xl shadow-xs transition-colors flex items-center gap-2"
         >
           <Truck className="w-4 h-4" />
-          <span>Asignar chofer de recogida</span>
-        </button>
+          <span>Asignar en Despacho</span>
+        </Link>
       );
       break;
 
     case 'PICKUP_ASSIGNED':
       stageTitle = 'Chofer asignado para recogida';
-      stageDescription = `Conductor ${order.pickup.driverName || 'asignado'} programado para la recogida. ${byDriver}`;
+      stageDescription = `${
+        order.pickup.driverName
+          ? `${order.pickup.driverName} tiene asignada la recogida.`
+          : 'La recogida ya tiene chofer asignado.'
+      } ${byDriver}`;
       break;
 
     case 'HEADING_TO_PICKUP':
@@ -116,37 +137,33 @@ export const OperationTab: React.FC<OperationTabProps> = ({
     case 'PRICING_PENDING':
     case 'CUSTOMER_APPROVAL_PENDING':
       stageTitle = 'Pedido en planta';
-      stageDescription = 'Sigue los pasos del panel "Proceso en planta": pesaje, inspección, precio y pago.';
+      stageDescription =
+        'El pesaje, la inspección, los ajustes y el precio se gestionan en Planta.';
+      primaryCTA = manageInPlant;
       break;
 
     case 'IN_PROCESS':
     case 'QUALITY_CONTROL':
       stageTitle = stage === 'IN_PROCESS' ? 'En ciclo de lavado y cuidado' : 'Control de calidad final';
-      stageDescription = 'El avance se registra en el panel "Proceso en planta".';
-      primaryCTA = (
-        <button
-          onClick={onOpenQuarantine}
-          className="px-4 py-2.5 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer"
-        >
-          <AlertTriangle className="w-3.5 h-3.5" />
-          <span>Retener para revisión técnica</span>
-        </button>
-      );
+      stageDescription =
+        'El avance y la retención para revisión técnica se gestionan en Planta.';
+      primaryCTA = manageInPlant;
       break;
 
     case 'READY_FOR_DELIVERY':
     case 'DELIVERY_SCHEDULED':
       if (order.fulfillment?.outbound.method === 'DRIVER') {
         stageTitle = 'Lista para despacho y entrega';
-        stageDescription = 'Prendas listas y empaquetadas. Asigna un conductor para la entrega al cliente.';
+        stageDescription = 'Prendas listas y empaquetadas. El chofer de entrega se asigna en Entregas.';
+        // La entrega se asigna solo en Entregas; aquí solo se navega hasta allí.
         primaryCTA = (
-        <button
-          onClick={() => onOpenAssign('delivery')}
-          className="px-5 py-2.5 text-xs font-bold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
+        <Link
+          to={deliveriesHref(order.id)}
+          className="px-5 py-2.5 text-xs font-bold text-white bg-primary hover:bg-primary-hover rounded-xl shadow-xs transition-colors flex items-center gap-2"
         >
           <Truck className="w-4 h-4" />
-          <span>Asignar chofer de entrega</span>
-        </button>
+          <span>Asignar en Entregas</span>
+        </Link>
       );
       } else {
         stageTitle = 'Lista para retiro en sede';
@@ -156,7 +173,11 @@ export const OperationTab: React.FC<OperationTabProps> = ({
 
     case 'DELIVERY_ASSIGNED':
       stageTitle = 'Chofer asignado para reparto';
-      stageDescription = `Conductor ${order.delivery.driverName || 'asignado'} asignado. La salida se registra validando su código en la sede.`;
+      stageDescription = `${
+        order.delivery.driverName
+          ? `${order.delivery.driverName} tiene asignada la entrega.`
+          : 'La entrega ya tiene chofer asignado.'
+      } La salida se registra validando su código en la sede.`;
       break;
 
     case 'OUT_FOR_DELIVERY':
@@ -173,7 +194,7 @@ export const OperationTab: React.FC<OperationTabProps> = ({
       stageTitle = 'Pedido entregado';
       stageDescription = hasActiveIncidents
         ? 'Prendas entregadas. Resuelve las incidencias abiertas antes de cerrar la solicitud.'
-        : 'Prendas entregadas. Ciérrala en el panel de cierre cuando no haya saldo pendiente.';
+        : 'Prendas entregadas al cliente. Falta cerrar la solicitud.';
       break;
 
     case 'CLOSED':
@@ -190,15 +211,19 @@ export const OperationTab: React.FC<OperationTabProps> = ({
       break;
   }
 
-  // Check if payment verification alert is legitimately needed (Fixing Finding H-04)
+  // Transferencia pendiente según el servidor. El pago se confirma solo en la pestaña Pedido
+  // (decisión P-3): aquí solo se avisa y se lleva hasta allí.
   const isTransferPending =
     order.pricing?.paymentMethod === 'TRANSFERENCIA' && order.pricing?.paymentStatus !== 'PAID';
 
   return (
     <div className="space-y-6">
-      {/* Legitimate Transfer Validation Alert (Only if method is transfer and payment pending) */}
       {isTransferPending && (
-        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 flex flex-wrap items-center justify-between gap-3 text-xs text-amber-900">
+        <div
+          role="status"
+          aria-label="Transferencia pendiente"
+          className="p-4 rounded-2xl bg-amber-50 border border-amber-200 flex flex-wrap items-center justify-between gap-3 text-xs text-amber-900"
+        >
           <div className="flex items-center gap-2">
             <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
             <span>
@@ -207,11 +232,12 @@ export const OperationTab: React.FC<OperationTabProps> = ({
             </span>
           </div>
           <button
-            onClick={() => void onConfirmPayment()}
-            disabled={confirmingPayment}
-            className="px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors cursor-pointer disabled:opacity-50"
+            type="button"
+            onClick={() => onSwitchTab('order')}
+            className="font-bold underline hover:text-amber-950 inline-flex items-center gap-1 cursor-pointer"
           >
-            {confirmingPayment ? 'Confirmando...' : 'Confirmar transferencia'}
+            <span>Confirmar en la pestaña Pedido</span>
+            <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
       )}
@@ -244,7 +270,7 @@ export const OperationTab: React.FC<OperationTabProps> = ({
           <section className="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-2xs space-y-5">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
               <div className="flex items-center gap-2.5">
-                <div className="p-2.5 rounded-xl bg-sky-100 text-[#0F4C81]">
+                <div className="p-2.5 rounded-xl bg-sky-100 text-primary">
                   <Sparkles className="w-5 h-5" />
                 </div>
                 <div>
@@ -259,18 +285,41 @@ export const OperationTab: React.FC<OperationTabProps> = ({
               </span>
             </div>
 
-            {/* Sub-stages Progress Bar in Plant */}
+            {/* Fases de planta: solo mientras la ropa está (o quedó retenida) en planta. Antes de
+                llegar y después de salir, el progreso general ya lo muestra. */}
+            {showPlantPhases && (
             <div className="space-y-1.5 pt-1">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400 block">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block">
                 Fases del proceso en planta
               </span>
               <PlantProgress order={order} />
-              <p className="text-[11px] text-slate-400 mt-1">
+              <p className="text-[11px] text-slate-500 mt-1">
                 {isPerWeight
                   ? 'Servicio por peso: pesaje obligatorio previo a la inspección.'
                   : 'Servicio por prenda: no requiere pesaje inicial, ingresa directo a inspección.'}
               </p>
             </div>
+            )}
+
+            {/* Resumen de solo lectura mientras la solicitud está en planta. */}
+            {inPlant && (
+              <dl aria-label="Resumen en planta" className="grid grid-cols-2 gap-3 text-xs">
+                <div className="rounded-xl bg-slate-50 border border-slate-100 p-3">
+                  <dt className="text-slate-500">Importe</dt>
+                  <dd className="mt-0.5 font-bold text-slate-900">
+                    {order.pricing?.amountKnown === false
+                      ? 'Pendiente de pesaje'
+                      : `${order.pricing?.currency ?? 'USD'} ${(order.pricing?.total ?? 0).toFixed(2)}`}
+                  </dd>
+                </div>
+                <div className="rounded-xl bg-slate-50 border border-slate-100 p-3">
+                  <dt className="text-slate-500">Pago</dt>
+                  <dd className="mt-0.5 font-bold text-slate-900">
+                    {order.pricing?.paymentStatus === 'PAID' ? 'Pagado' : 'Pendiente'}
+                  </dd>
+                </div>
+              </dl>
+            )}
 
             {/* Single Primary Contextual CTA */}
             {primaryCTA && (
@@ -284,11 +333,14 @@ export const OperationTab: React.FC<OperationTabProps> = ({
           </section>
 
           {/* Contextual Facility Reception Panel if heading to facility */}
-          {stage === 'HEADING_TO_FACILITY' && (
+          {stage === 'HEADING_TO_FACILITY' && serverOrder && (
             <FacilityReceptionPanel
               orderId={order.id}
-              version={order.version ?? order.workflowVersion ?? 1}
-              initialCode={custodyCode}
+              version={serverOrder.version}
+              onStale={() => void refreshFromServer()}
+              initialCode={
+                !custodyType || custodyType === 'DRIVER_TO_FACILITY' ? custodyCode : ''
+              }
               onChanged={(updated) => void refreshFromServer(updated)}
             />
           )}
@@ -303,22 +355,18 @@ export const OperationTab: React.FC<OperationTabProps> = ({
             />
           )}
 
-          {/* Salida a reparto, retiro en sede y cierre. Se monta siempre: el panel consulta el
-              estado real en el servidor y decide qué mostrar (el estado local agrupa etapas). */}
-          <DispatchCustodyPanel
-            orderId={order.id}
-            refreshKey={versionKey}
-            initialCode={custodyCode}
-            onChanged={(updated) => void refreshFromServer(updated)}
-          />
-
-          {/* Proceso en planta con el servidor (solo mientras la solicitud está en planta). */}
-          <PlantProcessPanel
-            orderId={order.id}
-            onlyInPlant
-            refreshKey={versionKey}
-            onChanged={(updated) => void refreshFromServer(updated)}
-          />
+          {/* Salida a reparto, retiro en sede y cierre. Recibe la solicitud del servidor que ya
+              consultó el detalle (T-10) y decide qué mostrar según su estado real. */}
+          {serverOrder && (
+            <DispatchCustodyPanel
+              // Misma respuesta de GET /orders/:id; PlantOrder solo afina sus tipos.
+              order={serverOrder as PlantOrder}
+              onStale={() => void refreshFromServer()}
+              initialCode={custodyType === 'DRIVER_TO_FACILITY' ? '' : custodyCode}
+              initialType={custodyType}
+              onChanged={(updated) => void refreshFromServer(updated)}
+            />
+          )}
         </div>
 
         {/* Right: Compact Request Summary & Last Event (1 col) */}
@@ -326,7 +374,7 @@ export const OperationTab: React.FC<OperationTabProps> = ({
           {/* Compact Summary Card */}
           <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs space-y-4">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
-              <PackageCheck className="w-4 h-4 text-[#0F4C81]" />
+              <PackageCheck className="w-4 h-4 text-primary" />
               <span>Resumen de la solicitud</span>
             </h3>
 
@@ -352,7 +400,7 @@ export const OperationTab: React.FC<OperationTabProps> = ({
                       : 'bg-amber-100 text-amber-800'
                   }`}
                 >
-                  {order.pricing?.paymentMethod} ·{' '}
+                  {paymentMethodLabel(order.pricing?.paymentMethod)} ·{' '}
                   {order.pricing?.paymentStatus === 'PAID' ? 'PAGADO' : 'PENDIENTE'}
                 </span>
               </div>
@@ -361,7 +409,7 @@ export const OperationTab: React.FC<OperationTabProps> = ({
                 <span className="text-slate-500">Entrega programada:</span>
                 <span className="font-semibold text-slate-800 text-right">
                   {order.delivery.targetDate}
-                  <span className="block text-[10px] text-slate-400">
+                  <span className="block text-[10px] text-slate-500">
                     {order.delivery.timeSlot}
                   </span>
                 </span>
@@ -375,7 +423,7 @@ export const OperationTab: React.FC<OperationTabProps> = ({
 
             <button
               onClick={() => onSwitchTab('order')}
-              className="w-full mt-2 py-2 text-xs font-semibold text-[#0F4C81] bg-sky-50 hover:bg-sky-100 rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+              className="w-full mt-2 py-2 text-xs font-semibold text-primary bg-sky-50 hover:bg-sky-100 rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-1.5"
             >
               <span>Ver detalle comercial y prendas</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -387,10 +435,10 @@ export const OperationTab: React.FC<OperationTabProps> = ({
             <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5 text-[#0F4C81]" />
+                  <Clock className="w-3.5 h-3.5 text-primary" />
                   <span>Último evento registrado</span>
                 </h3>
-                <span className="text-[10px] font-mono text-slate-400">
+                <span className="text-[10px] font-mono text-slate-500">
                   {latestEvent.timestamp}
                 </span>
               </div>
@@ -398,7 +446,13 @@ export const OperationTab: React.FC<OperationTabProps> = ({
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs">
                 <p className="font-bold text-slate-900">{latestEvent.label}</p>
                 <p className="text-[11px] text-slate-500 mt-0.5">
-                  Registrado por: <strong>{latestEvent.userName}</strong> ({latestEvent.userRole})
+                  {latestEvent.userName === 'Sistema' ? (
+                    'Registrado automáticamente'
+                  ) : (
+                    <>
+                      Registrado por: <strong>{latestEvent.userName}</strong>
+                    </>
+                  )}
                 </p>
                 {latestEvent.notes && (
                   <p className="text-xs text-slate-600 mt-1 italic">

@@ -21,19 +21,19 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 }) => {
   return (
     <div
-      className={`flex flex-col items-center justify-center text-center rounded-xl border border-dashed border-[#E5EAF0] bg-white/60 ${
+      className={`flex flex-col items-center justify-center text-center rounded-xl border border-dashed border-line bg-white/60 ${
         compact ? 'py-8 px-4' : 'py-14 px-6'
       }`}
     >
-      <div className="w-12 h-12 rounded-full bg-[#E8EEF5] text-[#143F73] flex items-center justify-center mb-3">
-        {icon || <CheckCircle2 className="w-6 h-6 text-[#143F73]" />}
+      <div className="w-12 h-12 rounded-full bg-primary-soft text-primary flex items-center justify-center mb-3">
+        {icon || <CheckCircle2 className="w-6 h-6 text-primary" />}
       </div>
-      <h3 className="text-sm font-semibold text-[#102A43]">{title}</h3>
-      <p className="mt-1 text-xs text-[#6B7280] max-w-sm">{subtitle}</p>
+      <h3 className="text-sm font-semibold text-ink">{title}</h3>
+      <p className="mt-1 text-xs text-subtle max-w-sm">{subtitle}</p>
       {action && (
         <button
           onClick={action.onClick}
-          className="mt-4 inline-flex items-center justify-center px-4 py-2 text-xs font-semibold text-white bg-[#143F73] hover:bg-[#0F315A] rounded-lg transition-colors shadow-xs"
+          className="mt-4 inline-flex items-center justify-center px-4 py-2 text-xs font-semibold text-white bg-primary hover:bg-primary-hover rounded-lg transition-colors shadow-xs"
         >
           {action.label}
         </button>

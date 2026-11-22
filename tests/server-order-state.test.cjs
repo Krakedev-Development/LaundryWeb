@@ -72,3 +72,16 @@ test('una incidencia conserva hasta dónde llegó la solicitud', () => {
   const failedPickup = localStateFromServer('INCIDENT', false, false, 'CONFIRMED');
   assert.equal(failedPickup.inbound.milestone, 'PENDING');
 });
+
+// T-09b: método y estado de pago reales del servidor, sin valores inventados.
+test('el método y el estado de pago salen del servidor; sin dato no se supone tarjeta ni pagado', () => {
+  const pricing = (extra) => mapBackendOrderToOrder(raw('IN_PROCESS', 'HOME_HOME', extra)).pricing;
+  assert.equal(pricing({ paymentMethodKind: 'TRANSFER', paymentStatus: 'PENDING' }).paymentMethod, 'TRANSFERENCIA');
+  assert.equal(pricing({ paymentMethodKind: 'TRANSFER', paymentStatus: 'PENDING' }).paymentStatus, 'PENDING');
+  assert.equal(pricing({ paymentMethodKind: 'WALLET' }).paymentMethod, 'BILLETERA');
+  assert.equal(pricing({ paymentMethodKind: 'CARD' }).paymentMethod, 'TARJETA');
+  assert.equal(pricing({ paymentMethodKind: null }).paymentMethod, undefined);
+  assert.equal(pricing({ paymentStatus: undefined }).paymentStatus, 'PENDING');
+  assert.equal(pricing({ paymentStatus: 'ALGO_RARO' }).paymentStatus, 'PENDING');
+  assert.equal(pricing({ paymentStatus: 'PAID' }).paymentStatus, 'PAID');
+});

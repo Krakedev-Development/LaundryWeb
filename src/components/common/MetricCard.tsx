@@ -27,7 +27,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   className = '',
 }) => {
   const iconStyles = {
-    default: 'bg-slate-50 text-[#0F4C81] border border-slate-200/80 shadow-2xs',
+    default: 'bg-slate-50 text-primary border border-slate-200/80 shadow-2xs',
     urgent: 'bg-rose-50 text-rose-600 border border-rose-200/80 shadow-2xs',
     warning: 'bg-amber-50 text-amber-600 border border-amber-200/80 shadow-2xs',
     success:

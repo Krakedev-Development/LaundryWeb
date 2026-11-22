@@ -1,6 +1,7 @@
 import { listOrders, getOrder, assignDriver, type BackendOrderDetail } from './ordersApi';
 import { listDrivers, type BackendDriver } from './driversApi';
 import { ApiError } from './apiConfig';
+import { eligibilityReasons } from '../geo/DispatchService';
 
 // Entregas a domicilio contra el servidor. La salida a ruta y la confirmación con el cliente
 // pasan por custodia (handoffs), no por botones locales. El personal asigna chofer; la franja
@@ -138,17 +139,21 @@ export async function fetchDeliveryDrivers(): Promise<BackendDriver[]> {
   return listDrivers();
 }
 
+/**
+ * Asigna el chofer de entrega. Usa la lista de choferes que la pantalla ya cargó para armar la
+ * fila (nombre del chofer): no la vuelve a pedir tras asignar (T-10).
+ */
 export async function assignDeliveryDriver(
   orderId: string,
   driverId: string,
   expectedVersion: number,
+  drivers: BackendDriver[],
 ): Promise<DeliveryRow> {
   const updated = await assignDriver(orderId, {
     leg: 'OUTBOUND',
     driverId,
     expectedVersion,
   });
-  const drivers = await listDrivers().catch(() => [] as BackendDriver[]);
   const row = mapOrderToDeliveryRow(updated, drivers);
   if (!row) {
     throw new ApiError('La solicitud ya no está en una etapa de entrega a domicilio.', 409);
@@ -176,4 +181,39 @@ export function formatScheduleDate(scheduledDate: string | null, now = new Date(
     day: '2-digit',
     month: 'short',
   });
+}
+
+/**
+ * Choferes que pueden recibir la entrega. Usa la misma regla que Despacho (`eligibilityReasons`:
+ * estado, sede y capacidad) para que ninguna pantalla ofrezca un chofer que la otra excluye.
+ * La ubicación no excluye: sin GPS reciente el chofer sigue siendo elegible.
+ */
+export function deliveryDriverOptions(
+  drivers: BackendDriver[],
+  facilityId: string | null | undefined,
+  policy: { driverLimit?: number; enforceDriverLimit?: boolean } = {},
+): { eligible: BackendDriver[]; excluded: { driver: BackendDriver; reasons: string[] }[] } {
+  const eligible: BackendDriver[] = [];
+  const excluded: { driver: BackendDriver; reasons: string[] }[] = [];
+  for (const driver of drivers) {
+    const reasons = eligibilityReasons(
+      {
+        id: driver.id,
+        status: driver.status,
+        coordinates: { lat: driver.latitude ?? NaN, lng: driver.longitude ?? NaN },
+        updatedAt: driver.locationAt ?? '',
+        facilityId: driver.facilityId,
+        zoneId: '',
+        activeOrders: driver.activeLegsCount ?? 0,
+        maxOrders: policy.driverLimit ?? 8,
+      },
+      { id: '', coordinates: { lat: NaN, lng: NaN }, facilityId: facilityId ?? driver.facilityId, zoneId: '' },
+      Date.now(),
+      120,
+      policy.enforceDriverLimit ?? false,
+    );
+    if (reasons.length) excluded.push({ driver, reasons });
+    else eligible.push(driver);
+  }
+  return { eligible, excluded };
 }

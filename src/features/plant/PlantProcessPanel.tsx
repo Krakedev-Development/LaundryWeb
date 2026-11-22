@@ -19,14 +19,8 @@ import {
   type PlantOrder,
   type StaffAdjustment,
 } from '../../services/api/plantApi';
+import { btnPrimary, btnSecondary, field, fieldInvalid } from '../../shared/ui/controls';
 
-const field =
-  'mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm focus:outline-2 focus:outline-sky-700';
-const invalid = 'border-rose-400 bg-rose-50/40';
-const primary =
-  'inline-flex items-center justify-center gap-2 rounded-xl bg-[#0F4C81] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#0A3660] disabled:opacity-50';
-const secondary =
-  'inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-[#0F4C81] hover:bg-slate-50 disabled:opacity-50';
 
 const money = (v: string | number | null | undefined) => `$${(Number(v) || 0).toFixed(2)}`;
 const signed = (v: string | number) => `${Number(v) > 0 ? '+' : '-'}${money(Math.abs(Number(v)))}`;
@@ -113,7 +107,7 @@ export function PlantProcessPanel({
       <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
         <p className="font-semibold">No se pudo cargar el proceso en planta.</p>
         <p className="mt-1">{error}</p>
-        <button type="button" className={`${primary} mt-3`} onClick={() => void load()}>
+        <button type="button" className={`${btnPrimary} mt-3`} onClick={() => void load()}>
           Reintentar
         </button>
       </div>
@@ -175,7 +169,7 @@ export function PlantProcessPanel({
   return (
     <section aria-label="Proceso en planta" className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="flex items-center gap-2 text-sm font-bold text-[#102A43]">
+        <h3 className="flex items-center gap-2 text-sm font-bold text-ink">
           <ClipboardCheck className="h-4 w-4" aria-hidden />
           Proceso en planta
         </h3>
@@ -208,7 +202,7 @@ export function PlantProcessPanel({
           <span>El cliente eligió transferencia: confirma el pago cuando recibas el dinero.</span>
           <button
             type="button"
-            className={secondary}
+            className={btnSecondary}
             disabled={busy}
             onClick={() =>
               void run(() => confirmPayment(order.id, order.version, 'Transferencia recibida'), 'Pago confirmado')
@@ -226,12 +220,12 @@ export function PlantProcessPanel({
           {heldBy ? (
             <Link
               to={`/operations/incidents/${heldBy.id}`}
-              className="mt-2 inline-block font-semibold text-[#0F4C81] underline"
+              className="mt-2 inline-block font-semibold text-primary underline"
             >
               Resolver en Incidencias
             </Link>
           ) : (
-            <Link to="/operations/incidents" className="mt-2 inline-block font-semibold text-[#0F4C81] underline">
+            <Link to="/operations/incidents" className="mt-2 inline-block font-semibold text-primary underline">
               Ver Incidencias
             </Link>
           )}
@@ -250,7 +244,7 @@ export function PlantProcessPanel({
           </p>
           <button
             type="button"
-            className={primary}
+            className={btnPrimary}
             disabled={busy}
             onClick={() =>
               void run(
@@ -273,7 +267,7 @@ export function PlantProcessPanel({
                 inputMode="decimal"
                 aria-invalid={!!weightError}
                 aria-describedby="plant-weight-error"
-                className={`${field} ${weightError ? invalid : ''}`}
+                className={`${field} ${weightError ? fieldInvalid : ''}`}
                 value={weight}
                 onChange={(e) => setWeight(e.target.value)}
                 placeholder={order.estimatedWeightLb ? `Estimado: ${order.estimatedWeightLb}` : 'Ej: 12.5'}
@@ -285,7 +279,7 @@ export function PlantProcessPanel({
               </span>
             )}
           </div>
-          <button type="submit" className={primary} disabled={busy}>
+          <button type="submit" className={btnPrimary} disabled={busy}>
             <Scale className="h-4 w-4" aria-hidden />
             Registrar peso
           </button>
@@ -334,7 +328,7 @@ export function PlantProcessPanel({
                   <input
                     inputMode="decimal"
                     aria-invalid={!!adjErrors.amount}
-                    className={`${field} ${adjErrors.amount ? invalid : ''}`}
+                    className={`${field} ${adjErrors.amount ? fieldInvalid : ''}`}
                     value={adj.amount}
                     onChange={(e) => setAdj({ ...adj, amount: e.target.value })}
                     placeholder="Ej: 2.50 o -1.00"
@@ -348,7 +342,7 @@ export function PlantProcessPanel({
                   <input
                     maxLength={300}
                     aria-invalid={!!adjErrors.customerMessage}
-                    className={`${field} ${adjErrors.customerMessage ? invalid : ''}`}
+                    className={`${field} ${adjErrors.customerMessage ? fieldInvalid : ''}`}
                     value={adj.customerMessage}
                     onChange={(e) => setAdj({ ...adj, customerMessage: e.target.value })}
                   />
@@ -363,7 +357,7 @@ export function PlantProcessPanel({
                   <input
                     maxLength={300}
                     aria-invalid={!!adjErrors.internalReason}
-                    className={`${field} ${adjErrors.internalReason ? invalid : ''}`}
+                    className={`${field} ${adjErrors.internalReason ? fieldInvalid : ''}`}
                     value={adj.internalReason}
                     onChange={(e) => setAdj({ ...adj, internalReason: e.target.value })}
                   />
@@ -373,7 +367,7 @@ export function PlantProcessPanel({
                 )}
               </div>
               <div className="md:col-span-2">
-                <button type="submit" className={secondary} disabled={busy}>
+                <button type="submit" className={btnSecondary} disabled={busy}>
                   Agregar ajuste
                 </button>
                 <p className="mt-1 text-xs text-slate-500">
@@ -388,7 +382,7 @@ export function PlantProcessPanel({
       {status === 'INSPECTION' && (
         <button
           type="button"
-          className={primary}
+          className={btnPrimary}
           disabled={busy}
           onClick={() => void run(() => advance(order.id, 'PRICING_PENDING', order.version), 'Inspección terminada')}
         >
@@ -405,7 +399,7 @@ export function PlantProcessPanel({
           )}
           <button
             type="button"
-            className={primary}
+            className={btnPrimary}
             disabled={busy || (status === 'CUSTOMER_APPROVAL_PENDING' && pending.length > 0)}
             onClick={() => void run(() => resolvePricing(order.id, order.version), 'Precio procesado')}
           >
@@ -420,7 +414,7 @@ export function PlantProcessPanel({
       {status === 'IN_PROCESS' && (
         <button
           type="button"
-          className={primary}
+          className={btnPrimary}
           disabled={busy}
           onClick={() => void run(() => advance(order.id, 'QUALITY_CONTROL', order.version, 'Lavado terminado'), 'En control de calidad')}
         >
@@ -431,7 +425,7 @@ export function PlantProcessPanel({
       {status === 'QUALITY_CONTROL' && (
         <button
           type="button"
-          className={primary}
+          className={btnPrimary}
           disabled={busy}
           onClick={() =>
             void run(

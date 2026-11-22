@@ -1,11 +1,32 @@
 @import "tailwindcss";
 
+/*
+ * Tokens de color de la marca, registrados en Tailwind: generan utilidades como `bg-primary`,
+ * `text-ink` o `ring-primary/20`. Usa estas utilidades en lugar de colores hex escritos a mano.
+ */
+@theme {
+  /* Acción principal: botones primarios, enlaces, selección y foco. */
+  --color-primary: #0F4C81;
+  --color-primary-hover: #0A3660;
+  --color-primary-soft: #F0F6FC;
+  /* Títulos y texto de mayor jerarquía. */
+  --color-ink: #102A43;
+  /* Texto secundario (migas de pan, subtítulos). */
+  --color-subtle: #6B7280;
+  /* Superficies y bordes neutros. */
+  --color-canvas: #F8FAFC;
+  --color-surface-muted: #F7F9FC;
+  --color-line: #E5EAF0;
+  /* Verde lima del logo (indicador de la sección activa en el menú). */
+  --color-brand-lime: #A5CD39;
+}
+
 @layer base {
   :root {
     color-scheme: light !important;
-    --primary: #0F4C81;
-    --primary-hover: #0A3660;
-    --primary-soft: #F0F6FC;
+    --primary: var(--color-primary);
+    --primary-hover: var(--color-primary-hover);
+    --primary-soft: var(--color-primary-soft);
     --aqua: #0284C7;
     --lime: #16A34A;
     --bg-main: #F8FAFC;

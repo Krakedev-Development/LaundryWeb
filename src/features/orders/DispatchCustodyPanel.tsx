@@ -1,21 +1,21 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
-import { LoaderCircle, PackageOpen, QrCode } from 'lucide-react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { LoaderCircle, PackageOpen } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { parseCustodyInput, verifyHandoff, type HandoffType } from '../../services/api/handoffsApi';
-import { completeOrder, getPlantOrder, type PlantOrder } from '../../services/api/plantApi';
+import { ApiError } from '../../services/api/apiConfig';
+import {
+  custodyErrorMessage,
+  parseCustodyInput,
+  verifyHandoff,
+  type HandoffType,
+} from '../../services/api/handoffsApi';
+import { completeOrder, type PlantOrder } from '../../services/api/plantApi';
+import { CustodyCodeField } from '../custody/CustodyCodeField';
+import { btnPrimary, field, fieldInvalid } from '../../shared/ui/controls';
 
-const field =
-  'mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm focus:outline-2 focus:outline-sky-700';
-const invalid = 'border-rose-400 bg-rose-50/40';
-const primary =
-  'inline-flex items-center justify-center gap-2 rounded-xl bg-[#0F4C81] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#0A3660] disabled:opacity-50';
-const secondary =
-  'inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-[#0F4C81] hover:bg-slate-50';
 
 const messageOf = (e: unknown) =>
   e instanceof Error ? e.message : 'No se pudo completar la operación. Intenta de nuevo.';
 const money = (v: string | number | null | undefined) => `$${(Number(v) || 0).toFixed(2)}`;
-const QR_FULL = /^LDH1:[^:]+:[A-Z_]+:.{16,128}$/;
 
 type Step = { type: HandoffType; title: string; who: string; help: string; button: string; done: string; recipient: boolean };
 const STEPS: Record<string, Step> = {
@@ -42,75 +42,55 @@ const STEPS: Record<string, Step> = {
 /**
  * Traspasos de salida en la sede, contra el servidor: entrega al chofer para reparto y retiro
  * del cliente en sede. Con la solicitud entregada, permite cerrarla.
+ *
+ * Recibe la solicitud que el detalle ya consultó al servidor (T-10): no la vuelve a pedir. Tras
+ * cada confirmación entrega la respuesta del servidor a `onChanged` y el detalle la actualiza.
  */
 export function DispatchCustodyPanel({
-  orderId,
+  order,
   onChanged,
-  refreshKey,
+  onStale,
   initialCode = '',
+  initialType = '',
 }: {
-  orderId: string;
+  order: PlantOrder;
   onChanged(updated: PlantOrder): void;
-  /** Cambia cuando la solicitud cambió en otro panel (p. ej. su versión): se vuelve a consultar. */
-  refreshKey?: string | number;
+  /** La versión quedó vieja (409): el detalle vuelve a consultar la solicitud al servidor. */
+  onStale?(): void;
   /** Código o QR leído en "Recepción y retiros", para no tener que volver a escanearlo. */
   initialCode?: string;
+  /** Traspaso de la columna donde se eligió la solicitud (`?traspaso=`). */
+  initialType?: HandoffType | '';
 }) {
   const { showToast } = useApp();
-  const [order, setOrder] = useState<PlantOrder | null>(null);
   const [code, setCode] = useState(initialCode);
   const [name, setName] = useState('');
   const [relationship, setRelationship] = useState('');
   const [notes, setNotes] = useState('');
   const [errors, setErrors] = useState<{ code?: string; name?: string; relationship?: string }>({});
   const [busy, setBusy] = useState(false);
-  const [camera, setCamera] = useState(false);
-  const video = useRef<HTMLVideoElement>(null);
 
-  const load = useCallback(async () => {
-    try {
-      setOrder(await getPlantOrder(orderId));
-    } catch {
-      setOrder(null);
-    }
-  }, [orderId]);
-
+  // El código traído de "Recepción y retiros" solo sirve para la etapa en la que se eligió. Si la
+  // solicitud está en otra (o en ninguna de este panel), se descarta para no gastar un intento
+  // del traspaso equivocado.
+  const initialChecked = useRef(false);
   useEffect(() => {
-    void load();
-  }, [load, refreshKey]);
-
-  // Lectura del QR con la cámara (requiere HTTPS o localhost).
-  useEffect(() => {
-    if (!camera || !video.current) return;
-    let cancelled = false;
-    let controls: { stop(): void } | undefined;
-    import('@zxing/browser')
-      .then(async ({ BrowserQRCodeReader }) => {
-        controls = await new BrowserQRCodeReader().decodeFromVideoDevice(undefined, video.current!, (result) => {
-          if (!result) return;
-          setCode(result.getText());
-          setCamera(false);
-        });
-        if (cancelled) controls.stop();
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setCamera(false);
-        setErrors((prev) => ({ ...prev, code: 'No se pudo abrir la cámara. Escribe el código o usa el lector de QR.' }));
+    if (initialChecked.current || !initialCode) return;
+    initialChecked.current = true;
+    const current = STEPS[order.status];
+    if (current && (!initialType || current.type === initialType)) return;
+    setCode('');
+    if (current)
+      setErrors({
+        code: 'El código leído en Recepción y retiros era para otra etapa. Pide el código de esta etapa.',
       });
-    return () => {
-      cancelled = true;
-      controls?.stop();
-    };
-  }, [camera]);
-
-  if (!order) return null;
+  }, [order, initialCode, initialType]);
 
   if (order.status === 'DELIVERED') {
     const due = Number(order.amountDue) || 0;
     return (
       <section aria-label="Cierre de la solicitud" className="space-y-2 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5">
-        <h2 className="text-sm font-bold text-[#102A43]">Solicitud entregada</h2>
+        <h2 className="text-sm font-bold text-ink">Solicitud entregada</h2>
         {due > 0 ? (
           <p className="text-xs text-amber-800">
             Queda un saldo de {money(due)}. Confirma el pago antes de cerrar la solicitud.
@@ -120,7 +100,7 @@ export function DispatchCustodyPanel({
             <p className="text-xs text-slate-700">La ropa se entregó y no hay saldo pendiente.</p>
             <button
               type="button"
-              className={primary}
+              className={btnPrimary}
               disabled={busy}
               onClick={async () => {
                 setBusy(true);
@@ -128,7 +108,6 @@ export function DispatchCustodyPanel({
                   const updated = await completeOrder(order.id, order.version);
                   showToast({ type: 'success', title: 'Solicitud cerrada' });
                   onChanged(updated);
-                  await load();
                 } catch (e) {
                   showToast({ type: 'error', title: 'No se pudo cerrar', message: messageOf(e) });
                 } finally {
@@ -169,11 +148,13 @@ export function DispatchCustodyPanel({
         notes: notes.trim() || undefined,
         ...input,
       });
+      setCode('');
       showToast({ type: 'success', title: step.done });
       onChanged(updated as PlantOrder);
-      await load();
     } catch (err) {
-      setErrors({ code: messageOf(err) });
+      setErrors({ code: custodyErrorMessage(err, step.recipient ? 'del cliente' : 'del chofer') });
+      // La versión quedó vieja: se vuelve a consultar para confirmar con la vigente.
+      if (err instanceof ApiError && err.status === 409) onStale?.();
     } finally {
       setBusy(false);
     }
@@ -184,36 +165,21 @@ export function DispatchCustodyPanel({
       <div className="flex gap-3">
         <PackageOpen className="h-5 w-5 shrink-0 text-sky-800" aria-hidden />
         <div>
-          <h2 className="text-sm font-bold text-[#102A43]">{step.title}</h2>
+          <h2 className="text-sm font-bold text-ink">{step.title}</h2>
           <p className="mt-1 text-xs text-slate-700">{step.help}</p>
         </div>
       </div>
       <form className="grid gap-4 lg:grid-cols-3" onSubmit={submit} noValidate>
-        <div>
-          <label className="block text-sm font-medium">
-            {step.who}
-            <input
-              aria-invalid={!!errors.code}
-              className={`${field} font-mono ${errors.code ? invalid : ''}`}
-              value={code}
-              onChange={(e) => {
-                setCode(e.target.value);
-                setErrors((prev) => ({ ...prev, code: undefined }));
-              }}
-              placeholder="6 dígitos o lector de QR"
-              autoComplete="off"
-            />
-          </label>
-          {errors.code && <span className="mt-1 block text-xs text-rose-700">{errors.code}</span>}
-          {QR_FULL.test(code.trim()) && !errors.code && (
-            <span className="mt-1 block text-xs font-semibold text-emerald-700">QR leído</span>
-          )}
-          <button type="button" className={`${secondary} mt-2`} onClick={() => setCamera((v) => !v)}>
-            <QrCode className="h-4 w-4" aria-hidden />
-            {camera ? 'Cerrar cámara' : 'Escanear QR'}
-          </button>
-          {camera && <video ref={video} className="mt-2 max-h-56 w-full rounded-xl" />}
-        </div>
+        <CustodyCodeField
+          label={step.who}
+          value={code}
+          error={errors.code}
+          onChange={(value) => {
+            setCode(value);
+            setErrors((prev) => ({ ...prev, code: undefined }));
+          }}
+          onError={(message) => setErrors((prev) => ({ ...prev, code: message }))}
+        />
         {step.recipient && (
           <>
             <div>
@@ -222,7 +188,7 @@ export function DispatchCustodyPanel({
                 <input
                   maxLength={120}
                   aria-invalid={!!errors.name}
-                  className={`${field} ${errors.name ? invalid : ''}`}
+                  className={`${field} ${errors.name ? fieldInvalid : ''}`}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                 />
@@ -235,7 +201,7 @@ export function DispatchCustodyPanel({
                 <input
                   maxLength={80}
                   aria-invalid={!!errors.relationship}
-                  className={`${field} ${errors.relationship ? invalid : ''}`}
+                  className={`${field} ${errors.relationship ? fieldInvalid : ''}`}
                   value={relationship}
                   onChange={(e) => setRelationship(e.target.value)}
                   placeholder="Ej: Titular, familiar"
@@ -250,7 +216,7 @@ export function DispatchCustodyPanel({
           <textarea rows={2} maxLength={300} className={field} value={notes} onChange={(e) => setNotes(e.target.value)} />
         </label>
         <div className="lg:col-span-3">
-          <button type="submit" className={primary} disabled={busy}>
+          <button type="submit" className={btnPrimary} disabled={busy}>
             {busy ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> : null}
             {step.button}
           </button>

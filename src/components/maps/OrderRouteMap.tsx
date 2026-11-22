@@ -92,7 +92,8 @@ export function OrderRouteMap({ order }: { order: Order }) {
       <BaseMap points={points} route={route} center={target} />
       {loading && <p role="status">Calculando ruta…</p>}
       {error && <p role="alert">{error}</p>}
-      {route && (
+      {/* Una ruta de menos de 50 m no es informativa (faltan las coordenadas reales). */}
+      {route && route.distanceMeters >= 50 && (
         <p className="text-sm">
           {(route.distanceMeters / 1000).toFixed(1)} km ·{' '}
           {Math.ceil(route.durationSeconds / 60)} min estimados

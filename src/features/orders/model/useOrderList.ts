@@ -1,15 +1,21 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useApp } from '../../../context/AppContext';
-import { Order } from '../../../types';
 import { countOrderTabs } from '../../../entities/order/model/orderListCounts';
 import { getProblematicOrders } from '../../../entities/order/model/orderListCounts';
 import { filterOrderList } from '../../../entities/order/model/orderListFilters';
 import { sortOrderList } from '../../../entities/order/model/orderListSort';
 import { useOrderListFilters } from './useOrderListFilters';
-export function useOrderList() {
-  const { orders, facilities, drivers } = useApp();
+/**
+ * @param serverIds Ids que devolvió el servidor. Con ellos solo se listan esas solicitudes: lo que
+ *   quedó guardado en este equipo no se muestra como si viniera del servidor. `null`: aún sin datos.
+ */
+export function useOrderList(serverIds: ReadonlySet<string> | null = null) {
+  const { orders: stored, facilities, drivers } = useApp();
+  const orders = useMemo(
+    () => (serverIds ? stored.filter((o) => serverIds.has(o.id)) : []),
+    [stored, serverIds],
+  );
   const filters = useOrderListFilters();
-  const [assigningOrder, setAssigningOrder] = useState<Order | null>(null);
   const tabCounts = useMemo(() => countOrderTabs(orders), [orders]);
   const filteredOrders = useMemo(
     () => filterOrderList(orders, filters),
@@ -34,8 +40,6 @@ export function useOrderList() {
     orders,
     facilities,
     drivers,
-    assigningOrder,
-    setAssigningOrder,
     tabCounts,
     sortedOrders,
     problematicOrders,

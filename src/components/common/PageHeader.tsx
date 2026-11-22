@@ -33,19 +33,19 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   return (
     <div className="mb-6">
       {hasCrumbs && (
-        <nav className="flex items-center gap-1.5 text-xs text-[#6B7280] mb-2 font-medium">
+        <nav aria-label="Ruta de navegación" className="flex items-center gap-1.5 text-xs text-subtle mb-2 font-medium">
           {breadcrumbs.map((crumb, idx) => (
             <React.Fragment key={idx}>
-              {idx > 0 && <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />}
+              {idx > 0 && <ChevronRight className="w-3.5 h-3.5 text-slate-500 shrink-0" aria-hidden />}
               {crumb.path ? (
                 <Link
                   to={crumb.path}
-                  className="hover:text-[#143F73] transition-colors hover:underline"
+                  className="hover:text-primary transition-colors hover:underline"
                 >
                   {crumb.label}
                 </Link>
               ) : (
-                <span className="text-[#102A43] font-semibold">{crumb.label}</span>
+                <span aria-current="page" className="text-ink font-semibold">{crumb.label}</span>
               )}
             </React.Fragment>
           ))}

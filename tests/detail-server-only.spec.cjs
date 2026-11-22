@@ -8,7 +8,7 @@ const ORDER = 'SOL-HOME-001';
 const json = (route, status, body) =>
   route.fulfill({ status, headers: cors, contentType: 'application/json', body: JSON.stringify(body) });
 
-async function mockOrder(page, status) {
+async function mockOrder(page, status, extra = {}) {
   await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
   const facilityId = await page.evaluate((id) => {
     const raw = JSON.parse(localStorage.getItem('lw_workflow_v2') || '{}');
@@ -17,7 +17,7 @@ async function mockOrder(page, status) {
   const order = {
     id: ORDER, number: 3001, status, mode: 'HOME_HOME', facilityId, paymentStatus: 'PAID',
     pricingStatus: 'ESTIMATED', total: '15.00', version: 5, createdAt: '2026-11-19T13:00:00.000Z',
-    items: [], legs: [], events: [], incidents: [],
+    items: [], legs: [], events: [], incidents: [], ...extra,
   };
   await page.route(/\/api\/v1\/(orders|incidents)(\/[^?]*)?(\?.*)?$/, (route) => {
     const req = route.request();
@@ -56,4 +56,219 @@ test('en planta y en el cierre el detalle no repite los pasos de los paneles del
   await expect(page.getByRole('region', { name: 'Cierre de la solicitud' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Cerrar solicitud' })).toHaveCount(1);
   await expect(page.getByRole('button', { name: 'Confirmar entrega completada' })).toHaveCount(0);
+});
+
+test('la agenda en Logística es de solo lectura: no hay reprogramación local', async ({ page }) => {
+  await mockOrder(page, 'CONFIRMED');
+  await page.goto(`/operations/orders/${ORDER}`);
+  await expect(page.getByRole('heading', { name: 'Recogida pendiente de asignación' })).toBeVisible();
+  await page.getByRole('tab', { name: 'Logística' }).click();
+  const agenda = page.getByRole('region', { name: 'Agenda y horarios' });
+  await expect(agenda).toBeVisible();
+  await expect(agenda.getByText('La reprogramación por el personal aún no está disponible.')).toBeVisible();
+  await expect(page.getByRole('button', { name: /Reprogramar fecha/ })).toHaveCount(0);
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+});
+
+// T-07: en planta el detalle no gestiona el proceso ni retiene; enlaza a Planta.
+test('en planta el detalle muestra la fase y enlaza a Planta, sin botones de proceso ni retención', async ({ page }) => {
+  await mockOrder(page, 'INSPECTION');
+  await page.goto(`/operations/orders/${ORDER}`);
+  await expect(page.getByRole('heading', { name: 'Pedido en planta' })).toBeVisible();
+  const href = `/operations/plant?pedido=${ORDER}&seccion=proceso`;
+  await expect(page.getByRole('link', { name: 'Gestionar en Planta' })).toHaveAttribute('href', href);
+  await expect(page.getByRole('region', { name: 'Proceso en planta' })).toHaveCount(0);
+  for (const action of ['Iniciar inspección', 'Registrar peso', 'Proponer ajuste', 'Confirmar precio', 'Pasar a control de calidad'])
+    await expect(page.getByRole('button', { name: new RegExp(action) })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Retener para revisión técnica' })).toHaveCount(0);
+
+  // Acciones: retener se hace en Planta.
+  await page.getByRole('button', { name: /^Acciones/ }).click();
+  await expect(page.getByRole('link', { name: 'Retener en Planta' })).toHaveAttribute('href', href);
+  await page.getByRole('button', { name: /^Acciones/ }).click();
+
+  // Registrar incidencia sigue disponible, pero sin la casilla de retención.
+  await page.getByRole('button', { name: 'Registrar incidencia' }).click();
+  const modal = page.getByRole('dialog', { name: 'Registrar incidencia operacional' });
+  await expect(modal).toBeVisible();
+  await expect(modal.getByRole('checkbox', { name: /Retener la solicitud/ })).toHaveCount(0);
+});
+
+test('en lavado el detalle tampoco ofrece retener: el enlace lleva a Planta', async ({ page }) => {
+  await mockOrder(page, 'IN_PROCESS');
+  await page.goto(`/operations/orders/${ORDER}`);
+  await expect(page.getByRole('heading', { name: 'En ciclo de lavado y cuidado' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Gestionar en Planta' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Retener para revisión técnica' })).toHaveCount(0);
+});
+
+// T-09b: el pago se confirma solo en Pedido (decisión P-3); Operación avisa y enlaza.
+test('una transferencia pendiente se avisa en Operación y se confirma solo en Pedido', async ({ page }) => {
+  await mockOrder(page, 'IN_PROCESS', { paymentMethodKind: 'TRANSFER', paymentStatus: 'PENDING' });
+  await page.goto(`/operations/orders/${ORDER}`);
+  const notice = page.getByRole('status', { name: 'Transferencia pendiente' });
+  await expect(notice).toContainText('pago por transferencia');
+  await expect(page.getByText('Transferencia · PENDIENTE')).toBeVisible();
+  await expect(page.getByRole('button', { name: /Confirmar transferencia/ })).toHaveCount(0);
+  await notice.getByRole('button', { name: 'Confirmar en la pestaña Pedido' }).click();
+  await expect(page.getByText('Forma de pago registrada')).toBeVisible();
+  await expect(page.getByText('Transferencia', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Confirmar pago verificado/ })).toBeVisible();
+});
+
+test('sin método informado por el servidor se muestra "Sin definir" y no hay aviso de transferencia', async ({ page }) => {
+  await mockOrder(page, 'IN_PROCESS', { paymentStatus: 'PENDING' });
+  await page.goto(`/operations/orders/${ORDER}`);
+  await expect(page.getByText('Sin definir · PENDIENTE')).toBeVisible();
+  await expect(page.getByRole('status', { name: 'Transferencia pendiente' })).toHaveCount(0);
+});
+
+// T-11 (contrato 4): sin respuesta del servidor no se muestran datos guardados en el equipo.
+test('con el servidor caído el detalle muestra el error con Reintentar y ninguna acción', async ({ page }) => {
+  await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
+  let down = true;
+  const order = {
+    id: ORDER, number: 3001, status: 'CONFIRMED', mode: 'HOME_HOME', facilityId: 'f1', paymentStatus: 'PAID',
+    pricingStatus: 'ESTIMATED', total: '15.00', version: 5, createdAt: '2026-11-19T13:00:00.000Z',
+    items: [], legs: [], events: [], incidents: [],
+  };
+  await page.route(/\/api\/v1\/(orders|incidents)(\/[^?]*)?(\?.*)?$/, (route) => {
+    const req = route.request();
+    if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: preflight });
+    if (down) return route.abort('internetdisconnected');
+    const path = new URL(req.url()).pathname.replace(/^.*\/api\/v1/, '');
+    if (path === `/orders/${ORDER}`) return json(route, 200, order);
+    return json(route, 200, []);
+  });
+  await page.goto(`/operations/orders/${ORDER}`);
+  const alert = page.getByRole('alert').filter({ hasText: 'No se pudo cargar la solicitud desde el servidor' });
+  await expect(alert).toContainText('No se pudo conectar con el servidor.');
+  await expect(alert).toContainText('No se muestran datos guardados en este equipo');
+  // Aunque la solicitud esté guardada en el equipo, no se ofrece ninguna acción sobre ella.
+  for (const name of ['Registrar incidencia', 'Acciones'])
+    await expect(page.getByRole('button', { name, exact: true })).toHaveCount(0);
+  await expect(page.getByRole('tablist', { name: 'Secciones de la solicitud' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Asignar en Despacho' })).toHaveCount(0);
+
+  down = false;
+  await alert.getByRole('button', { name: 'Reintentar' }).click();
+  await expect(page.getByRole('heading', { name: 'Recogida pendiente de asignación' })).toBeVisible();
+  await expect(alert).toHaveCount(0);
+});
+
+test('si el servidor responde que no existe se muestra "Solicitud no encontrada"', async ({ page }) => {
+  await page.route(/\/api\/v1\/(orders|incidents)(\/[^?]*)?(\?.*)?$/, (route) => {
+    const req = route.request();
+    if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: preflight });
+    const path = new URL(req.url()).pathname.replace(/^.*\/api\/v1/, '');
+    if (path.startsWith('/orders/')) return json(route, 404, { message: 'Solicitud no encontrada.' });
+    return json(route, 200, []);
+  });
+  await page.goto(`/operations/orders/${ORDER}`);
+  await expect(page.getByRole('heading', { name: 'Solicitud no encontrada' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Registrar incidencia' })).toHaveCount(0);
+});
+
+test('con el servidor caído la lista de Solicitudes no muestra datos guardados en el equipo', async ({ page }) => {
+  let down = true;
+  await page.route(/\/api\/v1\/orders(\/[^?]*)?(\?.*)?$/, (route) => {
+    const req = route.request();
+    if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: preflight });
+    if (down) return json(route, 503, { message: 'Servidor en mantenimiento.' });
+    const path = new URL(req.url()).pathname.replace(/^.*\/api\/v1/, '');
+    if (path !== '/orders') return json(route, 404, { message: 'No existe.' });
+    const data = [{ id: ORDER, number: 3001, status: 'CONFIRMED', mode: 'HOME_HOME', facilityId: 'f1', paymentStatus: 'PAID', pricingStatus: 'ESTIMATED', total: '15.00', version: 1, createdAt: '2026-11-19T13:00:00.000Z' }];
+    return json(route, 200, { page: 1, pageSize: 50, total: 1, data });
+  });
+  await page.goto('/operations/orders');
+  const alert = page.getByRole('alert').filter({ hasText: 'No se pudieron cargar las solicitudes del servidor' });
+  await expect(alert).toContainText('Servidor en mantenimiento.');
+  await expect(page.getByRole('table')).toHaveCount(0);
+
+  down = false;
+  await alert.getByRole('button', { name: 'Reintentar' }).click();
+  await expect(page.getByRole('table')).toBeVisible();
+  // Solo la solicitud que devolvió el servidor; ninguna otra guardada en el equipo.
+  await expect(page.locator('tbody tr')).toHaveCount(1);
+  await expect(page.getByRole('table')).toContainText('SOL-3001');
+});
+
+// T-10: el detalle consulta la solicitud una sola vez; los paneles de custodia reciben esa
+// respuesta en vez de volver a pedirla.
+for (const status of ['CONFIRMED', 'HEADING_TO_FACILITY', 'IN_PROCESS', 'DELIVERY_ASSIGNED']) {
+  test(`al abrir el detalle (${status}) la solicitud se consulta una sola vez`, async ({ page }) => {
+    const gets = [];
+    page.on('request', (req) => {
+      const path = new URL(req.url()).pathname;
+      if (req.method() === 'GET' && path.endsWith(`/api/v1/orders/${ORDER}`)) gets.push(path);
+    });
+    await mockOrder(page, status);
+    gets.length = 0;
+    await page.goto(`/operations/orders/${ORDER}`);
+    await expect(page.getByRole('heading', { level: 2 }).first()).toBeVisible();
+    await page.waitForTimeout(1500);
+    expect(gets).toHaveLength(1);
+  });
+}
+
+test('tras confirmar la salida a reparto el detalle se actualiza con la respuesta, sin otra consulta', async ({ page }) => {
+  await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
+  let order = {
+    id: ORDER, number: 3001, status: 'DELIVERY_ASSIGNED', mode: 'HOME_HOME', facilityId: 'f1', paymentStatus: 'PAID',
+    pricingStatus: 'FINAL', total: '15.00', version: 5, createdAt: '2026-11-19T13:00:00.000Z',
+    items: [], legs: [], events: [], incidents: [],
+  };
+  let gets = 0;
+  await page.route(/\/api\/v1\/(orders|incidents)(\/[^?]*)?(\?.*)?$/, (route) => {
+    const req = route.request();
+    if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: preflight });
+    const path = new URL(req.url()).pathname.replace(/^.*\/api\/v1/, '');
+    if (path === `/orders/${ORDER}/handoffs/verify`) {
+      order = { ...order, status: 'OUT_FOR_DELIVERY', version: 6 };
+      return json(route, 201, order);
+    }
+    if (path === `/orders/${ORDER}`) {
+      gets += 1;
+      return json(route, 200, order);
+    }
+    return json(route, 200, []);
+  });
+  await page.goto(`/operations/orders/${ORDER}`);
+  const panel = page.getByRole('region', { name: 'Entrega al chofer para reparto' });
+  await panel.getByRole('textbox', { name: 'Código del chofer' }).fill('482910');
+  await panel.getByRole('button', { name: 'Confirmar salida a reparto', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'En reparto a domicilio' })).toBeVisible();
+  await expect(panel).toHaveCount(0);
+  expect(gets).toBe(1);
+});
+
+// Paso 1b (UI): pestañas accesibles compartidas; no cambian qué muestra cada sección.
+test('las secciones del detalle son pestañas accesibles con teclado y no desbordan la página', async ({ page }) => {
+  await mockOrder(page, 'CONFIRMED');
+  await page.goto(`/operations/orders/${ORDER}`);
+  const tablist = page.getByRole('tablist', { name: 'Secciones de la solicitud' });
+  await expect(tablist.getByRole('tab')).toHaveCount(4);
+  const operation = tablist.getByRole('tab', { name: 'Operación' });
+  await expect(operation).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tabpanel', { name: 'Operación' })).toBeVisible();
+
+  await operation.focus();
+  await page.keyboard.press('ArrowRight');
+  const pedido = tablist.getByRole('tab', { name: /^Pedido/ });
+  await expect(pedido).toHaveAttribute('aria-selected', 'true');
+  await expect(pedido).toBeFocused();
+  await expect(page.getByRole('tabpanel', { name: /^Pedido/ })).toContainText('Forma de pago registrada');
+  await page.keyboard.press('End');
+  await expect(tablist.getByRole('tab', { name: /^Actividad/ })).toBeFocused();
+  await page.keyboard.press('Home');
+  await expect(operation).toHaveAttribute('aria-selected', 'true');
+
+  // Solo la pestaña activa entra en el orden de tabulación.
+  await expect(tablist.locator('[role="tab"][tabindex="0"]')).toHaveCount(1);
+
+  // En tablet y en una pantalla angosta la fila de pestañas no provoca scroll horizontal.
+  for (const width of [768, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+  }
 });

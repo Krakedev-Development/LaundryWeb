@@ -35,7 +35,7 @@ export const PriorityBadge: React.FC<{ priority: OrderPriority; showIcon?: boole
   }
 
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs text-slate-400 font-normal whitespace-nowrap">
+    <span className="inline-flex items-center gap-1.5 text-xs text-slate-500 font-normal whitespace-nowrap">
       <span className="w-1.5 h-1.5 rounded-full bg-slate-200" />
       Baja
     </span>
@@ -82,13 +82,13 @@ export const SLABadge: React.FC<{ risk: SLARisk; progressPercent?: number; deadl
         {conf.icon}
         <span>{conf.label}</span>
         {progressPercent !== undefined && (
-          <span className="text-[11px] text-slate-400 font-mono tabular-nums">
+          <span className="text-[11px] text-slate-500 font-mono tabular-nums">
             ({progressPercent}%)
           </span>
         )}
       </div>
       {deadline && (
-        <span className="text-[11px] text-slate-400 font-normal tabular-nums">
+        <span className="text-[11px] text-slate-500 font-normal tabular-nums">
           Límite: {deadline}
         </span>
       )}

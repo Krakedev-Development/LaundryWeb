@@ -1,21 +1,19 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   User,
   Phone,
   Mail,
   Receipt,
   CreditCard,
-  Building2,
   CheckCircle2,
-  PlusCircle,
   LoaderCircle,
   AlertCircle,
   Tag,
 } from 'lucide-react';
 import type { Order } from '../../../types';
 import { PaginatedTable } from '../../../shared/ui/TablePagination';
-import { storageService } from '../../../services/storage';
-import { PaymentAdjustmentModal } from './PaymentAdjustmentModal';
+import { listAdjustments, type StaffAdjustment } from '../../../services/api/plantApi';
+import { paymentMethodLabel } from '../../../services/api/ordersApi';
 
 interface OrderInfoTabProps {
   order: Order;
@@ -24,19 +22,44 @@ interface OrderInfoTabProps {
   onConfirmPayment: () => Promise<void>;
 }
 
+const ADJ_STATUS: Record<StaffAdjustment['status'], string> = {
+  PENDING_CUSTOMER: 'Pendiente del cliente',
+  APPROVED: 'Aprobado',
+  REJECTED: 'Rechazado',
+};
+
+function formatAmount(value: string | number): string {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return '$0.00';
+  const sign = n > 0 ? '+' : '';
+  return `${sign}$${n.toFixed(2)}`;
+}
+
 export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
   order,
-  onRefresh,
   confirmingPayment,
   onConfirmPayment,
 }) => {
-  const [isAdjModalOpen, setIsAdjModalOpen] = useState(false);
+  const [adjustments, setAdjustments] = useState<StaffAdjustment[]>([]);
+  const [adjState, setAdjState] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [adjError, setAdjError] = useState('');
 
-  // Retrieve adjustments from workflow state
-  const workflowState = storageService.getWorkflow();
-  const adjustments = (workflowState?.adjustments || []).filter(
-    (a) => a.orderId === order.id,
-  );
+  const loadAdjustments = useCallback(async () => {
+    setAdjState('loading');
+    setAdjError('');
+    try {
+      setAdjustments(await listAdjustments(order.id));
+      setAdjState('ready');
+    } catch (err) {
+      setAdjustments([]);
+      setAdjError(err instanceof Error ? err.message : 'No se pudieron cargar los ajustes.');
+      setAdjState('error');
+    }
+  }, [order.id]);
+
+  useEffect(() => {
+    void loadAdjustments();
+  }, [loadAdjustments]);
 
   const pricing = order.pricing || {
     subtotal: 0,
@@ -78,8 +101,8 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
     <div className="space-y-6">
       {/* Customer & Facility Information Card */}
       <section className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs">
-        <h2 className="text-sm font-bold text-[#102A43] mb-4 flex items-center gap-2">
-          <User className="w-4 h-4 text-[#143F73]" />
+        <h2 className="text-sm font-bold text-ink mb-4 flex items-center gap-2">
+          <User className="w-4 h-4 text-primary" />
           <span>Información del Cliente y Sede Operativa</span>
         </h2>
 
@@ -87,7 +110,7 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
           {/* Client Details */}
           <div className="space-y-3">
             <div>
-              <span className="text-slate-400 block text-[11px]">Cliente solicitante</span>
+              <span className="text-slate-500 block text-[11px]">Cliente solicitante</span>
               <div className="flex items-center gap-2 mt-0.5">
                 <span className="font-bold text-sm text-slate-900">
                   {order.customerName || 'Cliente sin nombre registrado'}
@@ -99,12 +122,12 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
             </div>
 
             <div className="flex items-center gap-2 text-slate-600">
-              <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <Phone className="w-3.5 h-3.5 text-slate-500 shrink-0" />
               <span>{order.customerPhone || 'Teléfono no registrado'}</span>
             </div>
 
             <div className="flex items-center gap-2 text-slate-600">
-              <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <Mail className="w-3.5 h-3.5 text-slate-500 shrink-0" />
               <span>{order.customerEmail || 'Correo no registrado'}</span>
             </div>
           </div>
@@ -112,23 +135,26 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
           {/* Facility & Logistics Zone */}
           <div className="space-y-3 border-t md:border-t-0 md:border-l border-slate-100 md:pl-6">
             <div>
-              <span className="text-slate-400 block text-[11px]">Sede de procesamiento asignada</span>
+              <span className="text-slate-500 block text-[11px]">Sede de procesamiento asignada</span>
               <span className="font-bold text-slate-900 text-sm block mt-0.5">
                 {order.facilityName || 'Planta principal'}
               </span>
             </div>
 
             <div>
-              <span className="text-slate-400 block text-[11px]">Zona logística</span>
+              <span className="text-slate-500 block text-[11px]">Zona logística</span>
               <span className="font-semibold text-slate-700">
                 {order.zoneName || 'Zona Centro'}
               </span>
             </div>
 
-            <div>
-              <span className="text-slate-400 block text-[11px]">Identificador de cliente</span>
-              <span className="font-mono text-slate-500">{order.customerId}</span>
-            </div>
+            {/* Sin dato no se muestra la etiqueta vacía. */}
+            {order.customerId && (
+              <div>
+                <span className="text-slate-500 block text-[11px]">Identificador de cliente</span>
+                <span className="font-mono text-slate-500">{order.customerId}</span>
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -136,8 +162,8 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
       {/* Garments and Services Breakdown */}
       <section className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold text-[#102A43] flex items-center gap-2">
-            <Receipt className="w-4 h-4 text-[#143F73]" />
+          <h2 className="text-sm font-bold text-ink flex items-center gap-2">
+            <Receipt className="w-4 h-4 text-primary" />
             <span>Detalle de Prendas y Servicios ({order.itemCount} prendas)</span>
           </h2>
           <span className="text-xs font-semibold text-slate-500">
@@ -150,7 +176,7 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
           <PaginatedTable items={order.items || []} label="prendas" hideWhenSinglePage>
             {(itemRows) => (
               <table className="w-full text-xs text-left">
-                <thead className="bg-[#F7F9FC] text-slate-500 font-semibold border-b border-slate-200">
+                <thead className="bg-surface-muted text-slate-500 font-semibold border-b border-slate-200">
                   <tr>
                     <th className="py-2.5 px-3">Prenda / Ítem</th>
                     <th className="py-2.5 px-3 text-center">Cant.</th>
@@ -162,7 +188,7 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
                 <tbody className="divide-y divide-slate-100">
                   {itemRows.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="py-4 text-center text-slate-400 italic">
+                      <td colSpan={5} className="py-4 text-center text-slate-500 italic">
                         Sin ítems detallados individualmente.
                       </td>
                     </tr>
@@ -206,7 +232,7 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
             Servicios adicionales y extras seleccionados:
           </span>
           {(order.extras || []).length === 0 ? (
-            <p className="text-xs text-slate-400 italic">Sin servicios extras contratados.</p>
+            <p className="text-xs text-slate-500 italic">Sin servicios extras contratados.</p>
           ) : (
             <div className="space-y-1 text-xs">
               {order.extras.map((ext) => (
@@ -236,12 +262,12 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Reconciled Breakdown Card */}
         <section className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs space-y-3">
-          <h3 className="text-sm font-bold text-[#102A43] flex items-center gap-2">
-            <Receipt className="w-4 h-4 text-[#143F73]" />
+          <h3 className="text-sm font-bold text-ink flex items-center gap-2">
+            <Receipt className="w-4 h-4 text-primary" />
             <span>Desglose Económico Conciliado</span>
           </h3>
 
-          <div className="p-4 bg-[#F7F9FC] rounded-2xl border border-[#E5EAF0] space-y-2 font-mono text-xs">
+          <div className="p-4 bg-surface-muted rounded-2xl border border-line space-y-2 font-mono text-xs">
             <div className="flex justify-between text-slate-600">
               <span>Subtotal prendas:</span>
               <span className="tabular-nums">${subtotal.toFixed(2)}</span>
@@ -282,7 +308,7 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
               </div>
             )}
 
-            <div className="flex justify-between font-bold text-sm text-[#143F73] pt-2 border-t border-slate-300">
+            <div className="flex justify-between font-bold text-sm text-primary pt-2 border-t border-slate-300">
               <span>Total final:</span>
               <span className="tabular-nums">${total.toFixed(2)}</span>
             </div>
@@ -305,16 +331,16 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
 
         {/* Payment Method & Confirm Action */}
         <section className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs space-y-4">
-          <h3 className="text-sm font-bold text-[#102A43] flex items-center gap-2">
-            <CreditCard className="w-4 h-4 text-[#143F73]" />
+          <h3 className="text-sm font-bold text-ink flex items-center gap-2">
+            <CreditCard className="w-4 h-4 text-primary" />
             <span>Método y Estado de Pago</span>
           </h3>
 
           <div className="space-y-3 text-xs">
             <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200">
               <div>
-                <span className="text-[11px] text-slate-400 block">Forma de pago registrada</span>
-                <span className="font-bold text-slate-800 text-sm">{pricing.paymentMethod}</span>
+                <span className="text-[11px] text-slate-500 block">Forma de pago registrada</span>
+                <span className="font-bold text-slate-800 text-sm">{paymentMethodLabel(pricing.paymentMethod)}</span>
               </div>
               <div>
                 <span
@@ -353,67 +379,83 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
             )}
           </div>
 
-          {/* Adjustments Action */}
+          {/* Adjustments: read-only from server (T-01) */}
           <div className="pt-2 border-t border-slate-100">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-slate-700">
-                Ajustes de precio registrados ({adjustments.length})
-              </span>
-              <button
-                onClick={() => setIsAdjModalOpen(true)}
-                className="text-xs font-semibold text-[#0F4C81] hover:underline flex items-center gap-1 cursor-pointer"
-              >
-                <PlusCircle className="w-3.5 h-3.5" />
-                <span>+ Proponer ajuste</span>
-              </button>
-            </div>
+            <span className="text-xs font-bold text-slate-700 block mb-2">
+              Ajustes de precio registrados
+              {adjState === 'ready' ? ` (${adjustments.length})` : ''}
+            </span>
+            <p className="text-[11px] text-slate-500 mb-2">
+              Solo lectura. Los ajustes se gestionan en Planta.
+            </p>
 
-            {adjustments.length === 0 ? (
-              <p className="text-xs text-slate-400 italic">
+            {adjState === 'loading' && (
+              <p role="status" className="text-xs text-slate-500 flex items-center gap-1.5">
+                <LoaderCircle className="w-3.5 h-3.5 animate-spin" />
+                Cargando ajustes...
+              </p>
+            )}
+
+            {adjState === 'error' && (
+              <div
+                role="alert"
+                className="p-3 rounded-xl border border-rose-200 bg-rose-50 text-rose-900 space-y-2"
+              >
+                <p className="font-semibold">No se pudieron cargar los ajustes.</p>
+                <p className="text-[11px]">{adjError}</p>
+                <button
+                  type="button"
+                  onClick={() => void loadAdjustments()}
+                  className="px-3 py-1.5 text-xs font-bold text-white bg-rose-700 hover:bg-rose-800 rounded-xl cursor-pointer"
+                >
+                  Reintentar
+                </button>
+              </div>
+            )}
+
+            {adjState === 'ready' && adjustments.length === 0 && (
+              <p className="text-xs text-slate-500 italic">
                 Sin ajustes de precio en esta solicitud.
               </p>
-            ) : (
-              <div className="space-y-2 text-xs">
-                {adjustments.map((adj) => (
-                  <div
-                    key={adj.id}
-                    className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between"
-                  >
-                    <div>
-                      <span className="font-semibold text-slate-800">{adj.reason}</span>
-                      <span className="block text-[10px] text-slate-500">
-                        {adj.customerMessage}
-                      </span>
+            )}
+
+            {adjState === 'ready' && adjustments.length > 0 && (
+              <div className="space-y-2 text-xs" aria-label="Ajustes de precio">
+                {adjustments.map((adj) => {
+                  const amount = Number(adj.amountDifference);
+                  return (
+                    <div
+                      key={adj.id}
+                      className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between gap-2"
+                    >
+                      <div>
+                        <span className="font-semibold text-slate-800">{adj.customerMessage}</span>
+                        {adj.internalReason && (
+                          <span className="block text-[10px] text-slate-500">
+                            {adj.internalReason}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span
+                          className={`font-mono font-bold block ${
+                            amount > 0 ? 'text-amber-700' : 'text-emerald-700'
+                          }`}
+                        >
+                          {formatAmount(adj.amountDifference)}
+                        </span>
+                        <span className="text-[10px] font-semibold text-slate-500">
+                          {ADJ_STATUS[adj.status] ?? adj.status}
+                        </span>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <span
-                        className={`font-mono font-bold block ${
-                          adj.amount > 0 ? 'text-amber-700' : 'text-emerald-700'
-                        }`}
-                      >
-                        {adj.amount > 0 ? '+' : ''}${adj.amount.toFixed(2)}
-                      </span>
-                      <span className="text-[10px] font-semibold text-slate-400">
-                        {adj.status}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
         </section>
       </div>
-
-      {/* Payment Adjustment Modal */}
-      {isAdjModalOpen && (
-        <PaymentAdjustmentModal
-          order={order}
-          isOpen={true}
-          onClose={() => setIsAdjModalOpen(false)}
-          onSuccess={onRefresh}
-        />
-      )}
     </div>
   );
 };

@@ -5,13 +5,7 @@ import { OrderIdentityCells } from './OrderIdentityCells';
 import { OrderScheduleCells } from './OrderScheduleCells';
 import { OrderStatusCell } from './OrderStatusCell';
 import { OrderActionCell } from './OrderActionCell';
-export function OrderTableRow({
-  order,
-  setAssigningOrder,
-}: {
-  order: Order;
-  setAssigningOrder(order: Order | null): void;
-}) {
+export function OrderTableRow({ order }: { order: Order }) {
   const navigate = useNavigate();
   return (
     <tr
@@ -27,7 +21,7 @@ export function OrderTableRow({
       <td className="py-4 px-5 whitespace-nowrap">
         <SLABadge risk={order.slaStatus} deadline={order.slaDeadline} />
       </td>
-      <OrderActionCell order={order} setAssigningOrder={setAssigningOrder} />
+      <OrderActionCell order={order} />
     </tr>
   );
 }

@@ -44,7 +44,7 @@ export function OrderAdvancedFilters({
             <option value="QUALITY_CONTROL">Control de calidad</option>
             <option value="READY_FOR_DELIVERY">Lista para entrega</option>
             <option value="OUT_FOR_DELIVERY">En entrega</option>
-            <option value="QUARANTINE">Inscidencia</option>
+            <option value="QUARANTINE">Incidencia</option>
             <option value="CLOSED">Finalizada</option>
           </FilterSelect>
 

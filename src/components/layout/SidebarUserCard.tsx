@@ -27,7 +27,7 @@ export function SidebarUserCard({
         role="img"
         title={`${currentUser.name} · ${role} · ${currentUser.email}`}
         aria-label={`${currentUser.name}, ${role}, ${currentUser.email}`}
-        className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#E8EEF5] text-xs font-semibold text-[#143F73] ring-2 ring-white"
+        className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-semibold text-primary ring-2 ring-white"
       >
         {initials}
       </span>

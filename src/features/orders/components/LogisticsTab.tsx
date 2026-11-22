@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { deliveriesHref, dispatchHref } from '../../../services/operationsLinks';
 import {
   MapPin,
   Truck,
@@ -11,45 +13,23 @@ import {
 } from 'lucide-react';
 import type { Order } from '../../../types';
 import { operationalStage } from '../../../services/fulfillment';
+import {
+  deliveryNote,
+  isDeliveryCompleted as isDeliveryDone,
+  isPickupCompleted as isPickupDone,
+  pickupNote,
+} from '../model/orderDisplay';
 import { OrderRouteMap } from '../../../components/maps/OrderRouteMap';
-import { ScheduleChangeModal } from './ScheduleChangeModal';
 
 interface LogisticsTabProps {
   order: Order;
-  onOpenAssign: (type: 'pickup' | 'delivery') => void;
-  onRefresh: () => void;
 }
 
-export const LogisticsTab: React.FC<LogisticsTabProps> = ({
-  order,
-  onOpenAssign,
-  onRefresh,
-}) => {
-  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+export const LogisticsTab: React.FC<LogisticsTabProps> = ({ order }) => {
   const stage = operationalStage(order);
 
-  // Determine actual pickup status (Solving Finding H-03)
-  const isPickupCompleted =
-    Boolean(order.pickup.completedAt) ||
-    [
-      'PICKED_UP',
-      'HEADING_TO_FACILITY',
-      'ARRIVED_AT_FACILITY',
-      'AT_FACILITY',
-      'WEIGHING',
-      'INSPECTION',
-      'PRICING_PENDING',
-      'CUSTOMER_APPROVAL_PENDING',
-      'IN_PROCESS',
-      'QUALITY_CONTROL',
-      'READY_FOR_DELIVERY',
-      'DELIVERY_SCHEDULED',
-      'DELIVERY_ASSIGNED',
-      'OUT_FOR_DELIVERY',
-      'ARRIVED_FOR_DELIVERY',
-      'DELIVERED',
-      'CLOSED',
-    ].includes(stage);
+  // Mismas reglas que la lista de Solicitudes (model/orderDisplay).
+  const isPickupCompleted = isPickupDone(order);
 
   const isPickupInRoute = stage === 'HEADING_TO_PICKUP' || stage === 'ARRIVED_FOR_PICKUP';
   const isPickupAssigned = Boolean(order.pickup.driverId) || stage === 'PICKUP_ASSIGNED';
@@ -63,8 +43,7 @@ export const LogisticsTab: React.FC<LogisticsTabProps> = ({
         : 'Pendiente de asignación';
 
   // Determine actual delivery status (Solving Finding H-03)
-  const isDeliveryDelivered =
-    Boolean(order.delivery.completedAt) || stage === 'DELIVERED' || stage === 'CLOSED';
+  const isDeliveryDelivered = isDeliveryDone(order);
   const isDeliveryInRoute = stage === 'OUT_FOR_DELIVERY' || stage === 'ARRIVED_FOR_DELIVERY';
   const isDeliveryAssigned = Boolean(order.delivery.driverId) || stage === 'DELIVERY_ASSIGNED';
   const isDeliveryReady = ['READY_FOR_DELIVERY', 'DELIVERY_SCHEDULED'].includes(stage);
@@ -86,7 +65,7 @@ export const LogisticsTab: React.FC<LogisticsTabProps> = ({
         {/* Recogida Card */}
         <section className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-            <span className="font-bold text-xs text-[#143F73] uppercase tracking-wider flex items-center gap-2">
+            <span className="font-bold text-xs text-primary uppercase tracking-wider flex items-center gap-2">
               <MapPin className="w-4 h-4 text-teal-600" />
               <span>Logística de Recogida</span>
             </span>
@@ -105,32 +84,32 @@ export const LogisticsTab: React.FC<LogisticsTabProps> = ({
 
           <div className="space-y-3 text-xs">
             <div>
-              <span className="text-slate-400 block text-[11px]">Fecha y franja horaria</span>
+              <span className="text-slate-500 block text-[11px]">Fecha y franja horaria</span>
               <span className="font-bold text-slate-800 text-sm flex items-center gap-1.5 mt-0.5">
-                <Clock className="w-3.5 h-3.5 text-slate-400" />
+                <Clock className="w-3.5 h-3.5 text-slate-500" />
                 {order.pickup.date} · {order.pickup.timeSlot}
               </span>
             </div>
 
             <div>
-              <span className="text-slate-400 block text-[11px]">Dirección de recogida</span>
+              <span className="text-slate-500 block text-[11px]">Dirección de recogida</span>
               <span className="font-medium text-slate-700 block mt-0.5">
                 {order.customerAddress.street} #{order.customerAddress.number},{' '}
                 {order.customerAddress.neighborhood}
               </span>
               {order.customerAddress.reference && (
-                <span className="text-[11px] text-slate-400 italic block">
+                <span className="text-[11px] text-slate-500 italic block">
                   Ref: {order.customerAddress.reference}
                 </span>
               )}
             </div>
 
             <div>
-              <span className="text-slate-400 block text-[11px]">Conductor asignado</span>
+              <span className="text-slate-500 block text-[11px]">Conductor asignado</span>
               <span className="font-semibold text-slate-900 block mt-0.5">
                 {order.pickup.driverName
                   ? `${order.pickup.driverName} (${order.pickup.vehiclePlate || 'Vehículo asignado'})`
-                  : 'Sin asignar aún'}
+                  : pickupNote(order).text}
               </span>
             </div>
 
@@ -149,13 +128,14 @@ export const LogisticsTab: React.FC<LogisticsTabProps> = ({
               </p>
             )}
 
+            {/* La recogida se asigna solo en Despacho; aquí solo se navega hasta allí. */}
             {!isPickupCompleted && !order.pickup.driverName && (
-              <button
-                onClick={() => onOpenAssign('pickup')}
-                className="w-full mt-2 py-2 text-xs font-semibold text-[#0F4C81] bg-sky-50 hover:bg-sky-100 rounded-xl transition-colors cursor-pointer"
+              <Link
+                to={dispatchHref(order.id)}
+                className="block w-full mt-2 py-2 text-center text-xs font-semibold text-primary bg-sky-50 hover:bg-sky-100 rounded-xl transition-colors"
               >
-                Asignar chofer de recogida
-              </button>
+                Asignar en Despacho
+              </Link>
             )}
           </div>
         </section>
@@ -163,7 +143,7 @@ export const LogisticsTab: React.FC<LogisticsTabProps> = ({
         {/* Entrega Card */}
         <section className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-            <span className="font-bold text-xs text-[#143F73] uppercase tracking-wider flex items-center gap-2">
+            <span className="font-bold text-xs text-primary uppercase tracking-wider flex items-center gap-2">
               <Truck className="w-4 h-4 text-orange-600" />
               <span>Logística de Entrega</span>
             </span>
@@ -184,15 +164,15 @@ export const LogisticsTab: React.FC<LogisticsTabProps> = ({
 
           <div className="space-y-3 text-xs">
             <div>
-              <span className="text-slate-400 block text-[11px]">Fecha objetivo y franja horaria</span>
+              <span className="text-slate-500 block text-[11px]">Fecha objetivo y franja horaria</span>
               <span className="font-bold text-slate-800 text-sm flex items-center gap-1.5 mt-0.5">
-                <Clock className="w-3.5 h-3.5 text-slate-400" />
+                <Clock className="w-3.5 h-3.5 text-slate-500" />
                 {order.delivery.targetDate} · {order.delivery.timeSlot}
               </span>
             </div>
 
             <div>
-              <span className="text-slate-400 block text-[11px]">Destinatario de entrega</span>
+              <span className="text-slate-500 block text-[11px]">Destinatario de entrega</span>
               <span className="font-medium text-slate-700 block mt-0.5">
                 {order.delivery.recipientName || order.customerName} (
                 {order.delivery.recipientPhone || order.customerPhone})
@@ -200,7 +180,7 @@ export const LogisticsTab: React.FC<LogisticsTabProps> = ({
             </div>
 
             <div>
-              <span className="text-slate-400 block text-[11px]">Dirección de entrega</span>
+              <span className="text-slate-500 block text-[11px]">Dirección de entrega</span>
               <span className="font-medium text-slate-700 block mt-0.5">
                 {order.deliveryAddress.street} #{order.deliveryAddress.number},{' '}
                 {order.deliveryAddress.neighborhood}
@@ -208,11 +188,11 @@ export const LogisticsTab: React.FC<LogisticsTabProps> = ({
             </div>
 
             <div>
-              <span className="text-slate-400 block text-[11px]">Conductor de entrega</span>
+              <span className="text-slate-500 block text-[11px]">Conductor de entrega</span>
               <span className="font-semibold text-slate-900 block mt-0.5">
                 {order.delivery.driverName
                   ? `${order.delivery.driverName} (${order.delivery.vehiclePlate || 'Vehículo asignado'})`
-                  : 'Pendiente de asignación de entrega'}
+                  : deliveryNote(order).text}
               </span>
             </div>
 
@@ -222,55 +202,46 @@ export const LogisticsTab: React.FC<LogisticsTabProps> = ({
               </p>
             )}
 
-            {!isDeliveryDelivered && !order.delivery.driverName && isDeliveryReady && (
-              <button
-                onClick={() => onOpenAssign('delivery')}
-                className="w-full mt-2 py-2 text-xs font-semibold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-xl transition-colors cursor-pointer"
+            {/* La entrega se asigna solo en Entregas; aquí solo se navega hasta allí. */}
+            {!isDeliveryDelivered &&
+              !order.delivery.driverName &&
+              isDeliveryReady &&
+              order.fulfillment?.outbound.method === 'DRIVER' && (
+              <Link
+                to={deliveriesHref(order.id)}
+                className="block w-full mt-2 py-2 text-center text-xs font-semibold text-white bg-primary hover:bg-primary-hover rounded-xl transition-colors"
               >
-                Asignar chofer de entrega
-              </button>
+                Asignar en Entregas
+              </Link>
             )}
           </div>
         </section>
       </div>
 
-      {/* Schedule Management Banner */}
-      <section className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-sky-100 text-[#0F4C81]">
-            <Calendar className="w-5 h-5" />
-          </div>
-          <div>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800">
-              Gestión de Agenda y Horarios
-            </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Recogida: {order.pickup.date} ({order.pickup.timeSlot}) · Entrega:{' '}
-              {order.delivery.targetDate} ({order.delivery.timeSlot})
-            </p>
-          </div>
+      {/* Agenda en solo lectura: la reprogramación por el personal (B3) aún no existe en el servidor. */}
+      <section
+        aria-label="Agenda y horarios"
+        className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs flex items-center gap-3"
+      >
+        <div className="p-2.5 rounded-xl bg-sky-100 text-primary">
+          <Calendar className="w-5 h-5" />
         </div>
-
-        <button
-          onClick={() => setIsScheduleModalOpen(true)}
-          className="px-4 py-2 text-xs font-semibold text-[#0F4C81] bg-sky-50 hover:bg-sky-100 border border-sky-200 rounded-xl transition-colors cursor-pointer"
-        >
-          Reprogramar fecha / franja horaria
-        </button>
+        <div>
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800">
+            Agenda y horarios
+          </h3>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Recogida: {order.pickup.date} ({order.pickup.timeSlot}) · Entrega:{' '}
+            {order.delivery.targetDate} ({order.delivery.timeSlot})
+          </p>
+          <p className="text-xs text-slate-600 mt-1">
+            La reprogramación por el personal aún no está disponible.
+          </p>
+        </div>
       </section>
 
       {/* Interactive Route Map */}
       <OrderRouteMap order={order} />
-
-      {/* Schedule Modal */}
-      {isScheduleModalOpen && (
-        <ScheduleChangeModal
-          order={order}
-          isOpen={true}
-          onClose={() => setIsScheduleModalOpen(false)}
-          onSuccess={onRefresh}
-        />
-      )}
     </div>
   );
 };

@@ -68,6 +68,8 @@ export interface OrderExtra {
   price: number;
 }
 
+export type PaymentMethod = 'TARJETA' | 'TRANSFERENCIA' | 'BILLETERA' | 'EFECTIVO';
+
 export interface OrderPricing {
   pricingModel?: 'FIXED' | 'PER_WEIGHT';
   pricingStatus?:
@@ -98,7 +100,8 @@ export interface OrderPricing {
     discountValue: number;
     minOrderAmount: number;
   };
-  paymentMethod: 'TARJETA' | 'TRANSFERENCIA' | 'BILLETERA' | 'EFECTIVO';
+  /** Método elegido por el cliente según el servidor. Sin dato, queda sin definir (no se supone). */
+  paymentMethod?: PaymentMethod;
   paymentStatus:
     | 'PENDING_AMOUNT'
     | 'PAID'

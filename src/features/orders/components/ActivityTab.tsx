@@ -1,17 +1,5 @@
 import React, { useState } from 'react';
-import {
-  Clock,
-  AlertTriangle,
-  MessageSquare,
-  Send,
-  Camera,
-  Code2,
-  ChevronDown,
-  ChevronUp,
-  User,
-  ShieldAlert,
-  Info,
-} from 'lucide-react';
+import { Clock, AlertTriangle, Code2 } from 'lucide-react';
 import type { Order } from '../../../types';
 import {
   INCIDENT_SEVERITY_LABEL,
@@ -19,7 +7,6 @@ import {
   incidentTypeLabel,
   type ServerIncident,
 } from '../../../services/api/incidentsApi';
-import { useApp } from '../../../context/AppContext';
 
 export const STATUS_LABELS_HUMAN: Record<string, string> = {
   CREATED: 'Solicitud creada en el sistema',
@@ -65,64 +52,16 @@ export const ActivityTab: React.FC<ActivityTabProps> = ({
   orderIncidents,
   onOpenIncidentModal,
 }) => {
-  const { currentUser, showToast } = useApp();
   const [showTechnicalDetails, setShowTechnicalDetails] = useState(false);
-  const [commType, setCommType] = useState<'INTERNAL' | 'CUSTOMER'>('INTERNAL');
-  const [internalNoteText, setInternalNoteText] = useState('');
-  const [customerMsgText, setCustomerMsgText] = useState('');
-  const [internalNotesList, setInternalNotesList] = useState<
-    { id: string; author: string; role: string; text: string; time: string }[]
-  >([
-    {
-      id: 'N-1',
-      author: 'Supervisor Planta',
-      role: 'SUPERVISOR',
-      text: 'Recepción en planta sin novedad en bultos iniciales.',
-      time: order.createdAt || '16/11/2026',
-    },
-  ]);
-
-  const handleAddInternalNote = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!internalNoteText.trim()) return;
-
-    const newNote = {
-      id: 'NOTE-' + Date.now(),
-      author: currentUser.name,
-      role: currentUser.role,
-      text: internalNoteText.trim(),
-      time: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
-    };
-    setInternalNotesList((prev) => [newNote, ...prev]);
-    setInternalNoteText('');
-    showToast({
-      type: 'success',
-      title: 'Nota interna agregada',
-      message: 'La nota fue registrada en el expediente de la solicitud.',
-    });
-  };
-
-  const handleSendCustomerMessage = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!customerMsgText.trim()) return;
-
-    showToast({
-      type: 'success',
-      title: 'Mensaje enviado al cliente',
-      message: `Mensaje transmitido a ${order.customerName}.`,
-    });
-    setCustomerMsgText('');
-  };
 
   return (
     <div className="space-y-6">
-      {/* 2-column layout: Timeline on left (7 cols) + Incidents and Communications on right (5 cols) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: Operational Lifecycle Timeline (7 cols) */}
+        {/* Left: Operational Lifecycle Timeline */}
         <section className="lg:col-span-7 bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-            <h2 className="text-sm font-bold text-[#102A43] flex items-center gap-2">
-              <Clock className="w-4 h-4 text-[#143F73]" />
+            <h2 className="text-sm font-bold text-ink flex items-center gap-2">
+              <Clock className="w-4 h-4 text-primary" />
               <span>Línea de Vida Operacional ({order.timeline.length} eventos)</span>
             </h2>
 
@@ -136,7 +75,6 @@ export const ActivityTab: React.FC<ActivityTabProps> = ({
             </button>
           </div>
 
-          {/* Vertical Timeline (Solving Finding H-07, H-12, H-18) */}
           <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
             {order.timeline.map((event, idx) => {
               const isLatest = idx === order.timeline.length - 1;
@@ -148,19 +86,19 @@ export const ActivityTab: React.FC<ActivityTabProps> = ({
                   <span
                     className={`absolute -left-6 top-1 w-3.5 h-3.5 rounded-full border-2 border-white ${
                       isLatest
-                        ? 'bg-[#143F73] ring-3 ring-sky-300'
+                        ? 'bg-primary ring-3 ring-sky-300'
                         : 'bg-slate-400'
                     }`}
                   />
                   <div className="flex items-center justify-between text-xs">
                     <span
                       className={`font-bold ${
-                        isLatest ? 'text-[#143F73] text-sm' : 'text-slate-800'
+                        isLatest ? 'text-primary text-sm' : 'text-slate-800'
                       }`}
                     >
                       {humanLabel}
                     </span>
-                    <span className="text-[11px] text-slate-400 font-mono tabular-nums whitespace-nowrap ml-2">
+                    <span className="text-[11px] text-slate-500 font-mono tabular-nums whitespace-nowrap ml-2">
                       {event.timestamp}
                     </span>
                   </div>
@@ -187,12 +125,11 @@ export const ActivityTab: React.FC<ActivityTabProps> = ({
           </div>
         </section>
 
-        {/* Right Column: Incidents & Communications (5 cols) */}
+        {/* Right: Incidents only (T-03: sin formularios simulados) */}
         <div className="lg:col-span-5 space-y-6">
-          {/* Incidents & Evidences Section */}
           <section className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="text-sm font-bold text-[#102A43] flex items-center gap-2">
+              <h3 className="text-sm font-bold text-ink flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 text-rose-600" />
                 <span>Incidencias y Evidencias ({orderIncidents.length})</span>
               </h3>
@@ -205,7 +142,7 @@ export const ActivityTab: React.FC<ActivityTabProps> = ({
             </div>
 
             {orderIncidents.length === 0 ? (
-              <div className="py-6 text-center text-xs text-slate-400 italic">
+              <div className="py-6 text-center text-xs text-slate-500 italic">
                 No hay incidencias registradas en esta solicitud.
               </div>
             ) : (
@@ -233,117 +170,6 @@ export const ActivityTab: React.FC<ActivityTabProps> = ({
                     )}
                   </div>
                 ))}
-              </div>
-            )}
-          </section>
-
-          {/* Communications Section (Solving Finding H-08: Distinct internal vs customer) */}
-          <section className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="text-sm font-bold text-[#102A43] flex items-center gap-2">
-                <MessageSquare className="w-4 h-4 text-[#143F73]" />
-                <span>Centro de Comunicaciones</span>
-              </h3>
-            </div>
-
-            {/* Audience Tab Selector */}
-            <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl text-xs">
-              <button
-                type="button"
-                onClick={() => setCommType('INTERNAL')}
-                className={`py-1.5 text-center font-semibold rounded-lg transition-all cursor-pointer ${
-                  commType === 'INTERNAL'
-                    ? 'bg-white text-[#0F4C81] shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Notas internas
-              </button>
-              <button
-                type="button"
-                onClick={() => setCommType('CUSTOMER')}
-                className={`py-1.5 text-center font-semibold rounded-lg transition-all cursor-pointer ${
-                  commType === 'CUSTOMER'
-                    ? 'bg-white text-[#0F4C81] shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Mensaje al cliente
-              </button>
-            </div>
-
-            {/* Audience 1: Internal Notes */}
-            {commType === 'INTERNAL' && (
-              <div className="space-y-3 text-xs">
-                <span className="text-[11px] text-slate-400 block">
-                  Visibilidad: Personal interno de operaciones, supervisores y choferes.
-                </span>
-
-                <form onSubmit={handleAddInternalNote} className="space-y-2">
-                  <textarea
-                    rows={2}
-                    value={internalNoteText}
-                    onChange={(e) => setInternalNoteText(e.target.value)}
-                    placeholder="Agregar nota interna para el equipo..."
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs"
-                  />
-                  <div className="flex justify-end">
-                    <button
-                      type="submit"
-                      disabled={!internalNoteText.trim()}
-                      className="px-4 py-1.5 text-xs font-bold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-xl shadow-xs transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
-                    >
-                      <span>Guardar nota</span>
-                    </button>
-                  </div>
-                </form>
-
-                <div className="space-y-2 pt-2 border-t border-slate-100">
-                  {internalNotesList.map((note) => (
-                    <div key={note.id} className="p-2.5 bg-slate-50 rounded-xl border border-slate-100">
-                      <div className="flex justify-between items-center text-[10px] text-slate-400">
-                        <span className="font-bold text-slate-700">
-                          {note.author} ({note.role})
-                        </span>
-                        <span>{note.time}</span>
-                      </div>
-                      <p className="text-xs text-slate-700 mt-1">{note.text}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Audience 2: Customer Message */}
-            {commType === 'CUSTOMER' && (
-              <div className="space-y-3 text-xs">
-                <div className="p-2 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-[11px] flex items-center gap-1.5">
-                  <Info className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                  <span>
-                    El mensaje será transmitido a <strong>{order.customerName}</strong>. No se envía
-                    implícitamente con otras operaciones.
-                  </span>
-                </div>
-
-                <form onSubmit={handleSendCustomerMessage} className="space-y-2">
-                  <textarea
-                    rows={3}
-                    value={customerMsgText}
-                    onChange={(e) => setCustomerMsgText(e.target.value)}
-                    placeholder="Escribir mensaje formal para el cliente..."
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs"
-                  />
-                  <div className="flex justify-end">
-                    <button
-                      type="submit"
-                      disabled={!customerMsgText.trim()}
-                      className="px-4 py-2 text-xs font-bold text-white bg-teal-700 hover:bg-teal-800 rounded-xl shadow-xs transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
-                    >
-                      <Send className="w-3 h-3" />
-                      <span>Enviar mensaje</span>
-                    </button>
-                  </div>
-                </form>
               </div>
             )}
           </section>

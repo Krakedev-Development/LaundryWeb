@@ -24,6 +24,11 @@ async function mockServer(page, { pricingModel = 'PER_WEIGHT', status = 'AT_FACI
     const path = new URL(req.url()).pathname.replace(/^.*\/api\/v1/, '');
     const body = req.method() === 'GET' ? undefined : req.postDataJSON();
     if (req.method() !== 'GET') calls.push([path.replace(`/orders/${ORDER}`, ''), body]);
+    // Lista de Planta: la solicitud aparece en la etapa en que está.
+    if (path === '/orders') {
+      const data = new URL(req.url()).searchParams.get('status') === state.order.status ? [state.order] : [];
+      return json(route, 200, { page: 1, pageSize: 100, total: data.length, data });
+    }
     if (path === `/orders/${ORDER}/adjustments` && req.method() === 'GET') return json(route, 200, state.adjustments);
     if (path === `/orders/${ORDER}/transitions`) return json(route, 201, bump({ status: body.to }));
     if (path === `/orders/${ORDER}/weight`) return json(route, 201, bump({ status: 'INSPECTION' }));
@@ -49,9 +54,13 @@ async function mockServer(page, { pricingModel = 'PER_WEIGHT', status = 'AT_FACI
   return { state, calls };
 }
 
+// El proceso en planta vive solo en Planta (T-07): se abre desde su lista, en "Gestionar proceso".
 const panelOf = async (page) => {
-  await page.goto(`/operations/orders/${ORDER}`, { waitUntil: 'domcontentloaded' });
-  return page.getByRole('region', { name: 'Proceso en planta' });
+  await page.goto('/operations/plant', { waitUntil: 'domcontentloaded' });
+  await page.locator('table').getByRole('button', { name: 'Abrir pedido SOL-1001' }).click();
+  const modal = page.getByRole('dialog', { name: /^Pedido SOL-1001/ });
+  await modal.getByRole('tab', { name: 'Gestionar proceso' }).click();
+  return modal.getByRole('region', { name: 'Proceso en planta' });
 };
 
 test('servicio por peso: pesaje, ajuste con aprobación del cliente, precio, lavado y lista para entrega', async ({ page }) => {
@@ -81,13 +90,14 @@ test('servicio por peso: pesaje, ajuste con aprobación del cliente, precio, lav
   await expect(panel).toContainText('Esperando la decisión del cliente sobre un ajuste.');
   await expect(panel.getByRole('button', { name: 'Fijar precio', exact: true })).toBeDisabled();
 
-  // El cliente aprueba desde su app; la sede recarga y fija el precio.
+  // El cliente aprueba desde su app; la sede vuelve a abrir el pedido en Planta y fija el precio.
   state.adjustments[0].status = 'APPROVED';
-  await page.reload();
+  await panelOf(page);
   await panel.getByRole('button', { name: 'Fijar precio', exact: true }).click();
   await panel.getByRole('button', { name: 'Pasar a control de calidad', exact: true }).click();
   await panel.getByRole('button', { name: 'Marcar lista para entrega', exact: true }).click();
-  await expect(panel).toHaveCount(0);
+  // En el modal de Planta el panel sigue mostrando el resumen, pero ya no queda ningún paso.
+  await expect(panel.getByRole('button', { name: 'Marcar lista para entrega', exact: true })).toHaveCount(0);
 
   expect(calls.map(([p, b]) => [p, b.to ?? null])).toEqual([
     ['/transitions', 'WEIGHING'],
