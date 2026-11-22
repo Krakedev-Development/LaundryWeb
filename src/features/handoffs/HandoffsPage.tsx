@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import React, { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowUpRight,
@@ -14,6 +14,7 @@ import { listOrders, type BackendOrderSummary } from '../../services/api/ordersA
 import { getFacilities, type FacilityResponse } from '../../services/api/geoApi';
 import { ApiError } from '../../services/api/apiConfig';
 import { Modal } from '../../shared/ui/Modal';
+import { useQrScanner } from '../custody/useQrScanner';
 
 /*
  * Puerta de entrada del mostrador. La validación de los traspasos (código, prendas, quién retira)
@@ -109,8 +110,6 @@ export function HandoffsPage() {
   // confirma la solicitud elegida, porque un código en la solicitud equivocada gasta sus intentos.
   const [confirming, setConfirming] = useState<{ row: Row; queue: (typeof QUEUES)[number] } | null>(null);
   const [scanError, setScanError] = useState('');
-  const [camera, setCamera] = useState(false);
-  const video = useRef<HTMLVideoElement>(null);
 
   const load = useCallback(async () => {
     setState('loading');
@@ -173,35 +172,10 @@ export function HandoffsPage() {
     submit(input);
   };
 
-  // Lectura del QR con la cámara (requiere HTTPS o localhost).
-  useEffect(() => {
-    if (!camera || !video.current) return;
-    let cancelled = false;
-    let controls: { stop(): void } | undefined;
-    import('@zxing/browser')
-      .then(async ({ BrowserQRCodeReader }) => {
-        controls = await new BrowserQRCodeReader().decodeFromVideoDevice(
-          undefined,
-          video.current!,
-          (result) => {
-            if (!result || cancelled) return;
-            setCamera(false);
-            submit(result.getText());
-          },
-        );
-        if (cancelled) controls.stop();
-      })
-      .catch(() => {
-        setScanError('No se pudo abrir la cámara. Usa un lector o escribe el código.');
-        setCamera(false);
-      });
-    return () => {
-      cancelled = true;
-      controls?.stop();
-    };
-    // submit solo navega o guarda el código; no necesita volver a crear el lector.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [camera]);
+  // Lector QR compartido con los paneles de custodia (T-12).
+  const camera = useQrScanner(submit, () =>
+    setScanError('No se pudo abrir la cámara. Usa un lector o escribe el código.'),
+  );
 
   const facilityName = (id: string) => facilities.find((f) => f.id === id)?.name;
   const visible = (status: QueueKey) =>
@@ -240,9 +214,9 @@ export function HandoffsPage() {
             <ArrowUpRight className="size-4" aria-hidden="true" />
             Continuar
           </button>
-          <button type="button" className={secondary} onClick={() => setCamera((v) => !v)}>
+          <button type="button" className={secondary} onClick={camera.toggle}>
             <ScanLine className="size-4" aria-hidden="true" />
-            {camera ? 'Cerrar cámara' : 'Escanear con cámara'}
+            {camera.active ? 'Cerrar cámara' : 'Escanear con cámara'}
           </button>
         </form>
         {scanError && (
@@ -267,8 +241,13 @@ export function HandoffsPage() {
             </button>
           </div>
         )}
-        {camera && (
-          <video ref={video} className="w-full max-w-sm rounded-xl border border-slate-200" muted playsInline />
+        {camera.active && (
+          <video
+            ref={camera.videoRef}
+            className="w-full max-w-sm rounded-xl border border-slate-200"
+            muted
+            playsInline
+          />
         )}
       </section>
 

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
-import { LoaderCircle, PackageCheck, QrCode, RefreshCw } from 'lucide-react';
+import { LoaderCircle, PackageCheck, RefreshCw } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { ApiError } from '../../services/api/apiConfig';
 import type { BackendOrderDetail } from '../../services/api/ordersApi';
@@ -11,6 +11,7 @@ import {
   validateReception,
   verifyHandoff,
 } from '../../services/api/handoffsApi';
+import { CustodyCodeField } from '../custody/CustodyCodeField';
 
 const field =
   'mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm focus:outline-2 focus:outline-sky-700';
@@ -60,8 +61,6 @@ export function FacilityReceptionPanel({
   const [notes, setNotes] = useState('');
   const [errors, setErrors] = useState<{ code?: string; received?: string; notes?: string }>({});
   const [busy, setBusy] = useState(false);
-  const [camera, setCamera] = useState(false);
-  const video = useRef<HTMLVideoElement>(null);
   const mounted = useRef(true);
 
   const load = useCallback(async () => {
@@ -87,38 +86,6 @@ export function FacilityReceptionPanel({
       mounted.current = false;
     };
   }, [load]);
-
-  // Lectura del QR con la cámara (requiere HTTPS o localhost).
-  useEffect(() => {
-    if (!camera || !video.current) return;
-    let cancelled = false;
-    let controls: { stop(): void } | undefined;
-    import('@zxing/browser')
-      .then(async ({ BrowserQRCodeReader }) => {
-        controls = await new BrowserQRCodeReader().decodeFromVideoDevice(
-          undefined,
-          video.current!,
-          (result) => {
-            if (!result) return;
-            setCode(result.getText());
-            setCamera(false);
-          },
-        );
-        if (cancelled) controls.stop();
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setCamera(false);
-        setErrors((prev) => ({
-          ...prev,
-          code: 'No se pudo abrir la cámara. Escribe el código o usa el lector de QR.',
-        }));
-      });
-    return () => {
-      cancelled = true;
-      controls?.stop();
-    };
-  }, [camera]);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -150,7 +117,6 @@ export function FacilityReceptionPanel({
       onChanged(updated);
     } catch (err) {
       setErrors({ code: custodyErrorMessage(err) });
-      // La versión quedó vieja: se vuelve a consultar para confirmar con la vigente.
       // La versión quedó vieja: el detalle vuelve a consultar la solicitud y trae la vigente.
       if (err instanceof ApiError && err.status === 409) onStale();
     } finally {
@@ -158,7 +124,6 @@ export function FacilityReceptionPanel({
     }
   };
 
-  const scanned = /^LDH1:[^:]+:[A-Z_]+:.{16,128}$/.test(code.trim());
   return (
     <section
       aria-label="Recepción en planta"
@@ -202,43 +167,17 @@ export function FacilityReceptionPanel({
       )}
 
       <form className="grid gap-4 lg:grid-cols-3" onSubmit={submit} noValidate>
-        <div>
-          <label className="block text-sm font-medium">
-            Código del chofer
-            <input
-              aria-invalid={!!errors.code}
-              aria-describedby="reception-code-error"
-              className={`${field} font-mono ${errors.code ? invalid : ''}`}
-              value={code}
-              onChange={(e) => {
-                setCode(e.target.value);
-                setErrors((prev) => ({ ...prev, code: undefined }));
-              }}
-              placeholder="6 dígitos o lector de QR"
-              autoComplete="off"
-            />
-          </label>
-          {scanned && !errors.code && (
-            <span className="mt-1 block text-xs font-semibold text-emerald-700">QR del chofer leído</span>
-          )}
-          {errors.code && (
-            <span id="reception-code-error" className="mt-1 block text-xs text-rose-700">
-              {errors.code}
-            </span>
-          )}
-          <div className="mt-2 flex flex-wrap gap-2">
-            <button type="button" className={secondary} onClick={() => setCamera((v) => !v)}>
-              <QrCode className="h-4 w-4" aria-hidden />
-              {camera ? 'Cerrar cámara' : 'Escanear QR'}
-            </button>
-            {scanned && (
-              <button type="button" className={secondary} onClick={() => setCode('')}>
-                Usar otro código
-              </button>
-            )}
-          </div>
-          {camera && <video ref={video} className="mt-2 max-h-56 w-full rounded-xl" />}
-        </div>
+        <CustodyCodeField
+          label="Código del chofer"
+          scannedText="QR del chofer leído"
+          value={code}
+          error={errors.code}
+          onChange={(value) => {
+            setCode(value);
+            setErrors((prev) => ({ ...prev, code: undefined }));
+          }}
+          onError={(message) => setErrors((prev) => ({ ...prev, code: message }))}
+        />
         <div>
           <label className="block text-sm font-medium">
             Prendas recibidas

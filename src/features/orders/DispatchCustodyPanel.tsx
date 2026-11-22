@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { LoaderCircle, PackageOpen, QrCode } from 'lucide-react';
+import { LoaderCircle, PackageOpen } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { ApiError } from '../../services/api/apiConfig';
 import {
@@ -9,19 +9,17 @@ import {
   type HandoffType,
 } from '../../services/api/handoffsApi';
 import { completeOrder, type PlantOrder } from '../../services/api/plantApi';
+import { CustodyCodeField } from '../custody/CustodyCodeField';
 
 const field =
   'mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm focus:outline-2 focus:outline-sky-700';
 const invalid = 'border-rose-400 bg-rose-50/40';
 const primary =
   'inline-flex items-center justify-center gap-2 rounded-xl bg-[#0F4C81] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#0A3660] disabled:opacity-50';
-const secondary =
-  'inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-[#0F4C81] hover:bg-slate-50';
 
 const messageOf = (e: unknown) =>
   e instanceof Error ? e.message : 'No se pudo completar la operación. Intenta de nuevo.';
 const money = (v: string | number | null | undefined) => `$${(Number(v) || 0).toFixed(2)}`;
-const QR_FULL = /^LDH1:[^:]+:[A-Z_]+:.{16,128}$/;
 
 type Step = { type: HandoffType; title: string; who: string; help: string; button: string; done: string; recipient: boolean };
 const STEPS: Record<string, Step> = {
@@ -75,8 +73,6 @@ export function DispatchCustodyPanel({
   const [notes, setNotes] = useState('');
   const [errors, setErrors] = useState<{ code?: string; name?: string; relationship?: string }>({});
   const [busy, setBusy] = useState(false);
-  const [camera, setCamera] = useState(false);
-  const video = useRef<HTMLVideoElement>(null);
 
   // El código traído de "Recepción y retiros" solo sirve para la etapa en la que se eligió. Si la
   // solicitud está en otra (o en ninguna de este panel), se descarta para no gastar un intento
@@ -93,31 +89,6 @@ export function DispatchCustodyPanel({
         code: 'El código leído en Recepción y retiros era para otra etapa. Pide el código de esta etapa.',
       });
   }, [order, initialCode, initialType]);
-
-  // Lectura del QR con la cámara (requiere HTTPS o localhost).
-  useEffect(() => {
-    if (!camera || !video.current) return;
-    let cancelled = false;
-    let controls: { stop(): void } | undefined;
-    import('@zxing/browser')
-      .then(async ({ BrowserQRCodeReader }) => {
-        controls = await new BrowserQRCodeReader().decodeFromVideoDevice(undefined, video.current!, (result) => {
-          if (!result) return;
-          setCode(result.getText());
-          setCamera(false);
-        });
-        if (cancelled) controls.stop();
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setCamera(false);
-        setErrors((prev) => ({ ...prev, code: 'No se pudo abrir la cámara. Escribe el código o usa el lector de QR.' }));
-      });
-    return () => {
-      cancelled = true;
-      controls?.stop();
-    };
-  }, [camera]);
 
   if (order.status === 'DELIVERED') {
     const due = Number(order.amountDue) || 0;
@@ -203,31 +174,16 @@ export function DispatchCustodyPanel({
         </div>
       </div>
       <form className="grid gap-4 lg:grid-cols-3" onSubmit={submit} noValidate>
-        <div>
-          <label className="block text-sm font-medium">
-            {step.who}
-            <input
-              aria-invalid={!!errors.code}
-              className={`${field} font-mono ${errors.code ? invalid : ''}`}
-              value={code}
-              onChange={(e) => {
-                setCode(e.target.value);
-                setErrors((prev) => ({ ...prev, code: undefined }));
-              }}
-              placeholder="6 dígitos o lector de QR"
-              autoComplete="off"
-            />
-          </label>
-          {errors.code && <span className="mt-1 block text-xs text-rose-700">{errors.code}</span>}
-          {QR_FULL.test(code.trim()) && !errors.code && (
-            <span className="mt-1 block text-xs font-semibold text-emerald-700">QR leído</span>
-          )}
-          <button type="button" className={`${secondary} mt-2`} onClick={() => setCamera((v) => !v)}>
-            <QrCode className="h-4 w-4" aria-hidden />
-            {camera ? 'Cerrar cámara' : 'Escanear QR'}
-          </button>
-          {camera && <video ref={video} className="mt-2 max-h-56 w-full rounded-xl" />}
-        </div>
+        <CustodyCodeField
+          label={step.who}
+          value={code}
+          error={errors.code}
+          onChange={(value) => {
+            setCode(value);
+            setErrors((prev) => ({ ...prev, code: undefined }));
+          }}
+          onError={(message) => setErrors((prev) => ({ ...prev, code: message }))}
+        />
         {step.recipient && (
           <>
             <div>

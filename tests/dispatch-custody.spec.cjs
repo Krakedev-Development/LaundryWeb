@@ -138,3 +138,21 @@ test('con el traspaso bloqueado (423) se pide un código nuevo al cliente', asyn
     panel.getByText('Código incorrecto. El traspaso quedó bloqueado. Pide al cliente que genere un código nuevo en su app.'),
   ).toBeVisible();
 });
+
+// T-12: el campo de código y el lector QR son los mismos en todos los paneles de custodia.
+test('el campo de código compartido permite descartar un QR leído y avisa si no hay cámara', async ({ page }) => {
+  await mockServer(page, { status: 'DELIVERY_ASSIGNED' });
+  await open(page);
+  const panel = page.getByRole('region', { name: 'Entrega al chofer para reparto' });
+  const field = panel.getByRole('textbox', { name: 'Código del chofer' });
+  await field.fill(`LDH1:${ORDER}:FACILITY_TO_DRIVER:${TOKEN}`);
+  await expect(panel.getByText('QR leído')).toBeVisible();
+  await panel.getByRole('button', { name: 'Usar otro código' }).click();
+  await expect(field).toHaveValue('');
+  await expect(panel.getByRole('button', { name: 'Usar otro código' })).toHaveCount(0);
+
+  // El navegador de prueba no tiene cámara: se avisa en el campo y el botón vuelve a su estado.
+  await panel.getByRole('button', { name: 'Escanear QR' }).click();
+  await expect(panel.getByText('No se pudo abrir la cámara. Escribe el código o usa el lector de QR.')).toBeVisible();
+  await expect(panel.getByRole('button', { name: 'Escanear QR' })).toBeVisible();
+});
