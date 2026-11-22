@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { LoaderCircle, PackageOpen, QrCode } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { ApiError } from '../../services/api/apiConfig';
@@ -8,7 +8,7 @@ import {
   verifyHandoff,
   type HandoffType,
 } from '../../services/api/handoffsApi';
-import { completeOrder, getPlantOrder, type PlantOrder } from '../../services/api/plantApi';
+import { completeOrder, type PlantOrder } from '../../services/api/plantApi';
 
 const field =
   'mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm focus:outline-2 focus:outline-sky-700';
@@ -48,25 +48,27 @@ const STEPS: Record<string, Step> = {
 /**
  * Traspasos de salida en la sede, contra el servidor: entrega al chofer para reparto y retiro
  * del cliente en sede. Con la solicitud entregada, permite cerrarla.
+ *
+ * Recibe la solicitud que el detalle ya consultó al servidor (T-10): no la vuelve a pedir. Tras
+ * cada confirmación entrega la respuesta del servidor a `onChanged` y el detalle la actualiza.
  */
 export function DispatchCustodyPanel({
-  orderId,
+  order,
   onChanged,
-  refreshKey,
+  onStale,
   initialCode = '',
   initialType = '',
 }: {
-  orderId: string;
+  order: PlantOrder;
   onChanged(updated: PlantOrder): void;
-  /** Cambia cuando la solicitud cambió en otro panel (p. ej. su versión): se vuelve a consultar. */
-  refreshKey?: string | number;
+  /** La versión quedó vieja (409): el detalle vuelve a consultar la solicitud al servidor. */
+  onStale?(): void;
   /** Código o QR leído en "Recepción y retiros", para no tener que volver a escanearlo. */
   initialCode?: string;
   /** Traspaso de la columna donde se eligió la solicitud (`?traspaso=`). */
   initialType?: HandoffType | '';
 }) {
   const { showToast } = useApp();
-  const [order, setOrder] = useState<PlantOrder | null>(null);
   const [code, setCode] = useState(initialCode);
   const [name, setName] = useState('');
   const [relationship, setRelationship] = useState('');
@@ -76,28 +78,12 @@ export function DispatchCustodyPanel({
   const [camera, setCamera] = useState(false);
   const video = useRef<HTMLVideoElement>(null);
 
-  const [loadError, setLoadError] = useState('');
-  const load = useCallback(async () => {
-    try {
-      setOrder(await getPlantOrder(orderId));
-      setLoadError('');
-    } catch (e) {
-      // Contrato 4: si falla la consulta se muestra el error, no un panel vacío en silencio.
-      setOrder(null);
-      setLoadError(messageOf(e));
-    }
-  }, [orderId]);
-
-  useEffect(() => {
-    void load();
-  }, [load, refreshKey]);
-
   // El código traído de "Recepción y retiros" solo sirve para la etapa en la que se eligió. Si la
   // solicitud está en otra (o en ninguna de este panel), se descarta para no gastar un intento
   // del traspaso equivocado.
   const initialChecked = useRef(false);
   useEffect(() => {
-    if (!order || initialChecked.current || !initialCode) return;
+    if (initialChecked.current || !initialCode) return;
     initialChecked.current = true;
     const current = STEPS[order.status];
     if (current && (!initialType || current.type === initialType)) return;
@@ -133,24 +119,6 @@ export function DispatchCustodyPanel({
     };
   }, [camera]);
 
-  if (loadError)
-    return (
-      <section
-        aria-label="Custodia de salida"
-        className="space-y-2 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-xs text-rose-800"
-      >
-        <div role="alert">
-          <p className="font-semibold">No se pudo consultar la custodia de salida en el servidor.</p>
-          <p>{loadError}</p>
-        </div>
-        <button type="button" className={secondary} onClick={() => void load()}>
-          Reintentar
-        </button>
-      </section>
-    );
-
-  if (!order) return null;
-
   if (order.status === 'DELIVERED') {
     const due = Number(order.amountDue) || 0;
     return (
@@ -173,7 +141,6 @@ export function DispatchCustodyPanel({
                   const updated = await completeOrder(order.id, order.version);
                   showToast({ type: 'success', title: 'Solicitud cerrada' });
                   onChanged(updated);
-                  await load();
                 } catch (e) {
                   showToast({ type: 'error', title: 'No se pudo cerrar', message: messageOf(e) });
                 } finally {
@@ -217,11 +184,10 @@ export function DispatchCustodyPanel({
       setCode('');
       showToast({ type: 'success', title: step.done });
       onChanged(updated as PlantOrder);
-      await load();
     } catch (err) {
       setErrors({ code: custodyErrorMessage(err, step.recipient ? 'del cliente' : 'del chofer') });
       // La versión quedó vieja: se vuelve a consultar para confirmar con la vigente.
-      if (err instanceof ApiError && err.status === 409) void load();
+      if (err instanceof ApiError && err.status === 409) onStale?.();
     } finally {
       setBusy(false);
     }

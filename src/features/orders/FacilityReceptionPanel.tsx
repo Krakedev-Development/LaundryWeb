@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { LoaderCircle, PackageCheck, QrCode, RefreshCw } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { ApiError } from '../../services/api/apiConfig';
-import { getOrder, type BackendOrderDetail } from '../../services/api/ordersApi';
+import type { BackendOrderDetail } from '../../services/api/ordersApi';
 import {
   custodyErrorMessage,
   declaredAtPickup,
@@ -27,23 +27,29 @@ const messageOf = (e: unknown) =>
 type ServerState =
   | { status: 'loading' }
   | { status: 'error'; message: string }
-  | { status: 'ready'; declared: number | null; version: number };
+  | { status: 'ready'; declared: number | null };
 
 /**
  * Llegada a planta: el chofer muestra su código o QR y la sede lo valida aquí, junto con las
  * prendas recibidas. Al validarse, el servidor pasa la solicitud a "En planta".
  *
- * Antes de confirmar se consultan al servidor el conteo declarado en la recogida y la versión
- * vigente de la solicitud. Sin ellos no se confirma: sin el conteo, una diferencia de prendas
+ * Antes de confirmar se consulta al servidor el conteo declarado en la recogida; la versión
+ * vigente llega del detalle (T-10). Sin el conteo no se confirma: una diferencia de prendas
  * pasaría sin explicación.
  */
 export function FacilityReceptionPanel({
   orderId,
+  version,
   onChanged,
+  onStale,
   initialCode = '',
 }: {
   orderId: string;
+  /** Versión vigente de la solicitud, tal como la devolvió el servidor al detalle. */
+  version: number;
   onChanged(updated: BackendOrderDetail): void;
+  /** La versión quedó vieja (409): el detalle vuelve a consultar la solicitud. */
+  onStale(): void;
   /** Código o QR leído en "Recepción y retiros", para no tener que volver a escanearlo. */
   initialCode?: string;
 }) {
@@ -61,9 +67,9 @@ export function FacilityReceptionPanel({
   const load = useCallback(async () => {
     setServer({ status: 'loading' });
     try {
-      const [rows, detail] = await Promise.all([listHandoffs(orderId), getOrder(orderId)]);
+      const rows = await listHandoffs(orderId);
       if (mounted.current)
-        setServer({ status: 'ready', declared: declaredAtPickup(rows), version: detail.version });
+        setServer({ status: 'ready', declared: declaredAtPickup(rows) });
     } catch (e) {
       if (mounted.current)
         setServer({
@@ -130,7 +136,7 @@ export function FacilityReceptionPanel({
     try {
       const updated = await verifyHandoff(orderId, {
         type: 'DRIVER_TO_FACILITY',
-        expectedVersion: server.version,
+        expectedVersion: version,
         receivedCount: Number(received),
         notes: notes.trim() || undefined,
         ...input,
@@ -145,7 +151,8 @@ export function FacilityReceptionPanel({
     } catch (err) {
       setErrors({ code: custodyErrorMessage(err) });
       // La versión quedó vieja: se vuelve a consultar para confirmar con la vigente.
-      if (err instanceof ApiError && err.status === 409) void load();
+      // La versión quedó vieja: el detalle vuelve a consultar la solicitud y trae la vigente.
+      if (err instanceof ApiError && err.status === 409) onStale();
     } finally {
       setBusy(false);
     }

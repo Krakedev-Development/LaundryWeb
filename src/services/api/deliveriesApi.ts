@@ -139,17 +139,21 @@ export async function fetchDeliveryDrivers(): Promise<BackendDriver[]> {
   return listDrivers();
 }
 
+/**
+ * Asigna el chofer de entrega. Usa la lista de choferes que la pantalla ya cargó para armar la
+ * fila (nombre del chofer): no la vuelve a pedir tras asignar (T-10).
+ */
 export async function assignDeliveryDriver(
   orderId: string,
   driverId: string,
   expectedVersion: number,
+  drivers: BackendDriver[],
 ): Promise<DeliveryRow> {
   const updated = await assignDriver(orderId, {
     leg: 'OUTBOUND',
     driverId,
     expectedVersion,
   });
-  const drivers = await listDrivers().catch(() => [] as BackendDriver[]);
   const row = mapOrderToDeliveryRow(updated, drivers);
   if (!row) {
     throw new ApiError('La solicitud ya no está en una etapa de entrega a domicilio.', 409);

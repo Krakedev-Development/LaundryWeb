@@ -192,33 +192,51 @@ test('con el servidor caído la lista de Solicitudes no muestra datos guardados 
   await expect(page.getByRole('table')).toContainText('SOL-3001');
 });
 
-test('si falla la consulta de la custodia de salida se muestra el error con Reintentar', async ({ page }) => {
+// T-10: el detalle consulta la solicitud una sola vez; los paneles de custodia reciben esa
+// respuesta en vez de volver a pedirla.
+for (const status of ['CONFIRMED', 'HEADING_TO_FACILITY', 'IN_PROCESS', 'DELIVERY_ASSIGNED']) {
+  test(`al abrir el detalle (${status}) la solicitud se consulta una sola vez`, async ({ page }) => {
+    const gets = [];
+    page.on('request', (req) => {
+      const path = new URL(req.url()).pathname;
+      if (req.method() === 'GET' && path.endsWith(`/api/v1/orders/${ORDER}`)) gets.push(path);
+    });
+    await mockOrder(page, status);
+    gets.length = 0;
+    await page.goto(`/operations/orders/${ORDER}`);
+    await expect(page.getByRole('heading', { level: 2 }).first()).toBeVisible();
+    await page.waitForTimeout(1500);
+    expect(gets).toHaveLength(1);
+  });
+}
+
+test('tras confirmar la salida a reparto el detalle se actualiza con la respuesta, sin otra consulta', async ({ page }) => {
   await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
-  let detailServed = false;
-  let failing = true;
-  const order = {
+  let order = {
     id: ORDER, number: 3001, status: 'DELIVERY_ASSIGNED', mode: 'HOME_HOME', facilityId: 'f1', paymentStatus: 'PAID',
     pricingStatus: 'FINAL', total: '15.00', version: 5, createdAt: '2026-11-19T13:00:00.000Z',
     items: [], legs: [], events: [], incidents: [],
   };
+  let gets = 0;
   await page.route(/\/api\/v1\/(orders|incidents)(\/[^?]*)?(\?.*)?$/, (route) => {
     const req = route.request();
     if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: preflight });
     const path = new URL(req.url()).pathname.replace(/^.*\/api\/v1/, '');
+    if (path === `/orders/${ORDER}/handoffs/verify`) {
+      order = { ...order, status: 'OUT_FOR_DELIVERY', version: 6 };
+      return json(route, 201, order);
+    }
     if (path === `/orders/${ORDER}`) {
-      // La primera consulta (la del detalle) responde; las siguientes (el panel de custodia)
-      // fallan hasta que la prueba lo desactiva.
-      if (detailServed && failing) return json(route, 503, { message: 'Servidor ocupado.' });
-      detailServed = true;
+      gets += 1;
       return json(route, 200, order);
     }
     return json(route, 200, []);
   });
   await page.goto(`/operations/orders/${ORDER}`);
-  const panel = page.getByRole('region', { name: 'Custodia de salida' });
-  await expect(panel).toContainText('No se pudo consultar la custodia de salida en el servidor.');
-  await expect(panel).toContainText('Servidor ocupado.');
-  failing = false;
-  await panel.getByRole('button', { name: 'Reintentar' }).click();
-  await expect(page.getByRole('region', { name: 'Entrega al chofer para reparto' })).toBeVisible();
+  const panel = page.getByRole('region', { name: 'Entrega al chofer para reparto' });
+  await panel.getByRole('textbox', { name: 'Código del chofer' }).fill('482910');
+  await panel.getByRole('button', { name: 'Confirmar salida a reparto', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'En reparto a domicilio' })).toBeVisible();
+  await expect(panel).toHaveCount(0);
+  expect(gets).toBe(1);
 });

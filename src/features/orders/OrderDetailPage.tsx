@@ -79,6 +79,9 @@ export const OrderDetailPage: React.FC = () => {
   // El detalle solo se muestra con datos del servidor (contrato 4). Sin respuesta no se usa la
   // copia guardada en este equipo: actuar sobre ella sería actuar sobre datos desactualizados.
   const [liveOrder, setLiveOrder] = useState<Order | null>(null);
+  // Respuesta del servidor tal cual: los paneles de custodia la reciben por props en vez de volver
+  // a pedir la misma solicitud (T-10).
+  const [serverOrder, setServerOrder] = useState<BackendOrderDetail | null>(null);
   const [load, setLoad] = useState<
     { status: 'loading' } | { status: 'ready' } | { status: 'notFound' } | { status: 'error'; message: string }
   >({ status: 'loading' });
@@ -101,6 +104,7 @@ export const OrderDetailPage: React.FC = () => {
     if (!id) return;
     let active = true;
     setLiveOrder(null);
+    setServerOrder(null);
     setLoad({ status: 'loading' });
     void (async () => {
       try {
@@ -114,6 +118,7 @@ export const OrderDetailPage: React.FC = () => {
           drivers,
         );
         setLiveOrder(mapped);
+        setServerOrder(raw);
         setLoad({ status: 'ready' });
         const next = orders.map((o) => (o.id === mapped.id ? mapped : o));
         if (!next.some((o) => o.id === mapped.id)) next.push(mapped);
@@ -208,6 +213,7 @@ export const OrderDetailPage: React.FC = () => {
       const raw = updated ?? (await getOrder(order.id));
       const mapped = mapBackendOrderToOrder(raw, order, customers, facilities, drivers);
       setLiveOrder(mapped);
+      setServerOrder(raw);
       const next = orders.map((o) => (o.id === mapped.id ? mapped : o));
       if (!next.some((o) => o.id === mapped.id)) next.push(mapped);
       storageService.saveOrders(next);
@@ -237,6 +243,7 @@ export const OrderDetailPage: React.FC = () => {
         drivers,
       );
       setLiveOrder(mapped);
+      setServerOrder(updated);
       const next = orders.map((o) => (o.id === mapped.id ? mapped : o));
       if (!next.some((o) => o.id === mapped.id)) next.push(mapped);
       storageService.saveOrders(next);
@@ -436,6 +443,7 @@ export const OrderDetailPage: React.FC = () => {
           activeIncidentsCount={activeIncidents.length}
           custodyCode={custody.code}
           custodyType={custody.type}
+          serverOrder={serverOrder}
         />
       )}
 

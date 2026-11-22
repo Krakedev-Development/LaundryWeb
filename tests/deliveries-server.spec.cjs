@@ -224,3 +224,20 @@ test('con ?pedido= se preselecciona la entrega; si no está en la lista se avisa
   await notice.getByRole('button', { name: 'Entendido' }).click();
   await expect(notice).toHaveCount(0);
 });
+
+// T-10: tras asignar, la fila se arma con los choferes ya cargados; no se vuelven a pedir.
+test('al asignar el chofer de entrega no se vuelve a pedir la lista de choferes', async ({ page }) => {
+  const { calls } = await mockDeliveries(page, { status: 'READY_FOR_DELIVERY' });
+  let driverGets = 0;
+  page.on('request', (req) => {
+    if (req.method() === 'GET' && new URL(req.url()).pathname.endsWith('/api/v1/drivers')) driverGets += 1;
+  });
+  await page.goto('/operations/deliveries', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByLabel('Chofer de entrega').locator('option', { hasText: 'Carlos Pérez' })).toHaveCount(1);
+  const before = driverGets;
+  await page.getByLabel('Chofer de entrega').selectOption(DRIVER);
+  await page.getByRole('button', { name: 'Asignar chofer en servidor' }).click();
+  await expect.poll(() => calls.length).toBe(1);
+  await expect(page.getByRole('table').getByText('Carlos Pérez')).toBeVisible();
+  expect(driverGets).toBe(before);
+});

@@ -160,6 +160,7 @@ export const DeliveriesPage: React.FC = () => {
         selected.id,
         assignDriverId,
         selected.version,
+        drivers,
       );
       setRows((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
       showToast({

@@ -21,11 +21,12 @@ import {
 } from 'lucide-react';
 import type { Order } from '../../../types';
 import { operationalStage } from '../../../services/fulfillment';
-import { paymentMethodLabel } from '../../../services/api/ordersApi';
+import { paymentMethodLabel, type BackendOrderDetail } from '../../../services/api/ordersApi';
 import { PlantProgress } from '../../plant/plantProgress';
 import { FacilityReceptionPanel } from '../FacilityReceptionPanel';
 import type { HandoffType } from '../../../services/api/handoffsApi';
 import { DispatchCustodyPanel } from '../DispatchCustodyPanel';
+import type { PlantOrder } from '../../../services/api/plantApi';
 import { FailedPickupPanel } from '../FailedPickupPanel';
 
 interface OperationTabProps {
@@ -39,6 +40,8 @@ interface OperationTabProps {
   custodyCode?: string;
   /** Traspaso de la columna donde se eligió la solicitud: el código solo va a ese panel. */
   custodyType?: HandoffType | '';
+  /** Solicitud tal como la devolvió el servidor; los paneles de custodia la usan sin volver a pedirla. */
+  serverOrder: BackendOrderDetail | null;
 }
 
 export const OperationTab: React.FC<OperationTabProps> = ({
@@ -49,6 +52,7 @@ export const OperationTab: React.FC<OperationTabProps> = ({
   activeIncidentsCount,
   custodyCode = '',
   custodyType = '',
+  serverOrder,
 }) => {
   const stage = operationalStage(order);
   // En planta, el proceso (pesaje, inspección, ajustes, precio, lavado, calidad) y la retención se
@@ -63,9 +67,6 @@ export const OperationTab: React.FC<OperationTabProps> = ({
       <span>Gestionar en Planta</span>
     </Link>
   );
-  // Cada paso en otro panel cambia la versión: los paneles vuelven a consultar el servidor para
-  // mostrar el paso siguiente sin recargar la página.
-  const versionKey = `${order.version ?? order.workflowVersion ?? 0}:${order.status}`;
   const isPerWeight = order.pricing?.pricingModel === 'PER_WEIGHT';
   const latestEvent = order.timeline[order.timeline.length - 1];
 
@@ -319,9 +320,11 @@ export const OperationTab: React.FC<OperationTabProps> = ({
           </section>
 
           {/* Contextual Facility Reception Panel if heading to facility */}
-          {stage === 'HEADING_TO_FACILITY' && (
+          {stage === 'HEADING_TO_FACILITY' && serverOrder && (
             <FacilityReceptionPanel
               orderId={order.id}
+              version={serverOrder.version}
+              onStale={() => void refreshFromServer()}
               initialCode={
                 !custodyType || custodyType === 'DRIVER_TO_FACILITY' ? custodyCode : ''
               }
@@ -339,15 +342,18 @@ export const OperationTab: React.FC<OperationTabProps> = ({
             />
           )}
 
-          {/* Salida a reparto, retiro en sede y cierre. Se monta siempre: el panel consulta el
-              estado real en el servidor y decide qué mostrar (el estado local agrupa etapas). */}
-          <DispatchCustodyPanel
-            orderId={order.id}
-            refreshKey={versionKey}
-            initialCode={custodyType === 'DRIVER_TO_FACILITY' ? '' : custodyCode}
-            initialType={custodyType}
-            onChanged={(updated) => void refreshFromServer(updated)}
-          />
+          {/* Salida a reparto, retiro en sede y cierre. Recibe la solicitud del servidor que ya
+              consultó el detalle (T-10) y decide qué mostrar según su estado real. */}
+          {serverOrder && (
+            <DispatchCustodyPanel
+              // Misma respuesta de GET /orders/:id; PlantOrder solo afina sus tipos.
+              order={serverOrder as PlantOrder}
+              onStale={() => void refreshFromServer()}
+              initialCode={custodyType === 'DRIVER_TO_FACILITY' ? '' : custodyCode}
+              initialType={custodyType}
+              onChanged={(updated) => void refreshFromServer(updated)}
+            />
+          )}
         </div>
 
         {/* Right: Compact Request Summary & Last Event (1 col) */}
