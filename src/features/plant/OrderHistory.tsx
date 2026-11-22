@@ -162,7 +162,7 @@ export function OrderHistory({ orderId, customerName }: { orderId: string; custo
         <ol className="ml-2 border-l border-slate-200">
           {entries.map((entry) => (
             <li key={entry.id} className="relative pb-6 pl-6 last:pb-0">
-              <span className="absolute -left-1.5 top-1.5 size-3 rounded-full border-2 border-white bg-[#0F4C81]" />
+              <span className="absolute -left-1.5 top-1.5 size-3 rounded-full border-2 border-white bg-primary" />
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-xs font-semibold text-sky-800">{entry.source}</span>
                 <time className="text-xs text-slate-600">{displayDate(entry.at)}</time>

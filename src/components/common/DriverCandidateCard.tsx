@@ -24,16 +24,16 @@ export function DriverCandidateCard({
 }) {
   return (
     <label
-      className={`group block cursor-pointer rounded-2xl border p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md focus-within:ring-2 focus-within:ring-[#0F4C81]/30 ${selected ? 'border-[#0F4C81] bg-[#F0F6FC] ring-1 ring-[#0F4C81]/20 shadow-sm' : 'border-slate-200 bg-white hover:border-[#0F4C81]/40 hover:bg-slate-50/70'}`}
+      className={`group block cursor-pointer rounded-2xl border p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md focus-within:ring-2 focus-within:ring-primary/30 ${selected ? 'border-primary bg-primary-soft ring-1 ring-primary/20 shadow-sm' : 'border-slate-200 bg-white hover:border-primary/40 hover:bg-slate-50/70'}`}
     >
       <div className="flex items-start gap-3">
         <span
-          className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${selected ? 'bg-[#0F4C81] text-white' : 'bg-slate-100 text-[#0F4C81]'}`}
+          className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${selected ? 'bg-primary text-white' : 'bg-slate-100 text-primary'}`}
         >
           <UserRound className="size-5" aria-hidden="true" />
         </span>
         <div className="min-w-0 flex-1">
-          <span className="block text-sm font-bold text-[#102A43]">
+          <span className="block text-sm font-bold text-ink">
             {driver.name}
           </span>
           {recommended && (
@@ -49,14 +49,14 @@ export function DriverCandidateCard({
           aria-label={driver.name}
           checked={selected}
           onChange={onSelect}
-          className="mt-1 size-4 shrink-0 cursor-pointer accent-[#0F4C81]"
+          className="mt-1 size-4 shrink-0 cursor-pointer accent-primary"
         />
       </div>
       <div className="my-3 grid grid-cols-2 gap-2">
         <span className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">
-          <Clock className="size-4 text-[#0F4C81]" aria-hidden="true" />
+          <Clock className="size-4 text-primary" aria-hidden="true" />
           <span>
-            <strong className="font-bold text-[#102A43]">
+            <strong className="font-bold text-ink">
               {candidate.etaSeconds !== null
                 ? `${Math.ceil(candidate.etaSeconds / 60)} min`
                 : 'GPS pendiente'}
@@ -69,9 +69,9 @@ export function DriverCandidateCard({
           </span>
         </span>
         <span className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">
-          <MapPin className="size-4 text-[#0F4C81]" aria-hidden="true" />
+          <MapPin className="size-4 text-primary" aria-hidden="true" />
           <span>
-            <strong className="font-bold text-[#102A43]">
+            <strong className="font-bold text-ink">
               {candidate.distanceMeters !== null
                 ? `${(candidate.distanceMeters / 1000).toFixed(1)} km`
                 : 'En sede'}

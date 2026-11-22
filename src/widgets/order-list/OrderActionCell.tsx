@@ -15,7 +15,7 @@ export function OrderActionCell({ order }: { order: Order }) {
         {operationalStage(order) === 'PICKUP_PENDING' && (
           <Link
             to={dispatchHref(order.id)}
-            className="px-3 py-1.5 text-xs font-semibold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-lg transition-colors flex items-center gap-1 shadow-xs"
+            className="px-3 py-1.5 text-xs font-semibold text-white bg-primary hover:bg-primary-hover rounded-lg transition-colors flex items-center gap-1 shadow-xs"
             title="Asignar chofer en Despacho"
           >
             <Truck className="w-3.5 h-3.5" />

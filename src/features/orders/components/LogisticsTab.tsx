@@ -80,7 +80,7 @@ export const LogisticsTab: React.FC<LogisticsTabProps> = ({ order }) => {
         {/* Recogida Card */}
         <section className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-            <span className="font-bold text-xs text-[#143F73] uppercase tracking-wider flex items-center gap-2">
+            <span className="font-bold text-xs text-navy uppercase tracking-wider flex items-center gap-2">
               <MapPin className="w-4 h-4 text-teal-600" />
               <span>Logística de Recogida</span>
             </span>
@@ -147,7 +147,7 @@ export const LogisticsTab: React.FC<LogisticsTabProps> = ({ order }) => {
             {!isPickupCompleted && !order.pickup.driverName && (
               <Link
                 to={dispatchHref(order.id)}
-                className="block w-full mt-2 py-2 text-center text-xs font-semibold text-[#0F4C81] bg-sky-50 hover:bg-sky-100 rounded-xl transition-colors"
+                className="block w-full mt-2 py-2 text-center text-xs font-semibold text-primary bg-sky-50 hover:bg-sky-100 rounded-xl transition-colors"
               >
                 Asignar en Despacho
               </Link>
@@ -158,7 +158,7 @@ export const LogisticsTab: React.FC<LogisticsTabProps> = ({ order }) => {
         {/* Entrega Card */}
         <section className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-            <span className="font-bold text-xs text-[#143F73] uppercase tracking-wider flex items-center gap-2">
+            <span className="font-bold text-xs text-navy uppercase tracking-wider flex items-center gap-2">
               <Truck className="w-4 h-4 text-orange-600" />
               <span>Logística de Entrega</span>
             </span>
@@ -224,7 +224,7 @@ export const LogisticsTab: React.FC<LogisticsTabProps> = ({ order }) => {
               order.fulfillment?.outbound.method === 'DRIVER' && (
               <Link
                 to={deliveriesHref(order.id)}
-                className="block w-full mt-2 py-2 text-center text-xs font-semibold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-xl transition-colors"
+                className="block w-full mt-2 py-2 text-center text-xs font-semibold text-white bg-primary hover:bg-primary-hover rounded-xl transition-colors"
               >
                 Asignar en Entregas
               </Link>
@@ -238,7 +238,7 @@ export const LogisticsTab: React.FC<LogisticsTabProps> = ({ order }) => {
         aria-label="Agenda y horarios"
         className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs flex items-center gap-3"
       >
-        <div className="p-2.5 rounded-xl bg-sky-100 text-[#0F4C81]">
+        <div className="p-2.5 rounded-xl bg-sky-100 text-primary">
           <Calendar className="w-5 h-5" />
         </div>
         <div>

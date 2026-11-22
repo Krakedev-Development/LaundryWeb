@@ -6,7 +6,7 @@ const field =
   'mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm focus:outline-2 focus:outline-sky-700';
 const invalid = 'border-rose-400 bg-rose-50/40';
 const secondary =
-  'inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-[#0F4C81] hover:bg-slate-50';
+  'inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-primary hover:bg-slate-50';
 
 /** Contenido completo del QR de custodia: LDH1:<solicitud>:<tipo>:<token>. */
 const FULL_QR = /^LDH1:[^:]+:[A-Z_]+:.{16,128}$/;

@@ -23,11 +23,11 @@ import { useQrScanner } from '../custody/useQrScanner';
  */
 
 const button =
-  'sidebar-focus inline-flex items-center justify-center gap-2 rounded-xl bg-[#0F4C81] px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-[#0A3660] disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:cursor-not-allowed cursor-pointer';
+  'sidebar-focus inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-primary-hover disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:cursor-not-allowed cursor-pointer';
 const secondary =
   'sidebar-focus inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50 cursor-pointer';
 const field =
-  'mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-normal text-slate-800 outline-none transition-colors placeholder:text-slate-400 focus:border-[#0F4C81] focus:bg-white focus:ring-2 focus:ring-[#0F4C81]/10';
+  'mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-normal text-slate-800 outline-none transition-colors placeholder:text-slate-400 focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/10';
 
 type QueueKey = 'HEADING_TO_FACILITY' | 'DELIVERY_ASSIGNED' | 'READY_FOR_PICKUP';
 
@@ -303,8 +303,8 @@ export function HandoffsPage() {
               >
                 <header className="flex items-start justify-between gap-2 border-b border-slate-200 bg-slate-50 p-4">
                   <div>
-                    <h2 className="flex items-center gap-2 text-sm font-bold text-[#102A43]">
-                      <q.icon className="size-4 text-[#0F4C81]" aria-hidden="true" />
+                    <h2 className="flex items-center gap-2 text-sm font-bold text-ink">
+                      <q.icon className="size-4 text-primary" aria-hidden="true" />
                       {q.title}
                     </h2>
                     <p className="mt-0.5 text-[11px] text-slate-500">{q.hint}</p>
@@ -320,7 +320,7 @@ export function HandoffsPage() {
                   {list.map((r) => (
                     <li key={r.id} className="flex items-center justify-between gap-3 p-4">
                       <div className="min-w-0 text-xs">
-                        <p className="font-bold text-[#102A43]">SOL-{String(r.number).padStart(4, '0')}</p>
+                        <p className="font-bold text-ink">SOL-{String(r.number).padStart(4, '0')}</p>
                         <p className="truncate text-slate-600">{r.customer?.user?.name ?? 'Cliente'}</p>
                         {facilityName(r.facilityId) && (
                           <p className="truncate text-[11px] text-slate-400">{facilityName(r.facilityId)}</p>

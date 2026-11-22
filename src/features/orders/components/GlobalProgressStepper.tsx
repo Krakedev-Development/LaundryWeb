@@ -101,7 +101,7 @@ export const GlobalProgressStepper: React.FC<{ order: Order }> = ({ order }) => 
                       : isCurrent
                         ? isHeld
                           ? 'bg-amber-500 text-white ring-4 ring-amber-100'
-                          : 'bg-[#0F4C81] text-white ring-4 ring-sky-100'
+                          : 'bg-primary text-white ring-4 ring-sky-100'
                         : 'bg-slate-100 text-slate-400 border border-slate-200'
                   }`}
                 >
@@ -125,7 +125,7 @@ export const GlobalProgressStepper: React.FC<{ order: Order }> = ({ order }) => 
                       isCurrent
                         ? isHeld
                           ? 'font-bold text-amber-900'
-                          : 'font-bold text-[#0F4C81]'
+                          : 'font-bold text-primary'
                         : isCompleted
                           ? 'font-semibold text-slate-800'
                           : 'text-slate-500'

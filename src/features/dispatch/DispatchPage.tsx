@@ -230,8 +230,8 @@ export function DispatchPage() {
       )}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-xs">
         <span className="flex items-center gap-2 px-2 text-xs text-slate-500">
-          <ClipboardList className="size-4 text-[#0F4C81]" aria-hidden="true" />
-          <strong className="text-[#102A43]">{queue.length}</strong> recogidas pendientes
+          <ClipboardList className="size-4 text-primary" aria-hidden="true" />
+          <strong className="text-ink">{queue.length}</strong> recogidas pendientes
           de chofer
         </span>
       </div>
@@ -239,10 +239,10 @@ export function DispatchPage() {
         <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
           <div className="flex items-center gap-2 border-b border-slate-200 bg-slate-50 px-4 py-4">
             <ClipboardList
-              className="size-4 text-[#0F4C81]"
+              className="size-4 text-primary"
               aria-hidden="true"
             />
-            <h2 className="text-sm font-bold text-[#102A43]">
+            <h2 className="text-sm font-bold text-ink">
               Solicitudes por asignar
             </h2>
           </div>
@@ -258,19 +258,19 @@ export function DispatchPage() {
                 className={
                   'sidebar-focus block text-left w-full p-4 rounded-xl border transition-colors ' +
                   (o.id === order?.id
-                    ? 'border-[#0F4C81] bg-[#F0F6FC] ring-1 ring-[#0F4C81]/10'
+                    ? 'border-primary bg-primary-soft ring-1 ring-primary/10'
                     : 'border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300')
                 }
                 aria-pressed={o.id === order?.id}
                 onClick={() => setOrderId(o.id)}
               >
                 <span className="flex flex-wrap items-center justify-between gap-2">
-                  <strong className="font-mono text-xs text-[#0F4C81]">
+                  <strong className="font-mono text-xs text-primary">
                     {o.trackingNumber || o.id}
                   </strong>
                   <PriorityBadge priority={o.priority} />
                 </span>
-                <p className="mt-2 text-sm font-semibold text-[#102A43]">
+                <p className="mt-2 text-sm font-semibold text-ink">
                   {o.customerName}
                 </p>
                 <p className="mt-1.5 flex items-center gap-1 text-[11px] text-slate-500">
@@ -284,8 +284,8 @@ export function DispatchPage() {
         <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-xs sm:p-5">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
-              <h2 className="flex items-center gap-2 text-sm font-bold text-[#102A43]">
-                <MapPin className="size-4 text-[#0F4C81]" aria-hidden="true" />
+              <h2 className="flex items-center gap-2 text-sm font-bold text-ink">
+                <MapPin className="size-4 text-primary" aria-hidden="true" />
                 Ruta y ubicación
               </h2>
               <p className="mt-1 text-xs text-slate-500">
@@ -333,9 +333,9 @@ export function DispatchPage() {
       <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-xs sm:p-5">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="flex items-center gap-2 text-sm font-bold text-[#102A43]">
+            <h2 className="flex items-center gap-2 text-sm font-bold text-ink">
               <UsersRound
-                className="size-4 text-[#0F4C81]"
+                className="size-4 text-primary"
                 aria-hidden="true"
               />
               Choferes disponibles
@@ -405,7 +405,7 @@ export function DispatchPage() {
                 isAssigning ||
                 !candidates.some((c) => c.driverId === driverId)
               }
-              className="sidebar-focus flex items-center gap-2 rounded-xl bg-[#0F4C81] px-5 py-2.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-[#0A3660] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
+              className="sidebar-focus flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
               onClick={handleAssignDriver}
             >
               {isAssigning ? (

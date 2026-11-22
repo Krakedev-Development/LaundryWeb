@@ -61,7 +61,7 @@ export const OperationTab: React.FC<OperationTabProps> = ({
   const manageInPlant = (
     <Link
       to={plantHref(order.id, 'proceso')}
-      className="px-5 py-2.5 text-xs font-bold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-xl shadow-xs transition-colors flex items-center gap-2"
+      className="px-5 py-2.5 text-xs font-bold text-white bg-primary hover:bg-primary-hover rounded-xl shadow-xs transition-colors flex items-center gap-2"
     >
       <Sparkles className="w-4 h-4" />
       <span>Gestionar en Planta</span>
@@ -90,7 +90,7 @@ export const OperationTab: React.FC<OperationTabProps> = ({
         primaryCTA = (
         <Link
           to={dispatchHref(order.id)}
-          className="px-5 py-2.5 text-xs font-bold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-xl shadow-xs transition-colors flex items-center gap-2"
+          className="px-5 py-2.5 text-xs font-bold text-white bg-primary hover:bg-primary-hover rounded-xl shadow-xs transition-colors flex items-center gap-2"
         >
           <Truck className="w-4 h-4" />
           <span>Asignar en Despacho</span>
@@ -153,7 +153,7 @@ export const OperationTab: React.FC<OperationTabProps> = ({
         primaryCTA = (
         <Link
           to={deliveriesHref(order.id)}
-          className="px-5 py-2.5 text-xs font-bold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-xl shadow-xs transition-colors flex items-center gap-2"
+          className="px-5 py-2.5 text-xs font-bold text-white bg-primary hover:bg-primary-hover rounded-xl shadow-xs transition-colors flex items-center gap-2"
         >
           <Truck className="w-4 h-4" />
           <span>Asignar en Entregas</span>
@@ -260,7 +260,7 @@ export const OperationTab: React.FC<OperationTabProps> = ({
           <section className="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-2xs space-y-5">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
               <div className="flex items-center gap-2.5">
-                <div className="p-2.5 rounded-xl bg-sky-100 text-[#0F4C81]">
+                <div className="p-2.5 rounded-xl bg-sky-100 text-primary">
                   <Sparkles className="w-5 h-5" />
                 </div>
                 <div>
@@ -361,7 +361,7 @@ export const OperationTab: React.FC<OperationTabProps> = ({
           {/* Compact Summary Card */}
           <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs space-y-4">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
-              <PackageCheck className="w-4 h-4 text-[#0F4C81]" />
+              <PackageCheck className="w-4 h-4 text-primary" />
               <span>Resumen de la solicitud</span>
             </h3>
 
@@ -410,7 +410,7 @@ export const OperationTab: React.FC<OperationTabProps> = ({
 
             <button
               onClick={() => onSwitchTab('order')}
-              className="w-full mt-2 py-2 text-xs font-semibold text-[#0F4C81] bg-sky-50 hover:bg-sky-100 rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+              className="w-full mt-2 py-2 text-xs font-semibold text-primary bg-sky-50 hover:bg-sky-100 rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-1.5"
             >
               <span>Ver detalle comercial y prendas</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -422,7 +422,7 @@ export const OperationTab: React.FC<OperationTabProps> = ({
             <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5 text-[#0F4C81]" />
+                  <Clock className="w-3.5 h-3.5 text-primary" />
                   <span>Último evento registrado</span>
                 </h3>
                 <span className="text-[10px] font-mono text-slate-400">

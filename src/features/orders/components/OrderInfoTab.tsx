@@ -101,8 +101,8 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
     <div className="space-y-6">
       {/* Customer & Facility Information Card */}
       <section className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs">
-        <h2 className="text-sm font-bold text-[#102A43] mb-4 flex items-center gap-2">
-          <User className="w-4 h-4 text-[#143F73]" />
+        <h2 className="text-sm font-bold text-ink mb-4 flex items-center gap-2">
+          <User className="w-4 h-4 text-navy" />
           <span>Información del Cliente y Sede Operativa</span>
         </h2>
 
@@ -159,8 +159,8 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
       {/* Garments and Services Breakdown */}
       <section className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold text-[#102A43] flex items-center gap-2">
-            <Receipt className="w-4 h-4 text-[#143F73]" />
+          <h2 className="text-sm font-bold text-ink flex items-center gap-2">
+            <Receipt className="w-4 h-4 text-navy" />
             <span>Detalle de Prendas y Servicios ({order.itemCount} prendas)</span>
           </h2>
           <span className="text-xs font-semibold text-slate-500">
@@ -173,7 +173,7 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
           <PaginatedTable items={order.items || []} label="prendas" hideWhenSinglePage>
             {(itemRows) => (
               <table className="w-full text-xs text-left">
-                <thead className="bg-[#F7F9FC] text-slate-500 font-semibold border-b border-slate-200">
+                <thead className="bg-surface-muted text-slate-500 font-semibold border-b border-slate-200">
                   <tr>
                     <th className="py-2.5 px-3">Prenda / Ítem</th>
                     <th className="py-2.5 px-3 text-center">Cant.</th>
@@ -259,12 +259,12 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Reconciled Breakdown Card */}
         <section className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs space-y-3">
-          <h3 className="text-sm font-bold text-[#102A43] flex items-center gap-2">
-            <Receipt className="w-4 h-4 text-[#143F73]" />
+          <h3 className="text-sm font-bold text-ink flex items-center gap-2">
+            <Receipt className="w-4 h-4 text-navy" />
             <span>Desglose Económico Conciliado</span>
           </h3>
 
-          <div className="p-4 bg-[#F7F9FC] rounded-2xl border border-[#E5EAF0] space-y-2 font-mono text-xs">
+          <div className="p-4 bg-surface-muted rounded-2xl border border-line space-y-2 font-mono text-xs">
             <div className="flex justify-between text-slate-600">
               <span>Subtotal prendas:</span>
               <span className="tabular-nums">${subtotal.toFixed(2)}</span>
@@ -305,7 +305,7 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
               </div>
             )}
 
-            <div className="flex justify-between font-bold text-sm text-[#143F73] pt-2 border-t border-slate-300">
+            <div className="flex justify-between font-bold text-sm text-navy pt-2 border-t border-slate-300">
               <span>Total final:</span>
               <span className="tabular-nums">${total.toFixed(2)}</span>
             </div>
@@ -328,8 +328,8 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
 
         {/* Payment Method & Confirm Action */}
         <section className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs space-y-4">
-          <h3 className="text-sm font-bold text-[#102A43] flex items-center gap-2">
-            <CreditCard className="w-4 h-4 text-[#143F73]" />
+          <h3 className="text-sm font-bold text-ink flex items-center gap-2">
+            <CreditCard className="w-4 h-4 text-navy" />
             <span>Método y Estado de Pago</span>
           </h3>
 

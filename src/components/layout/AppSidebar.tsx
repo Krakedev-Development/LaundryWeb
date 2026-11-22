@@ -132,7 +132,7 @@ export function AppSidebar() {
                 : 'pinned'
         }
         style={{ width: compact ? SIDEBAR_MINI_WIDTH : SIDEBAR_EXPANDED_WIDTH }}
-        className={`sidebar-motion fixed inset-y-0 left-0 z-40 flex flex-col overflow-hidden border-r border-white/15 bg-[#0A3660] text-white transition-[width,transform] duration-200 ease-out ${isLargeScreen || mobileOpen ? 'translate-x-0' : '-translate-x-full'} ${hover.previewOpen ? 'shadow-2xl ring-1 ring-[#0A3660]/20' : 'shadow-xs'}`}
+        className={`sidebar-motion fixed inset-y-0 left-0 z-40 flex flex-col overflow-hidden border-r border-white/15 bg-primary-hover text-white transition-[width,transform] duration-200 ease-out ${isLargeScreen || mobileOpen ? 'translate-x-0' : '-translate-x-full'} ${hover.previewOpen ? 'shadow-2xl ring-1 ring-primary-hover/20' : 'shadow-xs'}`}
         onPointerEnter={hover.onPointerEnter}
         onPointerLeave={hover.onPointerLeave}
         onFocusCapture={hover.onFocusCapture}
@@ -232,7 +232,7 @@ export function AppSidebar() {
                                 >
                                   {itemActive && (
                                     <span
-                                      className="size-1.5 shrink-0 rounded-full bg-[#A5CD39]"
+                                      className="size-1.5 shrink-0 rounded-full bg-brand-lime"
                                       aria-hidden="true"
                                     />
                                   )}

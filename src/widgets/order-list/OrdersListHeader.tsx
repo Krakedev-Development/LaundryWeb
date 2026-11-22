@@ -11,7 +11,7 @@ export function OrdersListHeader() {
         actions={
           <button
             onClick={() => navigate('/operations/dispatch')}
-            className="px-4 py-2.5 text-xs font-bold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
+            className="px-4 py-2.5 text-xs font-bold text-white bg-primary hover:bg-primary-hover rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
           >
             <Truck className="w-3.5 h-3.5" />
             <span>Consola de Despacho</span>

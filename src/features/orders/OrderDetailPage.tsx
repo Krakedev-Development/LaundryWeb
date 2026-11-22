@@ -146,7 +146,7 @@ export const OrderDetailPage: React.FC = () => {
   if (load.status === 'loading') {
     return (
       <div role="status" className="flex flex-col items-center justify-center p-16 text-slate-500">
-        <LoaderCircle className="w-8 h-8 animate-spin text-[#0F4C81] mb-3" />
+        <LoaderCircle className="w-8 h-8 animate-spin text-primary mb-3" />
         <p className="text-xs font-semibold">Cargando detalles de la solicitud...</p>
       </div>
     );
@@ -170,7 +170,7 @@ export const OrderDetailPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setAttempt((n) => n + 1)}
-            className="px-5 py-2.5 text-xs font-semibold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-xl transition-colors cursor-pointer"
+            className="px-5 py-2.5 text-xs font-semibold text-white bg-primary hover:bg-primary-hover rounded-xl transition-colors cursor-pointer"
           >
             Reintentar
           </button>
@@ -195,7 +195,7 @@ export const OrderDetailPage: React.FC = () => {
         </p>
         <button
           onClick={() => navigate('/operations/orders')}
-          className="mt-5 px-5 py-2.5 text-xs font-semibold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-xl transition-colors cursor-pointer"
+          className="mt-5 px-5 py-2.5 text-xs font-semibold text-white bg-primary hover:bg-primary-hover rounded-xl transition-colors cursor-pointer"
         >
           Volver a Solicitudes
         </button>
@@ -375,7 +375,7 @@ export const OrderDetailPage: React.FC = () => {
             onClick={() => setActiveTab('operation')}
             className={`py-3 px-3.5 text-xs font-bold border-b-2 transition-all flex items-center gap-2 cursor-pointer ${
               activeTab === 'operation'
-                ? 'border-[#0F4C81] text-[#0F4C81]'
+                ? 'border-primary text-primary'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
@@ -388,7 +388,7 @@ export const OrderDetailPage: React.FC = () => {
             onClick={() => setActiveTab('order')}
             className={`py-3 px-3.5 text-xs font-bold border-b-2 transition-all flex items-center gap-2 cursor-pointer ${
               activeTab === 'order'
-                ? 'border-[#0F4C81] text-[#0F4C81]'
+                ? 'border-primary text-primary'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
@@ -404,7 +404,7 @@ export const OrderDetailPage: React.FC = () => {
             onClick={() => setActiveTab('logistics')}
             className={`py-3 px-3.5 text-xs font-bold border-b-2 transition-all flex items-center gap-2 cursor-pointer ${
               activeTab === 'logistics'
-                ? 'border-[#0F4C81] text-[#0F4C81]'
+                ? 'border-primary text-primary'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
@@ -417,7 +417,7 @@ export const OrderDetailPage: React.FC = () => {
             onClick={() => setActiveTab('activity')}
             className={`py-3 px-3.5 text-xs font-bold border-b-2 transition-all flex items-center gap-2 cursor-pointer ${
               activeTab === 'activity'
-                ? 'border-[#0F4C81] text-[#0F4C81]'
+                ? 'border-primary text-primary'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >

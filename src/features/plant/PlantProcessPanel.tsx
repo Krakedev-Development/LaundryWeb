@@ -24,9 +24,9 @@ const field =
   'mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm focus:outline-2 focus:outline-sky-700';
 const invalid = 'border-rose-400 bg-rose-50/40';
 const primary =
-  'inline-flex items-center justify-center gap-2 rounded-xl bg-[#0F4C81] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#0A3660] disabled:opacity-50';
+  'inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-white hover:bg-primary-hover disabled:opacity-50';
 const secondary =
-  'inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-[#0F4C81] hover:bg-slate-50 disabled:opacity-50';
+  'inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-primary hover:bg-slate-50 disabled:opacity-50';
 
 const money = (v: string | number | null | undefined) => `$${(Number(v) || 0).toFixed(2)}`;
 const signed = (v: string | number) => `${Number(v) > 0 ? '+' : '-'}${money(Math.abs(Number(v)))}`;
@@ -175,7 +175,7 @@ export function PlantProcessPanel({
   return (
     <section aria-label="Proceso en planta" className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="flex items-center gap-2 text-sm font-bold text-[#102A43]">
+        <h3 className="flex items-center gap-2 text-sm font-bold text-ink">
           <ClipboardCheck className="h-4 w-4" aria-hidden />
           Proceso en planta
         </h3>
@@ -226,12 +226,12 @@ export function PlantProcessPanel({
           {heldBy ? (
             <Link
               to={`/operations/incidents/${heldBy.id}`}
-              className="mt-2 inline-block font-semibold text-[#0F4C81] underline"
+              className="mt-2 inline-block font-semibold text-primary underline"
             >
               Resolver en Incidencias
             </Link>
           ) : (
-            <Link to="/operations/incidents" className="mt-2 inline-block font-semibold text-[#0F4C81] underline">
+            <Link to="/operations/incidents" className="mt-2 inline-block font-semibold text-primary underline">
               Ver Incidencias
             </Link>
           )}

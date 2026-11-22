@@ -17,9 +17,9 @@ const field =
   'mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm focus:outline-2 focus:outline-sky-700';
 const invalid = 'border-rose-400 bg-rose-50/40';
 const primary =
-  'inline-flex items-center justify-center gap-2 rounded-xl bg-[#0F4C81] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#0A3660] disabled:opacity-50';
+  'inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-white hover:bg-primary-hover disabled:opacity-50';
 const secondary =
-  'inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-[#0F4C81] hover:bg-slate-50';
+  'inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-primary hover:bg-slate-50';
 
 const messageOf = (e: unknown) =>
   e instanceof Error ? e.message : 'No se pudo completar la operación. Intenta de nuevo.';
@@ -132,7 +132,7 @@ export function FacilityReceptionPanel({
       <div className="flex gap-3">
         <PackageCheck className="h-5 w-5 shrink-0 text-sky-800" aria-hidden />
         <div>
-          <h2 className="text-sm font-bold text-[#102A43]">Recepción en planta</h2>
+          <h2 className="text-sm font-bold text-ink">Recepción en planta</h2>
           <p className="mt-1 text-xs text-slate-700">
             El chofer está en camino a la planta. Al recibir la ropa, valida su código o QR y registra
             las prendas recibidas.

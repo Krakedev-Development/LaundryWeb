@@ -15,7 +15,7 @@ const field =
   'mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm focus:outline-2 focus:outline-sky-700';
 const invalid = 'border-rose-400 bg-rose-50/40';
 const primary =
-  'inline-flex items-center justify-center gap-2 rounded-xl bg-[#0F4C81] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#0A3660] disabled:opacity-50';
+  'inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-white hover:bg-primary-hover disabled:opacity-50';
 
 const messageOf = (e: unknown) =>
   e instanceof Error ? e.message : 'No se pudo completar la operación. Intenta de nuevo.';
@@ -94,7 +94,7 @@ export function DispatchCustodyPanel({
     const due = Number(order.amountDue) || 0;
     return (
       <section aria-label="Cierre de la solicitud" className="space-y-2 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5">
-        <h2 className="text-sm font-bold text-[#102A43]">Solicitud entregada</h2>
+        <h2 className="text-sm font-bold text-ink">Solicitud entregada</h2>
         {due > 0 ? (
           <p className="text-xs text-amber-800">
             Queda un saldo de {money(due)}. Confirma el pago antes de cerrar la solicitud.
@@ -169,7 +169,7 @@ export function DispatchCustodyPanel({
       <div className="flex gap-3">
         <PackageOpen className="h-5 w-5 shrink-0 text-sky-800" aria-hidden />
         <div>
-          <h2 className="text-sm font-bold text-[#102A43]">{step.title}</h2>
+          <h2 className="text-sm font-bold text-ink">{step.title}</h2>
           <p className="mt-1 text-xs text-slate-700">{step.help}</p>
         </div>
       </div>

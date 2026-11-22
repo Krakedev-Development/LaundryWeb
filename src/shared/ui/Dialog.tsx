@@ -46,7 +46,7 @@ export function Dialog({
             <p className="ops-eyebrow">Logística</p>
             <h2
               id="logistics-dialog-title"
-              className="mt-1 text-base font-bold tracking-tight text-[#102A43]"
+              className="mt-1 text-base font-bold tracking-tight text-ink"
             >
               {title}
             </h2>

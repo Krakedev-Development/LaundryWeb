@@ -24,7 +24,7 @@ export function IconPlaceholder({
       role="img"
       aria-label={label}
       title={label}
-      className={`flex shrink-0 flex-col items-center justify-center gap-3 border border-slate-200 bg-slate-100 text-[#0F4C81] ${className}`}
+      className={`flex shrink-0 flex-col items-center justify-center gap-3 border border-slate-200 bg-slate-100 text-primary ${className}`}
     >
       <Icon
         aria-hidden="true"

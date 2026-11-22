@@ -184,7 +184,7 @@ export const PlantPage = () => {
                     <button
                       aria-label={`Abrir pedido ${order.trackingNumber || order.id}`}
                       onClick={() => setSelectedId(order.id)}
-                      className="text-left font-bold text-[#0F4C81] hover:underline"
+                      className="text-left font-bold text-primary hover:underline"
                     >
                       {order.trackingNumber || order.id}
                     </button>
@@ -202,7 +202,7 @@ export const PlantPage = () => {
                   <PlantProgress compact order={order} />
                   <button
                     onClick={() => setSelectedId(order.id)}
-                    className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-[#0F4C81]"
+                    className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-primary"
                   >
                     Ver proceso e historial
                     <ArrowUpRight size={16} />
@@ -237,7 +237,7 @@ export const PlantPage = () => {
                             setSelectedId(order.id);
                           }}
                           aria-label={`Abrir pedido ${order.trackingNumber || order.id}`}
-                          className="font-bold text-[#0F4C81] hover:underline"
+                          className="font-bold text-primary hover:underline"
                         >
                           {order.trackingNumber || order.id}
                         </button>
@@ -275,7 +275,7 @@ export const PlantPage = () => {
                             event.stopPropagation();
                             setSelectedId(order.id);
                           }}
-                          className="inline-flex size-9 items-center justify-center rounded-lg text-[#0F4C81] hover:bg-sky-100"
+                          className="inline-flex size-9 items-center justify-center rounded-lg text-primary hover:bg-sky-100"
                         >
                           <ArrowUpRight size={19} />
                         </button>
@@ -297,7 +297,7 @@ export const PlantPage = () => {
               recibidos y pendientes de salida.
             </p>
             <button
-              className="mt-4 text-sm font-semibold text-[#0F4C81] underline"
+              className="mt-4 text-sm font-semibold text-primary underline"
               onClick={() => {
                 setQuery('');
                 setPhase('ALL');

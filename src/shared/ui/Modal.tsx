@@ -49,7 +49,7 @@ export function Modal({
       >
         <header className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-200 bg-slate-50/90 px-5 py-4 sm:px-6">
           <div>
-            <h2 id={titleId} className="text-lg font-bold text-[#0F4C81]">
+            <h2 id={titleId} className="text-lg font-bold text-primary">
               {title}
             </h2>
             {description && (

@@ -56,7 +56,7 @@ export function PlantOrderModal({
           <StatusBadge status={stage} />
           <Link
             to={`/operations/orders/${order.id}`}
-            className="inline-flex items-center gap-1 text-sm font-semibold text-[#0F4C81] hover:underline"
+            className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline"
           >
             Abrir ficha del pedido
             <ArrowUpRight size={16} />
@@ -82,7 +82,7 @@ export function PlantOrderModal({
             type="button"
             aria-pressed={tab === id}
             onClick={() => setTab(id)}
-            className={`inline-flex shrink-0 items-center gap-2 border-b-2 px-3 py-4 text-sm font-semibold ${tab === id ? "border-[#0F4C81] text-[#0F4C81]" : "border-transparent text-slate-600 hover:text-[#0F4C81]"}`}
+            className={`inline-flex shrink-0 items-center gap-2 border-b-2 px-3 py-4 text-sm font-semibold ${tab === id ? "border-primary text-primary" : "border-transparent text-slate-600 hover:text-primary"}`}
           >
             <Icon size={16} />
             {label}
@@ -220,7 +220,7 @@ export function PlantOrderModal({
               </section>
             )}
             <Link
-              className="inline-block text-sm font-semibold text-[#0F4C81] underline"
+              className="inline-block text-sm font-semibold text-primary underline"
               to={`/operations/orders/${order.id}`}
             >
               Abrir el detalle de la solicitud para validar custodia

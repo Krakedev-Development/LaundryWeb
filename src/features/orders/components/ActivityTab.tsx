@@ -60,8 +60,8 @@ export const ActivityTab: React.FC<ActivityTabProps> = ({
         {/* Left: Operational Lifecycle Timeline */}
         <section className="lg:col-span-7 bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-            <h2 className="text-sm font-bold text-[#102A43] flex items-center gap-2">
-              <Clock className="w-4 h-4 text-[#143F73]" />
+            <h2 className="text-sm font-bold text-ink flex items-center gap-2">
+              <Clock className="w-4 h-4 text-navy" />
               <span>Línea de Vida Operacional ({order.timeline.length} eventos)</span>
             </h2>
 
@@ -86,14 +86,14 @@ export const ActivityTab: React.FC<ActivityTabProps> = ({
                   <span
                     className={`absolute -left-6 top-1 w-3.5 h-3.5 rounded-full border-2 border-white ${
                       isLatest
-                        ? 'bg-[#143F73] ring-3 ring-sky-300'
+                        ? 'bg-navy ring-3 ring-sky-300'
                         : 'bg-slate-400'
                     }`}
                   />
                   <div className="flex items-center justify-between text-xs">
                     <span
                       className={`font-bold ${
-                        isLatest ? 'text-[#143F73] text-sm' : 'text-slate-800'
+                        isLatest ? 'text-navy text-sm' : 'text-slate-800'
                       }`}
                     >
                       {humanLabel}
@@ -129,7 +129,7 @@ export const ActivityTab: React.FC<ActivityTabProps> = ({
         <div className="lg:col-span-5 space-y-6">
           <section className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="text-sm font-bold text-[#102A43] flex items-center gap-2">
+              <h3 className="text-sm font-bold text-ink flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 text-rose-600" />
                 <span>Incidencias y Evidencias ({orderIncidents.length})</span>
               </h3>
