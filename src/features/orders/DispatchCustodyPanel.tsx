@@ -76,11 +76,15 @@ export function DispatchCustodyPanel({
   const [camera, setCamera] = useState(false);
   const video = useRef<HTMLVideoElement>(null);
 
+  const [loadError, setLoadError] = useState('');
   const load = useCallback(async () => {
     try {
       setOrder(await getPlantOrder(orderId));
-    } catch {
+      setLoadError('');
+    } catch (e) {
+      // Contrato 4: si falla la consulta se muestra el error, no un panel vacío en silencio.
       setOrder(null);
+      setLoadError(messageOf(e));
     }
   }, [orderId]);
 
@@ -128,6 +132,22 @@ export function DispatchCustodyPanel({
       controls?.stop();
     };
   }, [camera]);
+
+  if (loadError)
+    return (
+      <section
+        aria-label="Custodia de salida"
+        className="space-y-2 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-xs text-rose-800"
+      >
+        <div role="alert">
+          <p className="font-semibold">No se pudo consultar la custodia de salida en el servidor.</p>
+          <p>{loadError}</p>
+        </div>
+        <button type="button" className={secondary} onClick={() => void load()}>
+          Reintentar
+        </button>
+      </section>
+    );
 
   if (!order) return null;
 

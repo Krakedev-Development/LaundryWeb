@@ -1,4 +1,5 @@
 const { test, expect } = require('./support/fixtures.cjs');
+const { mockServerOrder, serverOrder } = require('./support/serverOrder.cjs');
 
 test.use({ viewport: { width: 1440, height: 900 } });
 
@@ -70,6 +71,7 @@ test('MVP uses icons even when stored records contain legacy image URLs', async 
   await expect(page.getByRole('dialog')).toContainText('Evidencias registradas: 1');
   await expect(page.locator('img[src*="legacy-photo"]')).toHaveCount(0);
   await page.keyboard.press('Escape');
+  await mockServerOrder(page, serverOrder('SOL-HOME-001'));
   await page.goto('/operations/orders/SOL-HOME-001');
   await page.getByRole('button', { name: /^Actividad/ }).click();
   await expect(page.getByText('Camisa con rotura')).toBeVisible();

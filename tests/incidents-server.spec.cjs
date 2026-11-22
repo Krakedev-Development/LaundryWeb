@@ -1,4 +1,5 @@
 const { test, expect } = require('./support/fixtures.cjs');
+const { mockServerOrder, serverOrder } = require('./support/serverOrder.cjs');
 
 // Incidencias contra el servidor: la lista, la resolución que libera la solicitud y el registro
 // desde el detalle salen de /incidents; nada se resuelve solo en el navegador.
@@ -137,6 +138,7 @@ test('si el servidor falla se muestra el error y no datos locales', async ({ pag
 test('el detalle registra la incidencia en el servidor y puede retener la solicitud', async ({ page }) => {
   const mode = { list: 'ok', create: 'reject' };
   const calls = await mockIncidents(page, [], mode);
+  await mockServerOrder(page, serverOrder(ORDER));
   await page.goto(`/operations/orders/${ORDER}`);
   await page.getByRole('button', { name: /^Actividad/ }).click();
   await page.getByRole('button', { name: '+ Registrar' }).click();

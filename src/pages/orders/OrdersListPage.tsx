@@ -10,15 +10,22 @@ import { OrdersTable } from '../../widgets/order-list/OrdersTable';
 import { useApp } from '../../context/AppContext';
 import { fetchFullOrders } from '../../services/api/ordersApi';
 import { storageService } from '../../services/storage';
+import { ApiError } from '../../services/api/apiConfig';
 
 export const OrdersListPage = () => {
-  const model = useOrderList();
   const { customers, facilities, drivers, orders } = useApp();
-  const [, setSyncing] = useState(false);
+  // Solo se listan las solicitudes que devolvió el servidor (contrato 4). Sin respuesta se muestra
+  // el error con "Reintentar", no lo que quedó guardado en este equipo.
+  const [serverIds, setServerIds] = useState<ReadonlySet<string> | null>(null);
+  const [sync, setSync] = useState<
+    { status: 'loading' } | { status: 'ready' } | { status: 'error'; message: string }
+  >({ status: 'loading' });
+  const [attempt, setAttempt] = useState(0);
+  const model = useOrderList(serverIds);
 
   useEffect(() => {
     let active = true;
-    setSyncing(true);
+    setSync({ status: 'loading' });
     void (async () => {
       try {
         const remoteOrders = await fetchFullOrders(
@@ -32,16 +39,26 @@ export const OrdersListPage = () => {
         if (remoteOrders.length > 0) {
           storageService.saveOrders(remoteOrders);
         }
-      } catch {
-        // Fallback to local persisted orders when offline
-      } finally {
-        if (active) setSyncing(false);
+        setServerIds(new Set(remoteOrders.map((o) => o.id)));
+        setSync({ status: 'ready' });
+      } catch (e) {
+        if (!active) return;
+        setServerIds(null);
+        setSync({
+          status: 'error',
+          message:
+            e instanceof ApiError && e.status === 0
+              ? 'No se pudo conectar con el servidor.'
+              : e instanceof Error
+                ? e.message
+                : 'Error desconocido.',
+        });
       }
     })();
     return () => {
       active = false;
     };
-  }, []);
+  }, [attempt]);
 
   return (
     <div className="space-y-8">
@@ -81,6 +98,28 @@ export const OrdersListPage = () => {
           drivers={model.drivers}
         />
       </div>
+      {sync.status === 'loading' && (
+        <p role="status" className="py-6 text-center text-sm text-slate-500">
+          Cargando solicitudes del servidor…
+        </p>
+      )}
+      {sync.status === 'error' && (
+        <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900">
+          <p className="font-semibold">No se pudieron cargar las solicitudes del servidor.</p>
+          <p className="mt-1">
+            {sync.message} No se muestran datos guardados en este equipo, para no actuar sobre
+            información desactualizada.
+          </p>
+          <button
+            type="button"
+            onClick={() => setAttempt((n) => n + 1)}
+            className="mt-3 rounded-lg border border-rose-300 px-3 py-1.5 text-xs font-semibold hover:bg-rose-100"
+          >
+            Reintentar
+          </button>
+        </div>
+      )}
+      {sync.status === 'ready' && (
       <OrdersTable
         orders={model.orders}
         sortedOrders={model.sortedOrders}
@@ -95,6 +134,7 @@ export const OrdersListPage = () => {
         ].join('|')}
         resetFilters={model.resetFilters}
       />
+      )}
     </div>
   );
 };

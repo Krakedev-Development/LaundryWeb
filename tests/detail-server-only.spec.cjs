@@ -122,3 +122,103 @@ test('sin método informado por el servidor se muestra "Sin definir" y no hay av
   await expect(page.getByText('Sin definir · PENDIENTE')).toBeVisible();
   await expect(page.getByRole('status', { name: 'Transferencia pendiente' })).toHaveCount(0);
 });
+
+// T-11 (contrato 4): sin respuesta del servidor no se muestran datos guardados en el equipo.
+test('con el servidor caído el detalle muestra el error con Reintentar y ninguna acción', async ({ page }) => {
+  await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
+  let down = true;
+  const order = {
+    id: ORDER, number: 3001, status: 'CONFIRMED', mode: 'HOME_HOME', facilityId: 'f1', paymentStatus: 'PAID',
+    pricingStatus: 'ESTIMATED', total: '15.00', version: 5, createdAt: '2026-11-19T13:00:00.000Z',
+    items: [], legs: [], events: [], incidents: [],
+  };
+  await page.route(/\/api\/v1\/(orders|incidents)(\/[^?]*)?(\?.*)?$/, (route) => {
+    const req = route.request();
+    if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: preflight });
+    if (down) return route.abort('internetdisconnected');
+    const path = new URL(req.url()).pathname.replace(/^.*\/api\/v1/, '');
+    if (path === `/orders/${ORDER}`) return json(route, 200, order);
+    return json(route, 200, []);
+  });
+  await page.goto(`/operations/orders/${ORDER}`);
+  const alert = page.getByRole('alert').filter({ hasText: 'No se pudo cargar la solicitud desde el servidor' });
+  await expect(alert).toContainText('No se pudo conectar con el servidor.');
+  await expect(alert).toContainText('No se muestran datos guardados en este equipo');
+  // Aunque la solicitud esté guardada en el equipo, no se ofrece ninguna acción sobre ella.
+  for (const name of ['Registrar incidencia', 'Acciones', 'Logística'])
+    await expect(page.getByRole('button', { name, exact: true })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Asignar en Despacho' })).toHaveCount(0);
+
+  down = false;
+  await alert.getByRole('button', { name: 'Reintentar' }).click();
+  await expect(page.getByRole('heading', { name: 'Recogida pendiente de asignación' })).toBeVisible();
+  await expect(alert).toHaveCount(0);
+});
+
+test('si el servidor responde que no existe se muestra "Solicitud no encontrada"', async ({ page }) => {
+  await page.route(/\/api\/v1\/(orders|incidents)(\/[^?]*)?(\?.*)?$/, (route) => {
+    const req = route.request();
+    if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: preflight });
+    const path = new URL(req.url()).pathname.replace(/^.*\/api\/v1/, '');
+    if (path.startsWith('/orders/')) return json(route, 404, { message: 'Solicitud no encontrada.' });
+    return json(route, 200, []);
+  });
+  await page.goto(`/operations/orders/${ORDER}`);
+  await expect(page.getByRole('heading', { name: 'Solicitud no encontrada' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Registrar incidencia' })).toHaveCount(0);
+});
+
+test('con el servidor caído la lista de Solicitudes no muestra datos guardados en el equipo', async ({ page }) => {
+  let down = true;
+  await page.route(/\/api\/v1\/orders(\/[^?]*)?(\?.*)?$/, (route) => {
+    const req = route.request();
+    if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: preflight });
+    if (down) return json(route, 503, { message: 'Servidor en mantenimiento.' });
+    const path = new URL(req.url()).pathname.replace(/^.*\/api\/v1/, '');
+    if (path !== '/orders') return json(route, 404, { message: 'No existe.' });
+    const data = [{ id: ORDER, number: 3001, status: 'CONFIRMED', mode: 'HOME_HOME', facilityId: 'f1', paymentStatus: 'PAID', pricingStatus: 'ESTIMATED', total: '15.00', version: 1, createdAt: '2026-11-19T13:00:00.000Z' }];
+    return json(route, 200, { page: 1, pageSize: 50, total: 1, data });
+  });
+  await page.goto('/operations/orders');
+  const alert = page.getByRole('alert').filter({ hasText: 'No se pudieron cargar las solicitudes del servidor' });
+  await expect(alert).toContainText('Servidor en mantenimiento.');
+  await expect(page.getByRole('table')).toHaveCount(0);
+
+  down = false;
+  await alert.getByRole('button', { name: 'Reintentar' }).click();
+  await expect(page.getByRole('table')).toBeVisible();
+  // Solo la solicitud que devolvió el servidor; ninguna otra guardada en el equipo.
+  await expect(page.locator('tbody tr')).toHaveCount(1);
+  await expect(page.getByRole('table')).toContainText('SOL-3001');
+});
+
+test('si falla la consulta de la custodia de salida se muestra el error con Reintentar', async ({ page }) => {
+  await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
+  let detailServed = false;
+  let failing = true;
+  const order = {
+    id: ORDER, number: 3001, status: 'DELIVERY_ASSIGNED', mode: 'HOME_HOME', facilityId: 'f1', paymentStatus: 'PAID',
+    pricingStatus: 'FINAL', total: '15.00', version: 5, createdAt: '2026-11-19T13:00:00.000Z',
+    items: [], legs: [], events: [], incidents: [],
+  };
+  await page.route(/\/api\/v1\/(orders|incidents)(\/[^?]*)?(\?.*)?$/, (route) => {
+    const req = route.request();
+    if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: preflight });
+    const path = new URL(req.url()).pathname.replace(/^.*\/api\/v1/, '');
+    if (path === `/orders/${ORDER}`) {
+      // La primera consulta (la del detalle) responde; las siguientes (el panel de custodia)
+      // fallan hasta que la prueba lo desactiva.
+      if (detailServed && failing) return json(route, 503, { message: 'Servidor ocupado.' });
+      detailServed = true;
+      return json(route, 200, order);
+    }
+    return json(route, 200, []);
+  });
+  await page.goto(`/operations/orders/${ORDER}`);
+  const panel = page.getByRole('region', { name: 'Custodia de salida' });
+  await expect(panel).toContainText('No se pudo consultar la custodia de salida en el servidor.');
+  await expect(panel).toContainText('Servidor ocupado.');
+  failing = false;
+  await panel.getByRole('button', { name: 'Reintentar' }).click();
+  await expect(page.getByRole('region', { name: 'Entrega al chofer para reparto' })).toBeVisible();
+});

@@ -76,8 +76,13 @@ export const OrderDetailPage: React.FC = () => {
   }, [id, refreshIncidents]);
   const navigate = useNavigate();
 
+  // El detalle solo se muestra con datos del servidor (contrato 4). Sin respuesta no se usa la
+  // copia guardada en este equipo: actuar sobre ella sería actuar sobre datos desactualizados.
   const [liveOrder, setLiveOrder] = useState<Order | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [load, setLoad] = useState<
+    { status: 'loading' } | { status: 'ready' } | { status: 'notFound' } | { status: 'error'; message: string }
+  >({ status: 'loading' });
+  const [attempt, setAttempt] = useState(0);
   const [confirmingPayment, setConfirmingPayment] = useState(false);
   const [activeTab, setActiveTab] = useState<'operation' | 'order' | 'logistics' | 'activity'>(
     'operation',
@@ -88,13 +93,15 @@ export const OrderDetailPage: React.FC = () => {
   const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false);
   const [isQuarantineModalOpen, setIsQuarantineModalOpen] = useState(false);
 
+  // La copia local solo completa datos que el servidor no envía (p. ej. nombres); no se muestra sola.
   const contextOrder = orders.find((o) => o.id === id || o.trackingNumber === id);
-  const order = liveOrder || contextOrder;
+  const order = liveOrder;
 
   useEffect(() => {
     if (!id) return;
     let active = true;
-    setLoading(true);
+    setLiveOrder(null);
+    setLoad({ status: 'loading' });
     void (async () => {
       try {
         const raw = await getOrder(id);
@@ -107,30 +114,74 @@ export const OrderDetailPage: React.FC = () => {
           drivers,
         );
         setLiveOrder(mapped);
+        setLoad({ status: 'ready' });
         const next = orders.map((o) => (o.id === mapped.id ? mapped : o));
         if (!next.some((o) => o.id === mapped.id)) next.push(mapped);
         storageService.saveOrders(next);
-      } catch {
-        // Fallback to contextOrder if offline or mock id
-      } finally {
-        if (active) setLoading(false);
+      } catch (e) {
+        if (!active) return;
+        if (e instanceof ApiError && e.status === 404) setLoad({ status: 'notFound' });
+        else
+          setLoad({
+            status: 'error',
+            message:
+              e instanceof ApiError && e.status === 0
+                ? 'No se pudo conectar con el servidor.'
+                : e instanceof Error
+                  ? e.message
+                  : 'Error desconocido.',
+          });
       }
     })();
     return () => {
       active = false;
     };
-  }, [id]);
+  }, [id, attempt]);
 
-  if (loading && !order) {
+  if (load.status === 'loading') {
     return (
-      <div className="flex flex-col items-center justify-center p-16 text-slate-500">
+      <div role="status" className="flex flex-col items-center justify-center p-16 text-slate-500">
         <LoaderCircle className="w-8 h-8 animate-spin text-[#0F4C81] mb-3" />
         <p className="text-xs font-semibold">Cargando detalles de la solicitud...</p>
       </div>
     );
   }
 
-  if (!order) {
+  if (load.status === 'error') {
+    return (
+      <div
+        role="alert"
+        className="p-8 bg-white rounded-3xl border border-rose-200 shadow-xs max-w-lg mx-auto my-12 space-y-3"
+      >
+        <h2 className="text-base font-bold text-slate-900">
+          No se pudo cargar la solicitud desde el servidor
+        </h2>
+        <p className="text-xs text-rose-800">{load.message}</p>
+        <p className="text-xs text-slate-600">
+          No se muestran datos guardados en este equipo, para no actuar sobre información
+          desactualizada.
+        </p>
+        <div className="flex flex-wrap gap-2 pt-1">
+          <button
+            type="button"
+            onClick={() => setAttempt((n) => n + 1)}
+            className="px-5 py-2.5 text-xs font-semibold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-xl transition-colors cursor-pointer"
+          >
+            Reintentar
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/operations/orders')}
+            className="px-5 py-2.5 text-xs font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl transition-colors cursor-pointer"
+          >
+            Volver a Solicitudes
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (load.status === 'notFound' || !order) {
     return (
       <div className="p-12 text-center bg-white rounded-3xl border border-slate-200/80 shadow-xs max-w-md mx-auto my-12">
         <h2 className="text-base font-bold text-slate-900">Solicitud no encontrada</h2>
@@ -160,8 +211,13 @@ export const OrderDetailPage: React.FC = () => {
       const next = orders.map((o) => (o.id === mapped.id ? mapped : o));
       if (!next.some((o) => o.id === mapped.id)) next.push(mapped);
       storageService.saveOrders(next);
-    } catch {
-      // Offline fallback
+    } catch (e) {
+      // El cambio ya lo aceptó el servidor (o no hubo cambio); solo falló volver a consultarlo.
+      showToast({
+        type: 'error',
+        title: 'No se pudo actualizar la solicitud',
+        message: `${e instanceof Error ? e.message : 'Error desconocido.'} Recarga la página para ver su estado actual.`,
+      });
     }
   };
 

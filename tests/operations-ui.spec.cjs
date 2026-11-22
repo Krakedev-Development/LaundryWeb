@@ -1,10 +1,19 @@
 const { test, expect } = require('./support/fixtures.cjs');
+const { mockServerOrder, serverOrder } = require('./support/serverOrder.cjs');
 
 test.use({ viewport: { width: 1440, height: 1000 } });
 
 test('la recogida se asigna solo en Despacho y las pantallas de operación funcionan en escritorio y móvil', async ({
   page,
 }) => {
+  // El detalle solo se muestra con datos del servidor (T-11), en la sede de la solicitud sembrada
+  // para que sus choferes sean elegibles en Despacho.
+  await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
+  const seededFacility = await page.evaluate(() => {
+    const raw = JSON.parse(localStorage.getItem('lw_workflow_v2') || '{}');
+    return (raw.orders || []).find((o) => o.id === 'SOL-HOME-001')?.facilityId ?? 'f1';
+  });
+  await mockServerOrder(page, serverOrder('SOL-HOME-001', 'CONFIRMED', { facilityId: seededFacility }));
   // El detalle no asigna: solo enlaza a Despacho con la solicitud preseleccionada (contrato 1).
   await page.goto('/operations/orders/SOL-HOME-001');
   const link = page.getByRole('link', { name: 'Asignar en Despacho' }).first();
