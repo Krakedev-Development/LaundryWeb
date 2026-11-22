@@ -1,255 +1,62 @@
 import React from 'react';
 import { OrderStatus } from '../../types';
+import { ORDER_STATUS_TONE, TONE_STYLE } from '../../shared/ui/statusTone';
 
 interface StatusBadgeProps {
   status: OrderStatus;
   size?: 'sm' | 'md';
 }
 
-export const StatusBadge: React.FC<StatusBadgeProps> = ({
-  status,
-  size = 'md',
-}) => {
-  const configMap: Record<
-    OrderStatus,
-    { label: string; bg: string; text: string; border: string; dot: string }
-  > = {
-    WEIGHING: {
-      label: 'Pesaje pendiente',
-      bg: 'bg-sky-50',
-      text: 'text-sky-700',
-      border: 'border-sky-200/90',
-      dot: 'bg-sky-500',
-    },
-    INSPECTION: {
-      label: 'Inspección',
-      bg: 'bg-indigo-50',
-      text: 'text-indigo-700',
-      border: 'border-indigo-200/90',
-      dot: 'bg-indigo-500',
-    },
-    PRICING_PENDING: {
-      label: 'Precio y pago',
-      bg: 'bg-amber-50',
-      text: 'text-amber-700',
-      border: 'border-amber-200/90',
-      dot: 'bg-amber-500',
-    },
-    CUSTOMER_APPROVAL_PENDING: {
-      label: 'Aprobación pendiente',
-      bg: 'bg-amber-50',
-      text: 'text-amber-700',
-      border: 'border-amber-200/90',
-      dot: 'bg-amber-500',
-    },
-    DRAFT: {
-      label: 'Borrador',
-      bg: 'bg-slate-100',
-      text: 'text-slate-700',
-      border: 'border-slate-200',
-      dot: 'bg-slate-400',
-    },
-    PAYMENT_PENDING: {
-      label: 'Pago pendiente',
-      bg: 'bg-amber-50',
-      text: 'text-amber-700',
-      border: 'border-amber-200/90',
-      dot: 'bg-amber-500',
-    },
-    CONFIRMED: {
-      label: 'Confirmado',
-      bg: 'bg-sky-50',
-      text: 'text-sky-700',
-      border: 'border-sky-200/90',
-      dot: 'bg-sky-500',
-    },
-    AWAITING_INTAKE: {
-      label: 'Recogida pendiente',
-      bg: 'bg-amber-50',
-      text: 'text-amber-700',
-      border: 'border-amber-200/90',
-      dot: 'bg-amber-500',
-    },
-    READY: {
-      label: 'Listo para retiro',
-      bg: 'bg-emerald-50',
-      text: 'text-emerald-700',
-      border: 'border-emerald-200/90',
-      dot: 'bg-emerald-500',
-    },
-    COMPLETED: {
-      label: 'Completado',
-      bg: 'bg-emerald-50',
-      text: 'text-emerald-700',
-      border: 'border-emerald-200/90',
-      dot: 'bg-emerald-500',
-    },
-    ARRIVED_AT_FACILITY: {
-      label: 'Esperando recepción',
-      bg: 'bg-amber-50',
-      text: 'text-amber-700',
-      border: 'border-amber-200/90',
-      dot: 'bg-amber-500',
-    },
-    CREATED: {
-      label: 'Nueva',
-      bg: 'bg-sky-50',
-      text: 'text-sky-700',
-      border: 'border-sky-200/90',
-      dot: 'bg-sky-500',
-    },
-    PICKUP_PENDING: {
-      label: 'Sin asignar',
-      bg: 'bg-amber-50',
-      text: 'text-amber-700',
-      border: 'border-amber-200/90',
-      dot: 'bg-amber-500',
-    },
-    PICKUP_ASSIGNED: {
-      label: 'Asignada',
-      bg: 'bg-indigo-50',
-      text: 'text-indigo-700',
-      border: 'border-indigo-200/90',
-      dot: 'bg-indigo-500',
-    },
-    HEADING_TO_PICKUP: {
-      label: 'Hacia recogida',
-      bg: 'bg-sky-50',
-      text: 'text-sky-700',
-      border: 'border-sky-200/90',
-      dot: 'bg-sky-500',
-    },
-    ARRIVED_FOR_PICKUP: {
-      label: 'Llegó a recogida',
-      bg: 'bg-emerald-50',
-      text: 'text-emerald-800',
-      border: 'border-emerald-200/90',
-      dot: 'bg-emerald-600',
-    },
-    HEADING_TO_FACILITY: {
-      label: 'Camino a planta',
-      bg: 'bg-sky-50',
-      text: 'text-sky-800',
-      border: 'border-sky-200/90',
-      dot: 'bg-sky-600',
-    },
-    ARRIVED_FOR_DELIVERY: {
-      label: 'Llegó a entrega',
-      bg: 'bg-emerald-50',
-      text: 'text-emerald-800',
-      border: 'border-emerald-200/90',
-      dot: 'bg-emerald-600',
-    },
-    PICKED_UP: {
-      label: 'Recogida',
-      bg: 'bg-emerald-50',
-      text: 'text-emerald-700',
-      border: 'border-emerald-200/90',
-      dot: 'bg-emerald-500',
-    },
-    AT_FACILITY: {
-      label: 'Recibida en planta',
-      bg: 'bg-sky-50',
-      text: 'text-sky-700',
-      border: 'border-sky-200/90',
-      dot: 'bg-sky-500',
-    },
-    IN_PROCESS: {
-      label: 'En procesamiento',
-      bg: 'bg-indigo-50',
-      text: 'text-indigo-800',
-      border: 'border-indigo-200/90',
-      dot: 'bg-indigo-600',
-    },
-    QUALITY_CONTROL: {
-      label: 'Control de calidad',
-      bg: 'bg-indigo-50',
-      text: 'text-indigo-700',
-      border: 'border-indigo-200/90',
-      dot: 'bg-indigo-500',
-    },
-    READY_FOR_DELIVERY: {
-      label: 'Lista para entrega',
-      bg: 'bg-emerald-50',
-      text: 'text-emerald-700',
-      border: 'border-emerald-200/90',
-      dot: 'bg-emerald-500',
-    },
-    DELIVERY_SCHEDULED: {
-      label: 'Entrega programada',
-      bg: 'bg-sky-50',
-      text: 'text-sky-800',
-      border: 'border-sky-200/90',
-      dot: 'bg-sky-600',
-    },
-    DELIVERY_ASSIGNED: {
-      label: 'Chofer asignado',
-      bg: 'bg-emerald-50',
-      text: 'text-emerald-800',
-      border: 'border-emerald-200/90',
-      dot: 'bg-emerald-600',
-    },
-    OUT_FOR_DELIVERY: {
-      label: 'En entrega',
-      bg: 'bg-amber-50',
-      text: 'text-amber-800',
-      border: 'border-amber-200/90',
-      dot: 'bg-amber-500',
-    },
-    DELIVERED: {
-      label: 'Entregada',
-      bg: 'bg-emerald-100/80',
-      text: 'text-emerald-800',
-      border: 'border-emerald-300',
-      dot: 'bg-emerald-600',
-    },
-    CLOSED: {
-      label: 'Finalizada',
-      bg: 'bg-slate-100',
-      text: 'text-slate-700',
-      border: 'border-slate-200',
-      dot: 'bg-slate-400',
-    },
-    INCIDENT: {
-      label: 'Incidencia',
-      bg: 'bg-rose-50',
-      text: 'text-rose-700',
-      border: 'border-rose-200/90',
-      dot: 'bg-rose-500',
-    },
-    CANCELLED: {
-      label: 'Cancelada',
-      bg: 'bg-slate-100',
-      text: 'text-slate-500',
-      border: 'border-slate-200',
-      dot: 'bg-slate-400',
-    },
-    QUARANTINE: {
-      label: 'Inscidencia',
-      bg: 'bg-rose-50',
-      text: 'text-rose-700',
-      border: 'border-rose-200/90',
-      dot: 'bg-rose-500',
-    },
-  };
+/** Nombre visible de cada etapa de la solicitud. */
+const STATUS_LABEL: Record<OrderStatus, string> = {
+  WEIGHING: 'Pesaje pendiente',
+  INSPECTION: 'Inspección',
+  PRICING_PENDING: 'Precio y pago',
+  CUSTOMER_APPROVAL_PENDING: 'Aprobación pendiente',
+  DRAFT: 'Borrador',
+  PAYMENT_PENDING: 'Pago pendiente',
+  CONFIRMED: 'Confirmado',
+  AWAITING_INTAKE: 'Recogida pendiente',
+  READY: 'Listo para retiro',
+  COMPLETED: 'Completado',
+  ARRIVED_AT_FACILITY: 'Esperando recepción',
+  CREATED: 'Nueva',
+  PICKUP_PENDING: 'Sin asignar',
+  PICKUP_ASSIGNED: 'Asignada',
+  HEADING_TO_PICKUP: 'Hacia recogida',
+  ARRIVED_FOR_PICKUP: 'Llegó a recogida',
+  HEADING_TO_FACILITY: 'Camino a planta',
+  ARRIVED_FOR_DELIVERY: 'Llegó a entrega',
+  PICKED_UP: 'Recogida',
+  AT_FACILITY: 'Recibida en planta',
+  IN_PROCESS: 'En procesamiento',
+  QUALITY_CONTROL: 'Control de calidad',
+  READY_FOR_DELIVERY: 'Lista para entrega',
+  DELIVERY_SCHEDULED: 'Entrega programada',
+  DELIVERY_ASSIGNED: 'Chofer asignado',
+  OUT_FOR_DELIVERY: 'En entrega',
+  DELIVERED: 'Entregada',
+  CLOSED: 'Finalizada',
+  INCIDENT: 'Incidencia',
+  CANCELLED: 'Cancelada',
+  QUARANTINE: 'Incidencia',
+};
 
-  const conf = configMap[status] || {
-    label: status,
-    bg: 'bg-slate-100',
-    text: 'text-slate-700',
-    border: 'border-slate-200',
-    dot: 'bg-slate-400',
-  };
-
-  const py =
-    size === 'sm' ? 'py-0.5 px-2 text-[11px]' : 'py-1 px-2.5 text-xs';
+/**
+ * Etapa de la solicitud con su color según la escala compartida (`shared/ui/statusTone`):
+ * azul en curso, ámbar requiere acción de la sede, rojo bloqueada, verde entregada, gris cerrada.
+ */
+export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'md' }) => {
+  const tone = TONE_STYLE[ORDER_STATUS_TONE[status] ?? 'closed'];
+  const label = STATUS_LABEL[status] ?? status;
+  const py = size === 'sm' ? 'py-0.5 px-2 text-[11px]' : 'py-1 px-2.5 text-xs';
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 font-semibold rounded-lg border shadow-2xs ${conf.bg} ${conf.text} ${conf.border} ${py} whitespace-nowrap`}
+      className={`inline-flex items-center gap-1.5 font-semibold rounded-lg border shadow-2xs ${tone.badge} ${py} whitespace-nowrap`}
     >
-      <span className={`w-1.5 h-1.5 rounded-full ${conf.dot} shrink-0`} />
-      {conf.label}
+      <span className={`w-1.5 h-1.5 rounded-full ${tone.dot} shrink-0`} aria-hidden />
+      {label}
     </span>
   );
 };

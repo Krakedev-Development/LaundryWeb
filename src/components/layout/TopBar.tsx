@@ -118,7 +118,7 @@ export function TopBar({
           aria-label="Abrir menú"
           aria-controls={SIDEBAR_ID}
           aria-expanded={mobileSidebarOpen}
-          className="sidebar-focus flex size-10 shrink-0 items-center justify-center rounded-xl text-navy hover:bg-slate-100 lg:hidden"
+          className="sidebar-focus flex size-10 shrink-0 items-center justify-center rounded-xl text-primary hover:bg-slate-100 lg:hidden"
         >
           <Menu className="size-5" aria-hidden="true" />
         </button>
@@ -154,7 +154,7 @@ export function TopBar({
           >
             <Bell className="size-[18px]" aria-hidden="true" />
             {notices.length > 0 && (
-              <span className="absolute right-1 top-1 flex min-w-4 items-center justify-center rounded-full bg-navy px-1 text-[9px] font-semibold leading-4 text-white">
+              <span className="absolute right-1 top-1 flex min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[9px] font-semibold leading-4 text-white">
                 {notices.length > 99 ? '99+' : notices.length}
               </span>
             )}
@@ -166,7 +166,7 @@ export function TopBar({
               className="fixed inset-x-4 top-[104px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:mt-3 sm:w-[360px]"
             >
               <div className="flex items-center justify-between gap-2 border-b border-slate-100 px-4 py-3">
-                <h2 className="text-sm font-semibold text-navy">
+                <h2 className="text-sm font-semibold text-primary">
                   Notificaciones
                 </h2>
                 <span className="text-[11px] text-slate-500">

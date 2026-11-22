@@ -31,13 +31,15 @@ import {
 import { useApp } from '../../context/AppContext';
 import { storageService } from '../../services/storage';
 import { btnPrimary, btnSecondarySm } from '../../shared/ui/controls';
+import { TONE_STYLE } from '../../shared/ui/statusTone';
 
+// Escala compartida: lista para entrega espera que la sede asigne chofer (ámbar).
 const STATUS_STYLE: Record<DeliveryServerStatus, string> = {
-  READY_FOR_DELIVERY: 'bg-sky-50 text-sky-800 border-sky-200',
-  DELIVERY_ASSIGNED: 'bg-indigo-50 text-indigo-800 border-indigo-200',
-  OUT_FOR_DELIVERY: 'bg-amber-50 text-amber-900 border-amber-200',
-  ARRIVED_FOR_DELIVERY: 'bg-violet-50 text-violet-800 border-violet-200',
-  DELIVERED: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+  READY_FOR_DELIVERY: TONE_STYLE.action.badge,
+  DELIVERY_ASSIGNED: TONE_STYLE.progress.badge,
+  OUT_FOR_DELIVERY: TONE_STYLE.progress.badge,
+  ARRIVED_FOR_DELIVERY: TONE_STYLE.progress.badge,
+  DELIVERED: TONE_STYLE.done.badge,
 };
 
 

@@ -22,7 +22,7 @@ export function OrderExceptionsNotice({
                 presentan excepciones operacionales
               </p>
               <p className="text-[11px] text-slate-500 mt-0.5">
-                Casos con SLA vencido, retención en inscidencia o incidencias
+                Casos con SLA vencido, retención por incidencia o incidencias
                 activas en curso.
               </p>
             </div>

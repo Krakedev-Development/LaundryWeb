@@ -102,7 +102,7 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
       {/* Customer & Facility Information Card */}
       <section className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs">
         <h2 className="text-sm font-bold text-ink mb-4 flex items-center gap-2">
-          <User className="w-4 h-4 text-navy" />
+          <User className="w-4 h-4 text-primary" />
           <span>Información del Cliente y Sede Operativa</span>
         </h2>
 
@@ -160,7 +160,7 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
       <section className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-bold text-ink flex items-center gap-2">
-            <Receipt className="w-4 h-4 text-navy" />
+            <Receipt className="w-4 h-4 text-primary" />
             <span>Detalle de Prendas y Servicios ({order.itemCount} prendas)</span>
           </h2>
           <span className="text-xs font-semibold text-slate-500">
@@ -260,7 +260,7 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
         {/* Reconciled Breakdown Card */}
         <section className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs space-y-3">
           <h3 className="text-sm font-bold text-ink flex items-center gap-2">
-            <Receipt className="w-4 h-4 text-navy" />
+            <Receipt className="w-4 h-4 text-primary" />
             <span>Desglose Económico Conciliado</span>
           </h3>
 
@@ -305,7 +305,7 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
               </div>
             )}
 
-            <div className="flex justify-between font-bold text-sm text-navy pt-2 border-t border-slate-300">
+            <div className="flex justify-between font-bold text-sm text-primary pt-2 border-t border-slate-300">
               <span>Total final:</span>
               <span className="tabular-nums">${total.toFixed(2)}</span>
             </div>
@@ -329,7 +329,7 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
         {/* Payment Method & Confirm Action */}
         <section className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs space-y-4">
           <h3 className="text-sm font-bold text-ink flex items-center gap-2">
-            <CreditCard className="w-4 h-4 text-navy" />
+            <CreditCard className="w-4 h-4 text-primary" />
             <span>Método y Estado de Pago</span>
           </h3>
 

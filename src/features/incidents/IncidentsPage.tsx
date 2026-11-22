@@ -32,6 +32,7 @@ import {
   type ServerIncidentSeverity,
   type ServerIncidentStatus,
 } from '../../services/api/incidentsApi';
+import { TONE_STYLE } from '../../shared/ui/statusTone';
 
 type Tab = 'ALL' | ServerIncidentStatus;
 
@@ -43,18 +44,20 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'CLOSED', label: 'Cerradas' },
 ];
 
+// La severidad es una intensidad, no un estado: solo crítica y alta se resaltan.
 const SEVERITY_STYLE: Record<ServerIncidentSeverity, string> = {
-  CRITICAL: 'bg-rose-50 text-rose-800 border-rose-200',
-  HIGH: 'bg-amber-50 text-amber-800 border-amber-200',
-  MEDIUM: 'bg-indigo-50 text-indigo-800 border-indigo-200',
-  LOW: 'bg-sky-50 text-sky-800 border-sky-200',
+  CRITICAL: TONE_STYLE.blocked.badge,
+  HIGH: TONE_STYLE.action.badge,
+  MEDIUM: 'bg-white text-slate-700 border-slate-300',
+  LOW: TONE_STYLE.closed.badge,
 };
 
+// Escala compartida: abierta bloquea la solicitud, en revisión espera a la sede.
 const STATUS_STYLE: Record<ServerIncidentStatus, string> = {
-  OPEN: 'bg-rose-50 text-rose-700 border-rose-200',
-  IN_REVIEW: 'bg-amber-50 text-amber-800 border-amber-200',
-  RESOLVED: 'bg-emerald-50 text-emerald-800 border-emerald-200',
-  CLOSED: 'bg-slate-100 text-slate-700 border-slate-200',
+  OPEN: TONE_STYLE.blocked.badge,
+  IN_REVIEW: TONE_STYLE.action.badge,
+  RESOLVED: TONE_STYLE.done.badge,
+  CLOSED: TONE_STYLE.closed.badge,
 };
 
 const displayDate = (iso?: string | null) =>

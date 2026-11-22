@@ -40,7 +40,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
               {crumb.path ? (
                 <Link
                   to={crumb.path}
-                  className="hover:text-navy transition-colors hover:underline"
+                  className="hover:text-primary transition-colors hover:underline"
                 >
                   {crumb.label}
                 </Link>

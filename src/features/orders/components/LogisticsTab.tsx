@@ -80,7 +80,7 @@ export const LogisticsTab: React.FC<LogisticsTabProps> = ({ order }) => {
         {/* Recogida Card */}
         <section className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-            <span className="font-bold text-xs text-navy uppercase tracking-wider flex items-center gap-2">
+            <span className="font-bold text-xs text-primary uppercase tracking-wider flex items-center gap-2">
               <MapPin className="w-4 h-4 text-teal-600" />
               <span>Logística de Recogida</span>
             </span>
@@ -158,7 +158,7 @@ export const LogisticsTab: React.FC<LogisticsTabProps> = ({ order }) => {
         {/* Entrega Card */}
         <section className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-            <span className="font-bold text-xs text-navy uppercase tracking-wider flex items-center gap-2">
+            <span className="font-bold text-xs text-primary uppercase tracking-wider flex items-center gap-2">
               <Truck className="w-4 h-4 text-orange-600" />
               <span>Logística de Entrega</span>
             </span>

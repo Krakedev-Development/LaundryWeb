@@ -27,7 +27,7 @@ function Workspace() {
     <div className="min-h-screen bg-canvas text-slate-900">
       <a
         href="#main-content"
-        className="sidebar-focus sr-only fixed left-3 top-3 z-50 rounded-lg bg-white px-4 py-3 text-sm text-navy focus:not-sr-only"
+        className="sidebar-focus sr-only fixed left-3 top-3 z-50 rounded-lg bg-white px-4 py-3 text-sm text-primary focus:not-sr-only"
       >
         Ir al contenido
       </a>
