@@ -189,7 +189,7 @@ export const DeliveriesPage: React.FC = () => {
         subtitle="Seguimiento y asignación de las entregas a domicilio. La salida a ruta y la entrega se confirman con custodia, no desde esta lista."
       />
 
-      <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
         <StaggerItem>
           <MetricCard
             title="A entregar hoy"
@@ -262,8 +262,8 @@ export const DeliveriesPage: React.FC = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        <div className="fintech-card lg:col-span-7 p-5 sm:p-6 space-y-4">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
+        <div className="fintech-card xl:col-span-8 p-5 sm:p-6 space-y-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
             <div>
               <h2 className="text-sm font-bold text-ink uppercase tracking-wider">
@@ -333,10 +333,11 @@ export const DeliveriesPage: React.FC = () => {
                   <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200/80">
                     <tr>
                       <th className="py-3 px-4">Solicitud y cliente</th>
-                      <th className="py-3 px-4">Horario</th>
-                      <th className="py-3 px-4">Chofer</th>
+                      <th className="py-3 px-4">Horario y chofer</th>
                       <th className="py-3 px-4">Estado</th>
-                      <th className="py-3 px-4 text-right">Acción</th>
+                      <th className="py-3 px-4 text-right">
+                        <span className="sr-only">Acción</span>
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -375,14 +376,13 @@ export const DeliveriesPage: React.FC = () => {
                             <span className="block text-[11px] text-slate-500 font-mono mt-0.5">
                               {ord.slotLabel}
                             </span>
-                          </td>
-                          <td className="py-3.5 px-4 whitespace-nowrap">
+                            {/* Horario y chofer en una sola columna. */}
                             {ord.driverName ? (
-                              <span className="font-semibold text-emerald-700">
+                              <span className="block mt-1 font-semibold text-emerald-700">
                                 {ord.driverName}
                               </span>
                             ) : (
-                              <span className="text-amber-700 italic">Por asignar</span>
+                              <span className="block mt-1 text-amber-700 italic">Por asignar</span>
                             )}
                           </td>
                           <td className="py-3.5 px-4 whitespace-nowrap">
@@ -431,7 +431,7 @@ export const DeliveriesPage: React.FC = () => {
           )}
         </div>
 
-        <div className="fintech-card lg:col-span-5 p-6 space-y-5">
+        <div className="fintech-card xl:col-span-4 p-6 space-y-5">
           {selected && state === 'ready' ? (
             <>
               <div className="flex items-center justify-between pb-4 border-b border-slate-100">

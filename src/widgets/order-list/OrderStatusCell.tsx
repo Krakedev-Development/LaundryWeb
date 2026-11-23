@@ -13,7 +13,7 @@ export function OrderStatusCell({ order }: { order: Order }) {
   const paymentPending =
     order.pricing.amountKnown !== false && order.pricing.paymentStatus !== 'PAID';
   return (
-    <td className="py-4 px-5 whitespace-nowrap">
+    <td className="py-4 px-4 min-w-[180px]">
       <div className="flex flex-wrap items-center gap-1.5">
         <StatusBadge status={orderDisplayStage(order)} size="sm" />
         {paymentPending && (
@@ -22,7 +22,7 @@ export function OrderStatusCell({ order }: { order: Order }) {
           </span>
         )}
       </div>
-      <span className="block text-xs text-slate-500 mt-1">
+      <span className="block text-xs text-slate-500 mt-1 max-w-56">
         {MODE_LABELS[order.fulfillment?.mode ?? 'HOME_HOME']}
       </span>
       {order.businessVersion === 3 && (

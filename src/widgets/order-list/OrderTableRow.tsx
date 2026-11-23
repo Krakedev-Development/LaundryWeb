@@ -17,11 +17,12 @@ export function OrderTableRow({ order }: { order: Order }) {
       <OrderIdentityCells order={order} />
       <OrderScheduleCells order={order} />
       <OrderStatusCell order={order} />
-      <td className="whitespace-nowrap px-5 py-4">
-        <PriorityBadge priority={order.priority} />
-      </td>
-      <td className="whitespace-nowrap px-5 py-4">
-        <SLABadge risk={order.slaStatus} deadline={order.slaDeadline} />
+      {/* Prioridad y SLA en una sola columna. */}
+      <td className="whitespace-nowrap px-4 py-4">
+        <div className="flex flex-col items-start gap-1.5">
+          <PriorityBadge priority={order.priority} />
+          <SLABadge risk={order.slaStatus} deadline={order.slaDeadline} />
+        </div>
       </td>
       <OrderActionCell order={order} />
     </StaggerTableRow>

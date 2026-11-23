@@ -7,7 +7,7 @@ export function OrderActionCell({ order }: { order: Order }) {
   const navigate = useNavigate();
   return (
     <td
-      className="py-4 px-5 text-right whitespace-nowrap"
+      className="py-4 px-4 text-right whitespace-nowrap"
       onClick={(e) => e.stopPropagation()}
     >
       <div className="flex items-center justify-end gap-2">

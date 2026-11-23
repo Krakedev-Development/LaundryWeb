@@ -212,11 +212,11 @@ export const PlantPage = () => {
               ))}
             </ul>
             <div className="relative hidden overflow-x-auto md:block">
-              <table className="w-full min-w-[800px] text-left text-sm">
+              <table className="w-full text-left text-sm">
                 <thead className="bg-slate-50 text-xs text-slate-600">
                   <tr>
                     <th className="px-5 py-3">Pedido y cliente</th>
-                    <th className="px-5 py-3">Servicio</th>
+                    <th className="hidden px-5 py-3 xl:table-cell">Servicio</th>
                     <th className="min-w-64 px-5 py-3">Línea de proceso</th>
                     <th className="px-5 py-3">SLA</th>
                     <th className="px-5 py-3">
@@ -249,7 +249,8 @@ export const PlantPage = () => {
                           {order.facilityName}
                         </p>
                       </td>
-                      <td className="px-5 py-5">
+                      {/* El servicio solo desde 1280 px: en tablet la línea de proceso necesita el espacio. */}
+                      <td className="hidden px-5 py-5 xl:table-cell">
                         <p className="font-medium">{order.serviceType}</p>
                         <p className="mt-1 text-xs text-slate-600">
                           {order.items.reduce(

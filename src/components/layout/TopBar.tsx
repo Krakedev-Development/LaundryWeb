@@ -136,7 +136,7 @@ export function TopBar({
               {pageTitle}
             </h1>
             {pageSubtitle && (
-              <p className="mt-1 hidden truncate text-sm leading-snug text-subtle sm:block">
+              <p className="mt-1 hidden text-sm leading-snug text-subtle sm:line-clamp-2">
                 {pageSubtitle}
               </p>
             )}

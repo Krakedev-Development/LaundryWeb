@@ -12,6 +12,8 @@ export function OrderQuickTabs({
       <AnimatedPillTabs<QuickTab>
         layoutId="order-quick-tabs"
         ariaLabel="Vistas rápidas de solicitudes"
+        // En tablet las vistas pasan a una segunda línea en lugar de esconderse tras un scroll.
+        className="flex-wrap"
         value={quickTab}
         onChange={setQuickTab}
         items={[

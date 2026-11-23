@@ -263,9 +263,10 @@ export const OperationTab: React.FC<OperationTabProps> = ({
       )}
 
       {/* Main 2-column layout for Operation view */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Dos columnas solo desde 1280 px: en tablet el resumen pasa debajo y las fases tienen espacio. */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Left: Current Plant Stage & Action (2 cols) */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="xl:col-span-2 space-y-6">
           {/* Plant Process Main Card */}
           <section className="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-2xs space-y-5">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">

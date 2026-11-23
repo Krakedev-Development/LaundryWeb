@@ -237,7 +237,7 @@ export const IncidentsPage: React.FC = () => {
         </p>
       </div>
 
-      <StaggerContainer className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      <StaggerContainer className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
         <StaggerItem>
           <MetricCard
             title="Abiertas"
@@ -277,8 +277,8 @@ export const IncidentsPage: React.FC = () => {
       </StaggerContainer>
 
       <div className="fintech-card space-y-5 p-5 sm:p-6">
-        <div className="flex flex-col items-center justify-between gap-4 lg:flex-row">
-          <div className="w-full overflow-x-auto pb-1 lg:w-auto lg:pb-0">
+        <div className="flex flex-col items-center justify-between gap-4 2xl:flex-row">
+          <div className="w-full overflow-x-auto pb-1 2xl:w-auto 2xl:pb-0">
             <AnimatedPillTabs<Tab>
               layoutId="incidents-tabs"
               ariaLabel="Estados de incidencias"
@@ -292,8 +292,8 @@ export const IncidentsPage: React.FC = () => {
               }))}
             />
           </div>
-          <div className="flex w-full items-center gap-2 lg:w-auto">
-            <div className="relative w-full lg:w-72">
+          <div className="flex w-full items-center gap-2 2xl:w-auto">
+            <div className="relative w-full 2xl:w-72">
               <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
@@ -342,14 +342,14 @@ export const IncidentsPage: React.FC = () => {
               <table className="w-full text-left text-xs">
                 <thead className="border-b border-slate-200/80 bg-slate-50 font-semibold text-slate-600">
                   <tr>
-                    <th className="px-4 py-3.5">Solicitud</th>
-                    <th className="px-4 py-3.5">Cliente</th>
-                    <th className="px-4 py-3.5">Tipo</th>
-                    <th className="px-4 py-3.5">Severidad</th>
-                    <th className="px-4 py-3.5">Retención</th>
-                    <th className="px-4 py-3.5">Fecha</th>
+                    <th className="px-4 py-3.5">Solicitud y cliente</th>
+                    <th className="px-4 py-3.5">Tipo y severidad</th>
+                    <th className="hidden px-4 py-3.5 xl:table-cell">Retención</th>
+                    <th className="hidden px-4 py-3.5 xl:table-cell">Fecha</th>
                     <th className="px-4 py-3.5">Estado</th>
-                    <th className="px-4 py-3.5 text-right">Acción</th>
+                    <th className="px-4 py-3.5 text-right">
+                      <span className="sr-only">Acción</span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -361,22 +361,26 @@ export const IncidentsPage: React.FC = () => {
                         onClick={() => setSelectedId(inc.id)}
                         className="cursor-pointer hover:bg-slate-50/70"
                       >
-                        <td className="px-4 py-3.5 font-mono font-semibold text-sky-800">
-                          {ref.trackingNumber}
+                        <td className="px-4 py-3.5">
+                          <span className="block font-mono font-semibold text-primary">
+                            {ref.trackingNumber}
+                          </span>
+                          <span className="block max-w-[180px] truncate font-semibold text-slate-900">
+                            {ref.customerName}
+                          </span>
                         </td>
-                        <td className="max-w-[160px] truncate px-4 py-3.5 font-semibold text-slate-900">
-                          {ref.customerName}
+                        <td className="px-4 py-3.5">
+                          <span className="block font-medium text-slate-800">
+                            {incidentTypeLabel(inc.type)}
+                          </span>
+                          <span className="mt-1 inline-block">
+                            <SeverityBadge severity={inc.severity} />
+                          </span>
                         </td>
-                        <td className="px-4 py-3.5 font-medium text-slate-800">
-                          {incidentTypeLabel(inc.type)}
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-3.5">
-                          <SeverityBadge severity={inc.severity} />
-                        </td>
-                        <td className="px-4 py-3.5 text-slate-600">
+                        <td className="hidden px-4 py-3.5 text-slate-600 xl:table-cell">
                           {inc.previousStatus ? (isIncidentActive(inc) ? 'Retenida' : 'Liberada') : 'No'}
                         </td>
-                        <td className="whitespace-nowrap px-4 py-3.5 font-mono text-[11px] text-slate-500">
+                        <td className="hidden whitespace-nowrap px-4 py-3.5 font-mono text-[11px] text-slate-500 xl:table-cell">
                           {displayDate(inc.createdAt)}
                         </td>
                         <td className="whitespace-nowrap px-4 py-3.5">
