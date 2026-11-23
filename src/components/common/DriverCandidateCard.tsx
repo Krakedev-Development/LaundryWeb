@@ -1,3 +1,4 @@
+import { motion } from 'motion/react';
 import {
   Building2,
   Check,
@@ -23,21 +24,24 @@ export function DriverCandidateCard({
   onSelect: () => void;
 }) {
   return (
-    <label
-      className={`group block cursor-pointer rounded-2xl border p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary ${selected ? 'border-primary bg-primary-soft ring-1 ring-primary/20 shadow-sm' : 'border-slate-200 bg-white hover:border-primary/40 hover:bg-slate-50/70'}`}
+    <motion.label
+      whileHover={{ y: -2 }}
+      whileTap={{ scale: 0.99 }}
+      transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
+      className={`group block cursor-pointer rounded-2xl border p-4 transition-colors duration-150 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary ${selected ? 'border-primary bg-primary-soft ring-1 ring-primary/20 shadow-sm' : 'border-slate-200/90 bg-white shadow-[var(--shadow-card)] hover:border-primary/40 hover:bg-slate-50/70'}`}
     >
       <div className="flex items-start gap-3">
         <span
-          className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${selected ? 'bg-primary text-white' : 'bg-slate-100 text-primary'}`}
+          className={`flex size-10 shrink-0 items-center justify-center rounded-xl transition-colors ${selected ? 'bg-primary text-white shadow-xs' : 'bg-slate-100 text-primary'}`}
         >
           <UserRound className="size-5" aria-hidden="true" />
         </span>
         <div className="min-w-0 flex-1">
-          <span className="block text-sm font-bold text-ink">
+          <span className="block text-sm font-bold tracking-tight text-ink">
             {driver.name}
           </span>
           {recommended && (
-            <span className="mt-1 inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+            <span className="mt-1 inline-flex items-center gap-1 rounded-full border border-emerald-200/70 bg-emerald-50 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-700">
               <ShieldCheck className="size-3" aria-hidden="true" />
               Recomendado
             </span>
@@ -95,6 +99,6 @@ export function DriverCandidateCard({
         />
         {candidate.reasons.join(' · ')}
       </span>
-    </label>
+    </motion.label>
   );
 }

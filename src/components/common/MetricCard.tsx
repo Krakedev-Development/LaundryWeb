@@ -1,5 +1,7 @@
 import React from 'react';
+import { motion } from 'motion/react';
 import { TrendingUp, TrendingDown } from 'lucide-react';
+import { AnimatedMetricValue } from '../ui/AnimatedMetricValue';
 
 interface MetricCardProps {
   title: string;
@@ -36,15 +38,15 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   };
 
   const highlightBorder = {
-    default: 'border-slate-200/80 hover:border-slate-300',
-    urgent: 'border-rose-200 hover:border-rose-300',
-    warning: 'border-amber-200 hover:border-amber-300',
-    success: 'border-emerald-200 hover:border-emerald-300',
-    aqua: 'border-sky-200 hover:border-sky-300',
+    default: 'border-slate-200/80 hover:border-primary/25',
+    urgent: 'border-rose-200/80 hover:border-rose-300',
+    warning: 'border-amber-200/80 hover:border-amber-300',
+    success: 'border-emerald-200/80 hover:border-emerald-300',
+    aqua: 'border-sky-200/80 hover:border-sky-300',
   };
 
   const topAccent = {
-    default: 'from-slate-300/60 via-sky-500/30 to-transparent',
+    default: 'from-slate-300/60 via-primary/25 to-transparent',
     urgent: 'from-rose-500 via-rose-400/50 to-transparent',
     warning: 'from-amber-500 via-amber-400/50 to-transparent',
     success: 'from-emerald-500 via-emerald-400/50 to-transparent',
@@ -52,9 +54,13 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   };
 
   return (
-    <div
+    <motion.div
       onClick={onClick}
-      className={`group relative overflow-hidden bg-white rounded-2xl border p-5 sm:p-6 shadow-[0_1px_3px_rgba(15,23,42,0.04)] hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200 ${highlightBorder[variant]} ${
+      whileHover={{ y: -2 }}
+      whileTap={onClick ? { scale: 0.985 } : undefined}
+      transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+      style={{ boxShadow: 'var(--shadow-card)' }}
+      className={`group relative overflow-hidden rounded-2xl border bg-white p-5 sm:p-6 transition-colors duration-200 hover:shadow-[var(--shadow-card-hover)] ${highlightBorder[variant]} ${
         onClick ? 'cursor-pointer' : ''
       } ${className}`}
     >
@@ -64,19 +70,20 @@ export const MetricCard: React.FC<MetricCardProps> = ({
       />
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-semibold tracking-wide text-slate-500 truncate">
+          <p className="truncate text-xs font-semibold tracking-wide text-subtle">
             {title}
           </p>
-          <div className="mt-2 flex flex-wrap items-baseline gap-2">
-            <span className="text-3xl font-extrabold tracking-tight text-slate-900 tabular-nums">
-              {value}
-            </span>
+          <div className="mt-2.5 flex flex-wrap items-baseline gap-2">
+            <AnimatedMetricValue
+              value={value}
+              className="text-3xl font-extrabold tracking-tight text-ink"
+            />
             {trend && (
               <span
-                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums border ${
+                className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-bold tabular-nums ${
                   trend.isPositive
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200/70'
-                    : 'bg-rose-50 text-rose-700 border-rose-200/70'
+                    ? 'border-emerald-200/70 bg-emerald-50 text-emerald-700'
+                    : 'border-rose-200/70 bg-rose-50 text-rose-700'
                 }`}
               >
                 {trend.isPositive ? (
@@ -92,19 +99,19 @@ export const MetricCard: React.FC<MetricCardProps> = ({
             )}
           </div>
           {subtitle && (
-            <p className="mt-1.5 text-xs font-medium text-slate-500 line-clamp-1">
+            <p className="mt-1.5 line-clamp-1 text-xs font-medium text-subtle">
               {subtitle}
             </p>
           )}
         </div>
         {icon && (
           <div
-            className={`p-3 rounded-xl shrink-0 flex items-center justify-center transition-transform duration-200 group-hover:scale-105 ${iconStyles[variant]}`}
+            className={`flex shrink-0 items-center justify-center rounded-xl p-3 transition-transform duration-200 group-hover:scale-105 ${iconStyles[variant]}`}
           >
             {icon}
           </div>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 };

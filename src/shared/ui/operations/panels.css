@@ -2,18 +2,18 @@
   .ops-ui .ops-panel {
     min-width: 0;
     overflow: hidden;
-    border: 1px solid #e2e8f0cc;
-    border-radius: 1rem;
+    border: 1px solid rgba(226, 232, 240, 0.85);
+    border-radius: 1.25rem;
     background: white;
-    box-shadow: 0 1px 3px #00000008;
+    box-shadow: var(--shadow-card);
     transition:
-      box-shadow 200ms ease,
-      border-color 200ms ease,
-      transform 200ms ease;
+      box-shadow var(--transition-smooth),
+      border-color var(--transition-smooth),
+      transform var(--transition-smooth);
   }
   .ops-ui .ops-panel:hover {
-    box-shadow: 0 10px 25px -5px #0f172a0d, 0 4px 10px -6px #0f172a08;
-    border-color: #cbd5e1;
+    box-shadow: var(--shadow-card-hover);
+    border-color: rgba(15, 76, 129, 0.22);
   }
   .ops-ui .ops-panel-header {
     display: flex;

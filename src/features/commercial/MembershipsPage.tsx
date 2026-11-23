@@ -204,7 +204,7 @@ export function MembershipsPage() {
           </button>
         }
       />
-      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+      <section className="fintech-card overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 p-4">
           <div className="relative min-w-0 flex-1 sm:max-w-sm">
             <Search
@@ -344,6 +344,7 @@ export function MembershipsPage() {
       </p>
       {draft && (
         <Modal
+          variant="drawer"
           title={
             plans.some((plan) => plan.id === draft.id)
               ? 'Editar membresía'

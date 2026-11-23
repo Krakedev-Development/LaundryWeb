@@ -2,10 +2,13 @@ import { Modal } from '../../shared/ui/Modal';
 import { useZones } from './zones/useZones';
 import { IconPlaceholder } from '../../components/common/IconPlaceholder';
 import React, { useEffect, useState } from 'react';
+import { motion } from 'motion/react';
 import { useApp } from '../../context/AppContext';
 import { PageHeader } from '../../components/common/PageHeader';
 import { TablePagination, usePagination } from '../../shared/ui/TablePagination';
 import { MetricCard } from '../../components/common/MetricCard';
+import { StaggerContainer, StaggerItem } from '../../components/ui/StaggerList';
+import { btnPrimary, btnSecondarySm } from '../../shared/ui/controls';
 import { Driver, DriverStatus } from '../../types';
 import {
   Car,
@@ -277,60 +280,72 @@ export const DriversPage: React.FC = () => {
         }
         actions={
           <div className="flex items-center gap-2">
-            <button
+            <motion.button
+              type="button"
+              whileTap={{ scale: 0.98 }}
               onClick={() => void refreshDrivers()}
               disabled={refreshing}
-              className="px-3 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
+              className={btnSecondarySm}
               title="Sincronizar choferes con el backend"
             >
               <RotateCcw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
               <span>Sincronizar</span>
-            </button>
+            </motion.button>
             {isAdmin && (
-              <button
+              <motion.button
+                type="button"
+                whileTap={{ scale: 0.98 }}
                 onClick={handleOpenCreate}
-                className="px-4 py-2.5 text-xs font-bold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
+                className={btnPrimary}
               >
                 <Plus className="w-4 h-4" />
                 <span>Registrar Chofer</span>
-              </button>
+              </motion.button>
             )}
           </div>
         }
       />
 
       {/* KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <MetricCard
-          title="Disponibles"
-          value={availableCount}
-          subtitle="Listos para despacho"
-          variant="success"
-          icon={<CheckCircle2 className="w-5 h-5 text-emerald-600" />}
-        />
-        <MetricCard
-          title="En Servicio"
-          value={onDutyCount}
-          subtitle="En ruta de recogida o entrega"
-          variant="aqua"
-          icon={<Truck className="w-5 h-5 text-sky-600" />}
-        />
-        <MetricCard
-          title="Offline / Taller"
-          value={offlineCount}
-          subtitle="Fuera de turno operativo"
-          icon={<Clock className="w-5 h-5 text-slate-400" />}
-        />
-        <MetricCard
-          title="Carga Promedio"
-          value={`${avgLoad} pedidos`}
-          subtitle="Capacidad utilizada"
-          icon={<Gauge className="w-5 h-5 text-sky-600" />}
-        />
-      </div>
+      <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <StaggerItem>
+          <MetricCard
+            title="Disponibles"
+            value={availableCount}
+            subtitle="Listos para despacho"
+            variant="success"
+            icon={<CheckCircle2 className="w-5 h-5 text-emerald-600" />}
+          />
+        </StaggerItem>
+        <StaggerItem>
+          <MetricCard
+            title="En Servicio"
+            value={onDutyCount}
+            subtitle="En ruta de recogida o entrega"
+            variant="aqua"
+            icon={<Truck className="w-5 h-5 text-sky-600" />}
+          />
+        </StaggerItem>
+        <StaggerItem>
+          <MetricCard
+            title="Offline / Taller"
+            value={offlineCount}
+            subtitle="Fuera de turno operativo"
+            icon={<Clock className="w-5 h-5 text-slate-400" />}
+          />
+        </StaggerItem>
+        <StaggerItem>
+          <MetricCard
+            title="Carga Promedio"
+            value={`${avgLoad} pedidos`}
+            subtitle="Capacidad utilizada"
+            icon={<Gauge className="w-5 h-5 text-sky-600" />}
+          />
+        </StaggerItem>
+      </StaggerContainer>
 
       {/* Table per spec #40 */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.03)] overflow-hidden">
+      <div className="fintech-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-xs text-left">
             <thead className="bg-slate-50/80 text-slate-600 font-semibold border-b border-slate-200/80">
@@ -423,7 +438,7 @@ export const DriversPage: React.FC = () => {
 
                     <td className="py-3.5 px-4 whitespace-nowrap">
                       <span
-                        className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-md border ${
+                        className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${
                           driver.status === 'AVAILABLE'
                             ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                             : driver.status === 'ON_SERVICE'
@@ -473,6 +488,7 @@ export const DriversPage: React.FC = () => {
       {/* Drawer Crear / Editar Chofer (Solo Admin) */}
       {isAdmin && isDrawerOpen && (
         <Modal
+          variant="drawer"
           title={
             editingDriver
               ? `Editar: ${editingDriver.name}`

@@ -20,6 +20,7 @@
     "test:app": "playwright test --config playwright.app.config.cjs"
   },
   "dependencies": {
+    "@number-flow/react": "^0.6.2",
     "@tailwindcss/vite": "^4.3.3",
     "@turf/boolean-point-in-polygon": "^7.4.0",
     "@vitejs/plugin-react": "^6.1.1",
@@ -27,10 +28,13 @@
     "framer-motion": "^14.9.1",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.546.0",
+    "motion": "^14.14.0",
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
     "react-qr-code": "^2.2.0",
     "react-router-dom": "^7.18.4",
+    "recharts": "^3.11.0",
+    "sonner": "^2.0.8",
     "vite": "^8.3.0"
   },
   "devDependencies": {

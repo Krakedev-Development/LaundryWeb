@@ -1,12 +1,17 @@
 import { Modal } from '../../shared/ui/Modal';
 import { operationalStage } from '../../services/fulfillment';
 import React, { useState, useMemo, useEffect } from 'react';
+import { motion } from 'motion/react';
 import { listCustomers } from '../../services/api/customersApi';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { PageHeader } from '../../components/common/PageHeader';
 import { TablePagination, usePagination } from '../../shared/ui/TablePagination';
 import { MetricCard } from '../../components/common/MetricCard';
+import { AnimatedPillTabs } from '../../components/ui/AnimatedPillTabs';
+import { StaggerContainer, StaggerItem } from '../../components/ui/StaggerList';
+import { AnimatedMetricValue } from '../../components/ui/AnimatedMetricValue';
+import { btnPrimary } from '../../shared/ui/controls';
 import { Customer } from '../../types';
 import {
   Users,
@@ -142,46 +147,54 @@ export const CustomersPage: React.FC = () => {
       )}
 
       {/* KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <MetricCard
-          title="Clientes Totales"
-          value={totalCustomers}
-          subtitle="Registrados en plataforma"
-          icon={<Users className="w-5 h-5 text-sky-600" />}
-        />
-        <MetricCard
-          title="Suscripción Activa"
-          value={premiumMembers}
-          subtitle="Clientes con un plan elegido"
-          variant="aqua"
-          icon={<Award className="w-5 h-5 text-sky-600" />}
-        />
-        <MetricCard
-          title="Saldo en Billeteras"
-          value={`$${totalWalletBalance.toFixed(2)}`}
-          subtitle="Fondos prepagados"
-          variant="success"
-          icon={<Wallet className="w-5 h-5 text-emerald-600" />}
-        />
-        <MetricCard
-          title="Puntos Acumulados"
-          value={totalPoints.toLocaleString()}
-          subtitle="En programa de lealtad"
-          icon={<Coins className="w-5 h-5 text-amber-600" />}
-        />
-      </div>
+      <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <StaggerItem>
+          <MetricCard
+            title="Clientes Totales"
+            value={totalCustomers}
+            subtitle="Registrados en plataforma"
+            icon={<Users className="w-5 h-5 text-sky-600" />}
+          />
+        </StaggerItem>
+        <StaggerItem>
+          <MetricCard
+            title="Suscripción Activa"
+            value={premiumMembers}
+            subtitle="Clientes con un plan elegido"
+            variant="aqua"
+            icon={<Award className="w-5 h-5 text-sky-600" />}
+          />
+        </StaggerItem>
+        <StaggerItem>
+          <MetricCard
+            title="Saldo en Billeteras"
+            value={`$${totalWalletBalance.toFixed(2)}`}
+            subtitle="Fondos prepagados"
+            variant="success"
+            icon={<Wallet className="w-5 h-5 text-emerald-600" />}
+          />
+        </StaggerItem>
+        <StaggerItem>
+          <MetricCard
+            title="Puntos Acumulados"
+            value={totalPoints}
+            subtitle="En programa de lealtad"
+            icon={<Coins className="w-5 h-5 text-amber-600" />}
+          />
+        </StaggerItem>
+      </StaggerContainer>
 
       {/* Filter Bar & Table Container */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-5">
+      <div className="fintech-card p-5 sm:p-6 space-y-5">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="relative w-full sm:max-w-md">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <Search className="pointer-events-none w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Buscar por nombre, documento, correo o teléfono..."
-              className="w-full text-xs pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-sky-500"
+              className="w-full text-xs pl-10 pr-4 py-2.5 bg-slate-50/70 border border-slate-200/90 rounded-xl focus:outline-none focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/15 transition-all"
             />
           </div>
 
@@ -189,7 +202,7 @@ export const CustomersPage: React.FC = () => {
             <select
               value={membershipFilter}
               onChange={(e) => setMembershipFilter(e.target.value)}
-              className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:border-sky-500"
+              className="px-3.5 py-2.5 bg-slate-50/70 border border-slate-200/90 rounded-xl text-ink font-medium focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
             >
               <option value="ALL">Todas las Membresías</option>
               <option value="NONE">Sin membresía</option>
@@ -200,13 +213,15 @@ export const CustomersPage: React.FC = () => {
               ))}
             </select>
             {currentUser.role === 'ADMIN' && (
-              <button
+              <motion.button
+                type="button"
+                whileTap={{ scale: 0.98 }}
                 onClick={() => navigate('/customers/kyc')}
-                className="px-4 py-2.5 text-xs font-bold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer whitespace-nowrap"
+                className={`${btnPrimary} whitespace-nowrap`}
               >
                 <ShieldCheck className="w-4 h-4" />
                 <span>Validaciones KYC Pendientes</span>
-              </button>
+              </motion.button>
             )}
           </div>
         </div>
@@ -256,14 +271,14 @@ export const CustomersPage: React.FC = () => {
                     {cust.addresses[0]?.neighborhood || 'Sin dirección'}
                   </td>
                   <td className="py-3.5 px-4 whitespace-nowrap">
-                    <span className="inline-flex items-center gap-1.5 font-semibold text-[11px] text-indigo-800 bg-indigo-50 px-2.5 py-0.5 rounded-lg border border-indigo-200/80">
+                    <span className="inline-flex items-center gap-1.5 font-semibold text-[11px] text-indigo-800 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-200/80">
                       <Award className="w-3 h-3 text-indigo-600" />
                       {cust.membership ?? 'Sin membresía'}
                     </span>
                   </td>
                   <td className="py-3.5 px-4 whitespace-nowrap">
                     <span
-                      className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-0.5 rounded-lg border ${
+                      className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${
                         cust.kycStatus === 'APPROVED'
                           ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                           : cust.kycStatus === 'PENDING'
@@ -313,6 +328,7 @@ export const CustomersPage: React.FC = () => {
       {/* Customer 360 Drawer per spec #34 */}
       {selectedCustomer && (
         <Modal
+          variant="drawer"
           wide
           title={selectedCustomer.fullName}
           description={`${selectedCustomer.id} · ${selectedCustomer.documentType} ${selectedCustomer.documentNumber} · KYC ${selectedCustomer.kycStatus}`}
@@ -320,64 +336,48 @@ export const CustomersPage: React.FC = () => {
         >
           {/* Quick Balances Grid */}
           <div className="p-4 grid grid-cols-3 gap-3 border-b border-slate-100 bg-white text-xs">
-            <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
-              <span className="text-slate-400 block text-[10px]">
+            <div className="p-3 rounded-xl bg-slate-50/80 border border-slate-200/80">
+              <span className="text-slate-500 block text-[10px]">
                 Membresía
               </span>
-              <span className="font-bold text-[#0F4C81]">
+              <span className="font-bold text-primary mt-0.5 block">
                 {selectedCustomer.membership ?? 'Sin membresía'}
               </span>
             </div>
-            <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
-              <span className="text-slate-400 block text-[10px]">
+            <div className="p-3 rounded-xl bg-slate-50/80 border border-slate-200/80">
+              <span className="text-slate-500 block text-[10px]">
                 Billetera
               </span>
-              <span className="font-bold text-emerald-800 font-mono tabular-nums">
-                ${selectedCustomer.walletBalance.toFixed(2)}
-              </span>
+              <AnimatedMetricValue
+                value={`$${selectedCustomer.walletBalance.toFixed(2)}`}
+                className="font-bold text-emerald-700 font-mono mt-0.5 block text-sm"
+              />
             </div>
-            <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
-              <span className="text-slate-400 block text-[10px]">
+            <div className="p-3 rounded-xl bg-slate-50/80 border border-slate-200/80">
+              <span className="text-slate-500 block text-[10px]">
                 Puntos Lealtad
               </span>
-              <span className="font-bold text-amber-700 font-mono tabular-nums">
-                {selectedCustomer.points} pts
-              </span>
+              <AnimatedMetricValue
+                value={`${selectedCustomer.points} pts`}
+                className="font-bold text-amber-700 font-mono mt-0.5 block text-sm"
+              />
             </div>
           </div>
 
           {/* Drawer Tabs */}
-          <div className="px-5 border-b border-slate-200 flex items-center gap-4 text-xs font-semibold">
-            <button
-              onClick={() => setDrawerTab('PROFILE')}
-              className={`py-3 border-b-2 transition-colors cursor-pointer ${
-                drawerTab === 'PROFILE'
-                  ? 'border-[#0F4C81] text-[#0F4C81]'
-                  : 'border-transparent text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              Perfil & Direcciones
-            </button>
-            <button
-              onClick={() => setDrawerTab('ORDERS')}
-              className={`py-3 border-b-2 transition-colors cursor-pointer ${
-                drawerTab === 'ORDERS'
-                  ? 'border-[#0F4C81] text-[#0F4C81]'
-                  : 'border-transparent text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              Solicitudes ({customerOrders.length})
-            </button>
-            <button
-              onClick={() => setDrawerTab('POINTS')}
-              className={`py-3 border-b-2 transition-colors cursor-pointer ${
-                drawerTab === 'POINTS'
-                  ? 'border-[#0F4C81] text-[#0F4C81]'
-                  : 'border-transparent text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              Ledger de Puntos
-            </button>
+          <div className="px-5 py-3 border-b border-slate-200/80 bg-slate-50/50 overflow-x-auto">
+            <AnimatedPillTabs<'PROFILE' | 'ORDERS' | 'POINTS'>
+              layoutId="customer-360-tabs"
+              ariaLabel="Secciones del perfil de cliente"
+              size="sm"
+              value={drawerTab === 'MEMBERSHIP' ? 'PROFILE' : drawerTab}
+              onChange={setDrawerTab}
+              items={[
+                { id: 'PROFILE', label: 'Perfil & Direcciones' },
+                { id: 'ORDERS', label: 'Solicitudes', count: customerOrders.length },
+                { id: 'POINTS', label: 'Ledger de Puntos' },
+              ]}
+            />
           </div>
 
           {/* Tab Content */}

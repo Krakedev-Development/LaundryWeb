@@ -131,7 +131,7 @@ export function PolicyPanel() {
   const missing = REQUIRED_FOR_ORDERS.filter(({ key }) => active?.[key] === null || active?.[key] === undefined);
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
+    <section className="fintech-card overflow-hidden">
       <header className="border-b border-slate-100 p-5">
         <h2 className="flex items-center gap-2 text-sm font-bold text-slate-900">
           <Settings2 className="h-4 w-4 text-sky-800" aria-hidden />

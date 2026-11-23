@@ -49,7 +49,7 @@ function SlotStatus({ slot }: { slot: Slot }) {
       ? ['Completa', 'border-amber-200 bg-amber-50 text-amber-800']
       : ['Activa', 'border-emerald-200 bg-emerald-50 text-emerald-800'];
   return (
-    <span className={`rounded-md border px-2.5 py-0.5 text-[11px] font-semibold ${tone}`}>
+    <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${tone}`}>
       {label}
     </span>
   );
@@ -224,7 +224,7 @@ export function TimeSlotsPanel() {
   const repeatCount = form ? datesBetween(form.date, form.until || undefined).length : 0;
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
+    <section className="fintech-card overflow-hidden">
       <header className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 p-5">
         <div>
           <h2 className="flex items-center gap-2 text-sm font-bold text-slate-900">

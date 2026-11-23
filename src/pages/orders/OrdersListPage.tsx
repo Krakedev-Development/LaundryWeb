@@ -69,7 +69,7 @@ export const OrdersListPage = () => {
         setSelectedStatus={model.setSelectedStatus}
       />
       <FulfillmentModeFilter mode={model.mode} setMode={model.setMode} />
-      <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-5">
+      <div className="fintech-card p-5 sm:p-6 space-y-5">
         <OrderQuickTabs
           tabCounts={model.tabCounts}
           quickTab={model.quickTab}
@@ -99,9 +99,14 @@ export const OrdersListPage = () => {
         />
       </div>
       {sync.status === 'loading' && (
-        <p role="status" className="py-6 text-center text-sm text-slate-500">
-          Cargando solicitudes del servidor…
-        </p>
+        <div role="status" className="fintech-card overflow-hidden p-5 space-y-3">
+          <p className="text-xs font-semibold text-subtle">
+            Cargando solicitudes del servidor…
+          </p>
+          {[0, 1, 2, 3].map((row) => (
+            <div key={row} className="h-12 rounded-xl skeleton-shimmer" />
+          ))}
+        </div>
       )}
       {sync.status === 'error' && (
         <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900">

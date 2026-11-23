@@ -49,11 +49,11 @@ const STATUS_LABEL: Record<OrderStatus, string> = {
 export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'md' }) => {
   const tone = TONE_STYLE[ORDER_STATUS_TONE[status] ?? 'closed'];
   const label = STATUS_LABEL[status] ?? status;
-  const py = size === 'sm' ? 'py-0.5 px-2 text-[11px]' : 'py-1 px-2.5 text-xs';
+  const py = size === 'sm' ? 'py-0.5 px-2.5 text-[11px]' : 'py-1 px-3 text-xs';
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 font-semibold rounded-lg border shadow-2xs ${tone.badge} ${py} whitespace-nowrap`}
+      className={`inline-flex items-center gap-1.5 font-semibold rounded-full border shadow-2xs ${tone.badge} ${py} whitespace-nowrap`}
     >
       <span className={`w-1.5 h-1.5 rounded-full ${tone.dot} shrink-0`} aria-hidden />
       {label}
