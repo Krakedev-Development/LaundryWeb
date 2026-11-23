@@ -33,19 +33,32 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   return (
     <div className="mb-6">
       {hasCrumbs && (
-        <nav aria-label="Ruta de navegación" className="flex items-center gap-1.5 text-xs text-subtle mb-2 font-medium">
+        <nav
+          aria-label="Ruta de navegación"
+          className="mb-2.5 flex items-center gap-1.5 text-xs font-medium text-subtle"
+        >
           {breadcrumbs.map((crumb, idx) => (
             <React.Fragment key={idx}>
-              {idx > 0 && <ChevronRight className="w-3.5 h-3.5 text-slate-500 shrink-0" aria-hidden />}
+              {idx > 0 && (
+                <ChevronRight
+                  className="h-3.5 w-3.5 shrink-0 text-slate-400"
+                  aria-hidden
+                />
+              )}
               {crumb.path ? (
                 <Link
                   to={crumb.path}
-                  className="hover:text-primary transition-colors hover:underline"
+                  className="rounded-md px-1.5 py-0.5 transition-colors hover:bg-slate-100 hover:text-primary"
                 >
                   {crumb.label}
                 </Link>
               ) : (
-                <span aria-current="page" className="text-ink font-semibold">{crumb.label}</span>
+                <span
+                  aria-current="page"
+                  className="rounded-md bg-slate-100/80 px-2 py-0.5 font-semibold text-ink"
+                >
+                  {crumb.label}
+                </span>
               )}
             </React.Fragment>
           ))}
@@ -56,7 +69,9 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">{badge}</div>
           {actions && (
-            <div className="flex items-center gap-2.5 flex-wrap shrink-0">{actions}</div>
+            <div className="flex shrink-0 flex-wrap items-center gap-2.5">
+              {actions}
+            </div>
           )}
         </div>
       )}

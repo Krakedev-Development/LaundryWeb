@@ -2,12 +2,15 @@ import { operationalStage } from '../../services/fulfillment';
 import { storageService } from '../../services/storage';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
+import { motion } from 'motion/react';
 import { useApp } from '../../context/AppContext';
 import { PageHeader } from '../../components/common/PageHeader';
 import { BaseMap } from '../../components/maps/BaseMap';
 import { useDriverCandidates } from '../../components/maps/useDriverCandidates';
 import { routingService } from '../../services/geo';
 import type { RouteSummary } from '../../services/geo/geo.types';
+import { StaggerContainer, StaggerItem } from '../../components/ui/StaggerList';
+import { btnPrimary, btnSecondarySm } from '../../shared/ui/controls';
 import {
   ArrowRight,
   ClipboardList,
@@ -183,15 +186,17 @@ export function DispatchPage() {
         title="Despacho"
         subtitle="Asignación del chofer de recogida: selecciona una solicitud, compara choferes y confirma. La entrega se asigna en Entregas."
         actions={
-          <button
+          <motion.button
+            type="button"
+            whileTap={{ scale: 0.98 }}
             onClick={() => void syncData()}
             disabled={refreshing}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer disabled:opacity-60"
+            className={btnSecondarySm}
             title="Refrescar estado táctico"
           >
             <RotateCcw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
             <span>Refrescar tablero</span>
-          </button>
+          </motion.button>
         }
       />
       {syncState === 'error' && (
@@ -228,21 +233,21 @@ export function DispatchPage() {
           </button>
         </div>
       )}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-xs">
-        <span className="flex items-center gap-2 px-2 text-xs text-slate-500">
+      <div className="fintech-card flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+        <span className="flex items-center gap-2 text-xs text-slate-600">
           <ClipboardList className="size-4 text-primary" aria-hidden="true" />
-          <strong className="text-ink">{queue.length}</strong> recogidas pendientes
+          <strong className="font-bold text-ink tabular-nums">{queue.length}</strong> recogidas pendientes
           de chofer
         </span>
       </div>
-      <div className="grid items-start gap-5 lg:grid-cols-[300px_minmax(0,1fr)]">
-        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
-          <div className="flex items-center gap-2 border-b border-slate-200 bg-slate-50 px-4 py-4">
+      <div className="grid items-start gap-5 lg:grid-cols-[310px_minmax(0,1fr)]">
+        <section className="fintech-card overflow-hidden">
+          <div className="flex items-center gap-2 border-b border-slate-200/80 bg-slate-50/80 px-4 py-4">
             <ClipboardList
               className="size-4 text-primary"
               aria-hidden="true"
             />
-            <h2 className="text-sm font-bold text-ink">
+            <h2 className="text-sm font-bold tracking-tight text-ink">
               Solicitudes por asignar
             </h2>
           </div>
@@ -253,13 +258,15 @@ export function DispatchPage() {
               </p>
             )}
             {queue.map((o) => (
-              <button
+              <motion.button
                 key={o.id}
+                type="button"
+                whileTap={{ scale: 0.985 }}
                 className={
-                  'sidebar-focus block text-left w-full p-4 rounded-xl border transition-colors ' +
+                  'sidebar-focus block w-full cursor-pointer rounded-xl border p-4 text-left transition-all ' +
                   (o.id === order?.id
-                    ? 'border-primary bg-primary-soft ring-1 ring-primary/10'
-                    : 'border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300')
+                    ? 'border-primary bg-primary-soft ring-1 ring-primary/15 shadow-xs'
+                    : 'border-slate-200/80 bg-white hover:border-slate-300 hover:bg-slate-50/80')
                 }
                 aria-pressed={o.id === order?.id}
                 onClick={() => setOrderId(o.id)}
@@ -277,25 +284,25 @@ export function DispatchPage() {
                   <MapPin className="size-3 shrink-0" aria-hidden="true" />
                   {o.zoneName}
                 </p>
-              </button>
+              </motion.button>
             ))}
           </div>
         </section>
-        <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-xs sm:p-5">
+        <section className="fintech-card min-w-0 p-5 sm:p-6">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
-              <h2 className="flex items-center gap-2 text-sm font-bold text-ink">
+              <h2 className="flex items-center gap-2 text-sm font-bold tracking-tight text-ink">
                 <MapPin className="size-4 text-primary" aria-hidden="true" />
                 Ruta y ubicación
               </h2>
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="mt-1 text-xs text-subtle">
                 {order
                   ? `${order.customerName} · ${order.zoneName}`
                   : 'Selecciona una solicitud para consultar su destino.'}
               </p>
             </div>
             {order && (
-              <span className="rounded-lg bg-slate-100 px-2 py-1 font-mono text-[10px] text-slate-600">
+              <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 font-mono text-[10px] font-semibold text-slate-600">
                 {order.trackingNumber || order.id}
               </span>
             )}
@@ -330,21 +337,21 @@ export function DispatchPage() {
           />
         </section>
       </div>
-      <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-xs sm:p-5">
+      <section className="fintech-card space-y-4 p-5 sm:p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="flex items-center gap-2 text-sm font-bold text-ink">
+            <h2 className="flex items-center gap-2 text-sm font-bold tracking-tight text-ink">
               <UsersRound
                 className="size-4 text-primary"
                 aria-hidden="true"
               />
               Choferes disponibles
             </h2>
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs text-subtle">
               Compara disponibilidad, distancia y tiempo de llegada.
             </p>
           </div>
-          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-ink tabular-nums">
             {candidates.length}
           </span>
         </div>
@@ -382,30 +389,34 @@ export function DispatchPage() {
             capacidad y antigüedad de ubicación.
           </p>
         )}
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <StaggerContainer className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {candidates.map((candidate, i) => {
-            const d = drivers.find((v) => v.id === candidate.driverId)!;
+            const d = drivers.find((v) => v.id === candidate.driverId);
+            if (!d) return null;
             return (
-              <DriverCandidateCard
-                key={d.id}
-                driver={d}
-                candidate={candidate}
-                recommended={i === 0}
-                selected={driverId === d.id}
-                onSelect={() => setDriverId(d.id)}
-              />
+              <StaggerItem key={d.id}>
+                <DriverCandidateCard
+                  driver={d}
+                  candidate={candidate}
+                  recommended={i === 0}
+                  selected={driverId === d.id}
+                  onSelect={() => setDriverId(d.id)}
+                />
+              </StaggerItem>
             );
           })}
-        </div>
+        </StaggerContainer>
         {order && (
-          <div className="flex flex-wrap items-end justify-end gap-3 border-t border-slate-200 pt-4">
-            <button
+          <div className="flex flex-wrap items-end justify-end gap-3 border-t border-slate-200/80 pt-4">
+            <motion.button
+              type="button"
+              whileTap={{ scale: 0.98 }}
               disabled={
                 loading ||
                 isAssigning ||
                 !candidates.some((c) => c.driverId === driverId)
               }
-              className="sidebar-focus flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
+              className={btnPrimary}
               onClick={handleAssignDriver}
             >
               {isAssigning ? (
@@ -419,7 +430,7 @@ export function DispatchPage() {
                   <ArrowRight className="size-4" aria-hidden="true" />
                 </>
               )}
-            </button>
+            </motion.button>
           </div>
         )}
       </section>

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { motion } from 'motion/react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ArrowUpRight,
@@ -14,6 +15,7 @@ import {
 } from 'lucide-react';
 import { PageHeader } from '../../components/common/PageHeader';
 import { MetricCard } from '../../components/common/MetricCard';
+import { StaggerContainer, StaggerItem } from '../../components/ui/StaggerList';
 import { TablePagination, usePagination } from '../../shared/ui/TablePagination';
 import { ApiError } from '../../services/api/apiConfig';
 import type { BackendDriver } from '../../services/api/driversApi';
@@ -46,7 +48,7 @@ const STATUS_STYLE: Record<DeliveryServerStatus, string> = {
 function StatusPill({ status }: { status: DeliveryServerStatus }) {
   return (
     <span
-      className={`inline-flex items-center rounded-lg border px-2.5 py-0.5 text-xs font-semibold ${STATUS_STYLE[status]}`}
+      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${STATUS_STYLE[status]}`}
     >
       {DELIVERY_STATUS_LABEL[status]}
     </span>
@@ -187,34 +189,42 @@ export const DeliveriesPage: React.FC = () => {
         subtitle="Seguimiento y asignación de las entregas a domicilio. La salida a ruta y la entrega se confirman con custodia, no desde esta lista."
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <MetricCard
-          title="A entregar hoy"
-          value={state === 'ready' ? toDeliverToday : '—'}
-          subtitle="Con franja de hoy"
-          icon={<Calendar className="w-5 h-5 text-emerald-600" />}
-        />
-        <MetricCard
-          title="En ruta"
-          value={state === 'ready' ? onRoute : '—'}
-          subtitle="En camino o en domicilio"
-          variant="aqua"
-          icon={<Truck className="w-5 h-5 text-sky-600" />}
-        />
-        <MetricCard
-          title="Entregadas (franja hoy)"
-          value={state === 'ready' ? deliveredToday : '—'}
-          subtitle="Confirmadas en servidor"
-          variant="success"
-          icon={<CheckCircle2 className="w-5 h-5 text-emerald-600" />}
-        />
-        <MetricCard
-          title="En cola"
-          value={state === 'ready' ? rows.length : '—'}
-          subtitle="Solicitudes de entrega a domicilio"
-          icon={<Clock className="w-5 h-5 text-sky-600" />}
-        />
-      </div>
+      <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <StaggerItem>
+          <MetricCard
+            title="A entregar hoy"
+            value={state === 'ready' ? toDeliverToday : '—'}
+            subtitle="Con franja de hoy"
+            icon={<Calendar className="w-5 h-5 text-emerald-600" />}
+          />
+        </StaggerItem>
+        <StaggerItem>
+          <MetricCard
+            title="En ruta"
+            value={state === 'ready' ? onRoute : '—'}
+            subtitle="En camino o en domicilio"
+            variant="aqua"
+            icon={<Truck className="w-5 h-5 text-sky-600" />}
+          />
+        </StaggerItem>
+        <StaggerItem>
+          <MetricCard
+            title="Entregadas (franja hoy)"
+            value={state === 'ready' ? deliveredToday : '—'}
+            subtitle="Confirmadas en servidor"
+            variant="success"
+            icon={<CheckCircle2 className="w-5 h-5 text-emerald-600" />}
+          />
+        </StaggerItem>
+        <StaggerItem>
+          <MetricCard
+            title="En cola"
+            value={state === 'ready' ? rows.length : '—'}
+            subtitle="Solicitudes de entrega a domicilio"
+            icon={<Clock className="w-5 h-5 text-sky-600" />}
+          />
+        </StaggerItem>
+      </StaggerContainer>
 
       {notListed && (
         <div
@@ -253,13 +263,13 @@ export const DeliveriesPage: React.FC = () => {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-4">
+        <div className="fintech-card lg:col-span-7 p-5 sm:p-6 space-y-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
             <div>
-              <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
+              <h2 className="text-sm font-bold text-ink uppercase tracking-wider">
                 Listado de entregas ({state === 'ready' ? filtered.length : '…'})
               </h2>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-subtle mt-0.5">
                 Datos del servidor. Selecciona una solicitud para asignar chofer o abrir su detalle.
               </p>
             </div>
@@ -270,7 +280,7 @@ export const DeliveriesPage: React.FC = () => {
                 onChange={(e) =>
                   setStatusFilter(e.target.value as 'ALL' | DeliveryServerStatus)
                 }
-                className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-2 focus:-outline-offset-1 focus:outline-primary"
+                className="px-3 py-1.5 bg-slate-50/80 border border-slate-200/90 rounded-xl text-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
               >
                 <option value="ALL">Todos los estados</option>
                 {(Object.keys(DELIVERY_STATUS_LABEL) as DeliveryServerStatus[]).map((s) => (
@@ -283,7 +293,7 @@ export const DeliveriesPage: React.FC = () => {
                 aria-label="Filtrar por chofer"
                 value={driverFilter}
                 onChange={(e) => setDriverFilter(e.target.value)}
-                className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-2 focus:-outline-offset-1 focus:outline-primary"
+                className="px-3 py-1.5 bg-slate-50/80 border border-slate-200/90 rounded-xl text-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
               >
                 <option value="ALL">Todos los choferes</option>
                 {drivers.map((d) => (
@@ -292,10 +302,15 @@ export const DeliveriesPage: React.FC = () => {
                   </option>
                 ))}
               </select>
-              <button type="button" className={btnSecondarySm} onClick={() => void load()}>
+              <motion.button
+                type="button"
+                whileTap={{ scale: 0.98 }}
+                className={btnSecondarySm}
+                onClick={() => void load()}
+              >
                 <RefreshCw className="size-3.5" aria-hidden="true" />
                 Actualizar
-              </button>
+              </motion.button>
             </div>
           </div>
 
@@ -416,7 +431,7 @@ export const DeliveriesPage: React.FC = () => {
           )}
         </div>
 
-        <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200/80 p-6 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-5">
+        <div className="fintech-card lg:col-span-5 p-6 space-y-5">
           {selected && state === 'ready' ? (
             <>
               <div className="flex items-center justify-between pb-4 border-b border-slate-100">

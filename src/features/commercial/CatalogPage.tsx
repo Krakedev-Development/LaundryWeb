@@ -1,5 +1,6 @@
 import { Modal } from '../../shared/ui/Modal';
 import React, { useEffect, useState, useMemo } from 'react';
+import { motion } from 'motion/react';
 import { useApp } from '../../context/AppContext';
 import { storageService } from '../../services/storage';
 import {
@@ -18,6 +19,9 @@ import {
 import { PageHeader } from '../../components/common/PageHeader';
 import { TablePagination, usePagination } from '../../shared/ui/TablePagination';
 import { MetricCard } from '../../components/common/MetricCard';
+import { AnimatedPillTabs } from '../../components/ui/AnimatedPillTabs';
+import { StaggerContainer, StaggerItem } from '../../components/ui/StaggerList';
+import { btnPrimary } from '../../shared/ui/controls';
 import { CatalogItem } from '../../types';
 import { WeightServicePanel } from './WeightServicePanel';
 import {
@@ -296,84 +300,77 @@ export const CatalogPage: React.FC = () => {
         subtitle="Administración de prendas, paquetes de lavado por kilos, servicios especializados y extras."
         actions={
           activeTab === 'PESO' ? undefined : (
-            <button
+            <motion.button
+              type="button"
+              whileTap={{ scale: 0.98 }}
               onClick={handleOpenCreate}
-              className="px-4 py-2.5 text-xs font-bold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
+              className={btnPrimary}
             >
               <Plus className="w-4 h-4" />
               <span>Nuevo Ítem de {activeTab}</span>
-            </button>
+            </motion.button>
           )
         }
       />
 
       {/* KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <MetricCard
-          title="Prendas"
-          value={prendasCount}
-          subtitle="Tipos de ropa"
-          icon={<Shirt className="w-5 h-5 text-sky-600" />}
-        />
-        <MetricCard
-          title="Servicios"
-          value={serviciosCount}
-          subtitle="Paquetes y lavado"
-          variant="aqua"
-          icon={<Sparkles className="w-5 h-5 text-sky-600" />}
-        />
-        <MetricCard
-          title="Extras y Acabados"
-          value={extrasCount}
-          subtitle="Adicionales de cuidado"
-          icon={<FolderKanban className="w-5 h-5 text-emerald-600" />}
-        />
-        <MetricCard
-          title="Total Activos"
-          value={activosCount}
-          subtitle="Disponibles en venta"
-          variant="success"
-          icon={<DollarSign className="w-5 h-5 text-emerald-600" />}
-        />
-      </div>
+      <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <StaggerItem>
+          <MetricCard
+            title="Prendas"
+            value={prendasCount}
+            subtitle="Tipos de ropa"
+            icon={<Shirt className="w-5 h-5 text-sky-600" />}
+          />
+        </StaggerItem>
+        <StaggerItem>
+          <MetricCard
+            title="Servicios"
+            value={serviciosCount}
+            subtitle="Paquetes y lavado"
+            variant="aqua"
+            icon={<Sparkles className="w-5 h-5 text-sky-600" />}
+          />
+        </StaggerItem>
+        <StaggerItem>
+          <MetricCard
+            title="Extras y Acabados"
+            value={extrasCount}
+            subtitle="Adicionales de cuidado"
+            icon={<FolderKanban className="w-5 h-5 text-emerald-600" />}
+          />
+        </StaggerItem>
+        <StaggerItem>
+          <MetricCard
+            title="Total Activos"
+            value={activosCount}
+            subtitle="Disponibles en venta"
+            variant="success"
+            icon={<DollarSign className="w-5 h-5 text-emerald-600" />}
+          />
+        </StaggerItem>
+      </StaggerContainer>
 
-      {/* Category Tabs per spec #36 */}
-      <div className="flex items-center gap-2 border-b border-slate-200">
-        {[
-          { id: 'PRENDAS', label: 'Prendas Individuales', count: prendasCount },
-          {
-            id: 'SERVICIOS',
-            label: 'Servicios & Paquetes',
-            count: serviciosCount,
-          },
-          { id: 'EXTRAS', label: 'Extras & Empaque', count: extrasCount },
-          { id: 'PESO', label: 'Servicio por Peso', count: null },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            aria-pressed={activeTab === tab.id}
-            onClick={() => setActiveTab(tab.id as CatalogTab)}
-            className={`px-4 py-3 text-xs font-bold transition-all border-b-2 cursor-pointer ${
-              activeTab === tab.id
-                ? 'border-[#0F4C81] text-[#0F4C81]'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            {tab.label}
-            {tab.count !== null && (
-              <span className="opacity-75 font-mono text-[11px]">
-                {' '}({tab.count})
-              </span>
-            )}
-          </button>
-        ))}
+      {/* Category Tabs */}
+      <div className="overflow-x-auto pb-1">
+        <AnimatedPillTabs<CatalogTab>
+          layoutId="catalog-tabs"
+          ariaLabel="Categorías del catálogo"
+          value={activeTab}
+          onChange={setActiveTab}
+          items={[
+            { id: 'PRENDAS', label: 'Prendas Individuales', count: prendasCount },
+            { id: 'SERVICIOS', label: 'Servicios & Paquetes', count: serviciosCount },
+            { id: 'EXTRAS', label: 'Extras & Empaque', count: extrasCount },
+            { id: 'PESO', label: 'Servicio por Peso' },
+          ]}
+        />
       </div>
 
       {activeTab === 'PESO' ? (
         <WeightServicePanel />
       ) : (
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.03)] overflow-hidden">
+      <div className="fintech-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-xs text-left">
             <thead className="bg-slate-50/80 text-slate-600 font-semibold border-b border-slate-200/80">
@@ -421,7 +418,7 @@ export const CatalogPage: React.FC = () => {
                   </td>
                   <td className="py-3.5 px-4 whitespace-nowrap">
                     <span
-                      className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-md border ${
+                      className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${
                         item.status === 'ACTIVE'
                           ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                           : 'bg-slate-100 text-slate-600 border-slate-200'
@@ -451,6 +448,7 @@ export const CatalogPage: React.FC = () => {
       {/* Drawer Crear / Editar per spec #36 */}
       {isDrawerOpen && (
         <Modal
+          variant="drawer"
           title={
             editingItem
               ? `Editar: ${editingItem.name}`

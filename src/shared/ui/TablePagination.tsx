@@ -86,9 +86,9 @@ export function TablePagination<T>({
   return (
     <nav
       aria-label={`Paginación de ${label}`}
-      className={`flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-4 py-3 text-xs text-slate-600 ${className}`}
+      className={`flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-5 py-3.5 text-xs text-slate-600 ${className}`}
     >
-      <p role="status" aria-live="polite">
+      <p role="status" aria-live="polite" className="tabular-nums font-medium">
         {start + 1}–{end} de {total}
       </p>
       <div className="flex items-center gap-2">
@@ -97,11 +97,11 @@ export function TablePagination<T>({
           aria-label={`Página anterior de ${label}`}
           disabled={page <= 1}
           onClick={() => setPage(page - 1)}
-          className="flex size-8 items-center justify-center rounded-lg border border-slate-300 bg-white hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex size-8 cursor-pointer items-center justify-center rounded-full border border-slate-200 bg-white text-ink shadow-2xs transition-all hover:bg-slate-50 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
         >
           <ChevronLeft size={16} aria-hidden="true" />
         </button>
-        <span>
+        <span className="px-1 font-medium tabular-nums">
           Página {page} de {totalPages}
         </span>
         <button
@@ -109,7 +109,7 @@ export function TablePagination<T>({
           aria-label={`Página siguiente de ${label}`}
           disabled={page >= totalPages}
           onClick={() => setPage(page + 1)}
-          className="flex size-8 items-center justify-center rounded-lg border border-slate-300 bg-white hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex size-8 cursor-pointer items-center justify-center rounded-full border border-slate-200 bg-white text-ink shadow-2xs transition-all hover:bg-slate-50 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
         >
           <ChevronRight size={16} aria-hidden="true" />
         </button>

@@ -204,13 +204,13 @@ export function StaffPage() {
         subtitle="Cuentas de supervisores por sede: alta, suspensión, contraseñas temporales y actividad."
       />
 
-      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 p-4">
+      <section className="fintech-card overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 p-4">
           <div className="relative min-w-0 flex-1 sm:max-w-sm">
-            <Search size={17} className="absolute left-3 top-3 text-slate-500" />
+            <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               aria-label="Buscar supervisores"
-              className="w-full rounded-lg border border-slate-300 py-2.5 pl-9 pr-3 text-sm"
+              className="w-full rounded-xl border border-slate-200/90 bg-slate-50/70 py-2.5 pl-10 pr-3.5 text-sm text-ink placeholder:text-slate-400 transition-all hover:border-slate-300 focus:border-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/15"
               placeholder="Buscar por nombre, correo, teléfono o sede"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -221,7 +221,7 @@ export function StaffPage() {
               aria-label="Filtrar por estado de la cuenta"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
-              className="rounded-lg border border-slate-300 px-3 py-2.5 text-sm"
+              className="rounded-xl border border-slate-200/90 bg-slate-50/70 px-3.5 py-2.5 text-sm font-medium text-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
             >
               <option value="ALL">Todos los estados</option>
               <option value="ACTIVE">Activas</option>
@@ -279,7 +279,7 @@ export function StaffPage() {
                     <td className="px-5 py-4 tabular-nums">{m.phone ?? '-'}</td>
                     <td className="px-5 py-4">
                       <span
-                        className={`inline-flex rounded-lg border px-2.5 py-0.5 text-xs font-semibold ${STATUS[m.status].style}`}
+                        className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold ${STATUS[m.status].style}`}
                       >
                         {STATUS[m.status].label}
                       </span>
@@ -354,6 +354,7 @@ export function StaffPage() {
 
       {draft && (
         <Modal
+          variant="drawer"
           title="Crear supervisor"
           description="La cuenta queda limitada a la sede elegida. En su primer ingreso deberá cambiar la contraseña temporal."
           onClose={() => setDraft(null)}

@@ -1,5 +1,6 @@
 import { Modal } from '../../shared/ui/Modal';
 import React, { useCallback, useEffect, useState } from 'react';
+import { motion } from 'motion/react';
 import { storageService } from '../../services/storage';
 import {
   getRewards,
@@ -17,6 +18,9 @@ import { useApp } from '../../context/AppContext';
 import { PageHeader } from '../../components/common/PageHeader';
 import { TablePagination, usePagination } from '../../shared/ui/TablePagination';
 import { MetricCard } from '../../components/common/MetricCard';
+import { AnimatedPillTabs } from '../../components/ui/AnimatedPillTabs';
+import { StaggerContainer, StaggerItem } from '../../components/ui/StaggerList';
+import { btnPrimary } from '../../shared/ui/controls';
 import { Reward, RewardRedemption } from '../../types';
 import {
   Gift,
@@ -260,7 +264,9 @@ export const RewardsPage: React.FC = () => {
         title="Sistema de Recompensas y Fidelización"
         subtitle="Catálogo de premios y revisión de canjes contra el servidor."
         actions={
-          <button
+          <motion.button
+            type="button"
+            whileTap={{ scale: 0.98 }}
             onClick={() => {
               setEditingReward(null);
               setName('');
@@ -272,102 +278,93 @@ export const RewardsPage: React.FC = () => {
               setStatus('ACTIVE');
               setIsDrawerOpen(true);
             }}
-            className="px-4 py-2.5 text-xs font-bold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
+            className={btnPrimary}
           >
             <Plus className="w-4 h-4" />
             <span>Nueva Recompensa</span>
-          </button>
+          </motion.button>
         }
       />
 
       {/* KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <MetricCard
-          title="Recompensas Activas"
-          value={totalRewards}
-          subtitle="Catálogo de canje"
-          icon={<Gift className="w-5 h-5 text-sky-600" />}
-        />
-        <MetricCard
-          title="Canjes Pendientes"
-          value={pendingRedemptions}
-          subtitle="Por autorizar"
-          variant={pendingRedemptions > 0 ? 'warning' : 'default'}
-          icon={<Clock className="w-5 h-5 text-amber-600" />}
-        />
-        <MetricCard
-          title="Canjes Aprobados"
-          value={approvedRedemptions}
-          subtitle="Entregados al cliente"
-          variant="success"
-          icon={<CheckCircle2 className="w-4 h-4" />}
-        />
-        <MetricCard
-          title="Puntos Redimidos"
-          value={totalPointsSpent.toLocaleString()}
-          subtitle="Total canjeado histórico"
-          variant="aqua"
-          icon={<Coins className="w-4 h-4" />}
-        />
-      </div>
+      <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <StaggerItem>
+          <MetricCard
+            title="Recompensas Activas"
+            value={totalRewards}
+            subtitle="Catálogo de canje"
+            icon={<Gift className="w-5 h-5 text-sky-600" />}
+          />
+        </StaggerItem>
+        <StaggerItem>
+          <MetricCard
+            title="Canjes Pendientes"
+            value={pendingRedemptions}
+            subtitle="Por autorizar"
+            variant={pendingRedemptions > 0 ? 'warning' : 'default'}
+            icon={<Clock className="w-5 h-5 text-amber-600" />}
+          />
+        </StaggerItem>
+        <StaggerItem>
+          <MetricCard
+            title="Canjes Aprobados"
+            value={approvedRedemptions}
+            subtitle="Entregados al cliente"
+            variant="success"
+            icon={<CheckCircle2 className="w-4 h-4" />}
+          />
+        </StaggerItem>
+        <StaggerItem>
+          <MetricCard
+            title="Puntos Redimidos"
+            value={totalPointsSpent}
+            subtitle="Total canjeado histórico"
+            variant="aqua"
+            icon={<Coins className="w-4 h-4" />}
+          />
+        </StaggerItem>
+      </StaggerContainer>
 
-      {/* Tabs per spec #38 */}
-      <div className="flex items-center gap-2 border-b border-slate-200">
-        {[
-          {
-            id: 'REWARDS',
-            label: 'Catálogo de Recompensas',
-            count: rewards.length,
-          },
-          { id: 'RULES', label: 'Reglas de Acumulación' },
-          {
-            id: 'REDEMPTIONS',
-            label: 'Solicitudes de Canje',
-            count: serverRedemptions.length,
-            highlight: pendingRedemptions > 0,
-          },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
-            className={`px-4 py-3 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 cursor-pointer ${
-              activeTab === tab.id
-                ? 'border-[#0F4C81] text-[#0F4C81]'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <span>{tab.label}</span>
-            {tab.count !== undefined && (
-              <span
-                className={`text-[11px] font-mono px-2 py-0.5 rounded-full ${
-                  tab.highlight
-                    ? 'bg-amber-100 text-amber-900 font-bold'
-                    : 'bg-slate-100 text-slate-600'
-                }`}
-              >
-                {tab.count}
-              </span>
-            )}
-          </button>
-        ))}
+      {/* Tabs */}
+      <div className="overflow-x-auto pb-1">
+        <AnimatedPillTabs<'REWARDS' | 'RULES' | 'REDEMPTIONS'>
+          layoutId="rewards-tabs"
+          ariaLabel="Secciones de recompensas"
+          value={activeTab}
+          onChange={setActiveTab}
+          items={[
+            {
+              id: 'REWARDS',
+              label: 'Catálogo de Recompensas',
+              count: rewards.length,
+            },
+            { id: 'RULES', label: 'Reglas de Acumulación' },
+            {
+              id: 'REDEMPTIONS',
+              label: 'Solicitudes de Canje',
+              count: serverRedemptions.length,
+              alert: pendingRedemptions > 0,
+            },
+          ]}
+        />
       </div>
 
       {/* Tab 1: Recompensas */}
       {activeTab === 'REWARDS' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {rewards.map((rew) => (
+            <StaggerItem key={rew.id}>
             <div
-              key={rew.id}
-              className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-[0_1px_3px_rgba(0,0,0,0.03)] flex flex-col justify-between"
+              className="fintech-card fintech-card-interactive h-full p-6 flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <span className="font-mono text-xs font-bold text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded-md border border-amber-200">
+                  <span className="font-mono text-xs font-bold text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200/80 tabular-nums">
                     {rew.pointsCost} puntos
                   </span>
                   <div className="flex items-center gap-1.5">
                     <span
-                      className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-md border ${
+                      className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${
                         rew.status === 'ACTIVE'
                           ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                           : 'bg-slate-100 text-slate-600 border-slate-200'
@@ -415,8 +412,9 @@ export const RewardsPage: React.FC = () => {
                 </div>
               </div>
             </div>
+            </StaggerItem>
           ))}
-        </div>
+        </StaggerContainer>
       )}
 
       {/* Tab 2: Reglas de acumulación */}

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import {
   AlertTriangle,
   Check,
@@ -20,6 +20,8 @@ import { PageHeader } from '../../components/common/PageHeader';
 import { TablePagination, usePagination } from '../../shared/ui/TablePagination';
 import { MetricCard } from '../../components/common/MetricCard';
 import { IconPlaceholder } from '../../components/common/IconPlaceholder';
+import { AnimatedPillTabs } from '../../components/ui/AnimatedPillTabs';
+import { btnPrimary } from '../../shared/ui/controls';
 import {
   fetchKycDocumentUrl,
   getKycDetail,
@@ -286,72 +288,35 @@ const KycReview: React.FC = () => {
       />
 
       {/* Contenedor principal a todo el ancho (Full width table) */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-5">
+      <div className="fintech-card p-5 sm:p-6 space-y-5">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-1">
-          <div
-            role="tablist"
-            aria-label="Estado de la verificación"
-            className="flex items-center gap-2 p-1.5 bg-slate-100/90 rounded-2xl flex-1 max-w-2xl relative"
-          >
-            {TABS.map((item) => {
-              const active = tab === item.id;
-              const count = lists[item.id].length;
-
-              // Configuración de color temático según el estado
-              const activeStyle =
-                item.id === 'PENDING'
-                  ? 'bg-amber-100/90 text-amber-900 border-amber-300/80 shadow-xs ring-1 ring-amber-200/60'
-                  : item.id === 'APPROVED'
-                  ? 'bg-emerald-100/90 text-emerald-900 border-emerald-300/80 shadow-xs ring-1 ring-emerald-200/60'
-                  : 'bg-rose-100/90 text-rose-900 border-rose-300/80 shadow-xs ring-1 ring-rose-200/60';
-
-              const badgeActiveStyle =
-                item.id === 'PENDING'
-                  ? 'bg-amber-200/90 text-amber-900'
-                  : item.id === 'APPROVED'
-                  ? 'bg-emerald-200/90 text-emerald-900'
-                  : 'bg-rose-200/90 text-rose-900';
-
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={active}
-                  onClick={() => {
-                    setTab(item.id);
-                    setSelectedId('');
-                  }}
-                  className={`relative flex-1 flex items-center justify-center gap-2.5 px-5 py-2.5 text-xs font-semibold rounded-xl border transition-colors duration-150 cursor-pointer whitespace-nowrap ${
-                    active
-                      ? `${activeStyle} font-bold`
-                      : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
-                  }`}
-                >
-                  <span>{item.label}</span>
-                  <span
-                    className={`px-2 py-0.5 text-[11px] font-bold rounded-full transition-colors duration-150 ${
-                      active
-                        ? badgeActiveStyle
-                        : 'bg-slate-200/70 text-slate-600'
-                    }`}
-                  >
-                    {count}
-                  </span>
-                </button>
-              );
-            })}
+          <div className="overflow-x-auto pb-1 lg:pb-0">
+            <AnimatedPillTabs<Tab>
+              layoutId="kyc-status-tabs"
+              ariaLabel="Estado de la verificación"
+              value={tab}
+              onChange={(nextTab) => {
+                setTab(nextTab);
+                setSelectedId('');
+              }}
+              items={TABS.map((item) => ({
+                id: item.id,
+                label: item.label,
+                count: lists[item.id].length,
+                alert: item.id === 'PENDING' && lists.PENDING.length > 0,
+              }))}
+            />
           </div>
 
           <div className="relative w-full lg:w-80 shrink-0">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <Search className="pointer-events-none w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Buscar por nombre, correo o cédula..."
               aria-label="Buscar verificación"
-              className="w-full text-xs pl-10 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-sky-500 focus:bg-white transition-all shadow-2xs"
+              className="w-full text-xs pl-10 pr-3.5 py-2.5 bg-slate-50/70 border border-slate-200/90 rounded-xl focus:outline-none focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/15 transition-all"
             />
           </div>
         </div>
