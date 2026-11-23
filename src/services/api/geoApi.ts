@@ -72,6 +72,100 @@ export async function updateZone(
   });
 }
 
+export interface ZoneMetricsSummary {
+  zoneId: string;
+  zoneName: string;
+  active: boolean;
+  totalFacilities: number;
+  activeFacilities: number;
+  onlineDrivers: number;
+  availableDrivers: number;
+  onServiceDrivers: number;
+  activeOrders: number;
+  activePickups: number;
+  activeDeliveries: number;
+}
+
+export interface OperationalMapDriver {
+  driverId: string;
+  name: string;
+  phone: string | null;
+  vehicle: string | null;
+  plate: string | null;
+  status: string;
+  facilityId: string;
+  zoneId: string;
+  lat: number | null;
+  lng: number | null;
+  heading?: number;
+  speed?: number;
+  locationAt: string | null;
+}
+
+export interface OperationalMapOrder {
+  orderId: string;
+  orderNumber: number;
+  status: string;
+  kind: 'pickup' | 'delivery';
+  facilityId: string;
+  zoneId: string;
+  customerName: string;
+  addressText: string;
+  lat: number;
+  lng: number;
+}
+
+export interface OperationalMapIncident {
+  incidentId: string;
+  orderId: string;
+  orderNumber: number;
+  facilityId: string;
+  zoneId: string;
+  description: string;
+  severity: string;
+  status: string;
+  lat: number;
+  lng: number;
+}
+
+export interface OperationalSnapshotResponse {
+  scope: 'ADMIN' | 'SUPERVISOR';
+  scopedFacilityId: string | null;
+  zones: ZoneResponse[];
+  facilities: FacilityResponse[];
+  drivers: OperationalMapDriver[];
+  orders: OperationalMapOrder[];
+  incidents: OperationalMapIncident[];
+}
+
+export async function findZoneByPoint(
+  lat: number,
+  lng: number,
+): Promise<ZoneResponse> {
+  return apiRequest<ZoneResponse>('/zones/by-point', {
+    method: 'POST',
+    token: session.getToken(),
+    body: JSON.stringify({ lat, lng }),
+  });
+}
+
+export async function getZonesMetricsSummary(): Promise<ZoneMetricsSummary[]> {
+  const res = await apiRequest<
+    ZoneMetricsSummary[] | { data?: ZoneMetricsSummary[] }
+  >('/zones/metrics/summary', {
+    method: 'GET',
+    token: session.getToken(),
+  });
+  return unwrapList(res);
+}
+
+export async function getOperationalSnapshot(): Promise<OperationalSnapshotResponse> {
+  return apiRequest<OperationalSnapshotResponse>('/zones/operational-snapshot', {
+    method: 'GET',
+    token: session.getToken(),
+  });
+}
+
 // --- 2. FACILITIES (/facilities) ---
 
 export interface CreateFacilityDto {

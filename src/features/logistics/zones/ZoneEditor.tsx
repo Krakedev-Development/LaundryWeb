@@ -3,6 +3,8 @@ import { useZoneDraft } from './useZoneDraft';
 import { PolygonToolbar } from './PolygonToolbar';
 import React from 'react';
 import { BaseMap } from '../../../components/maps/BaseMap';
+import { MapboxZoneDrawMap } from '../../../components/maps/MapboxZoneDrawMap';
+import { USE_MAPBOX } from '../../../config/mapbox';
 import { Dialog } from '../../../shared/ui/Dialog';
 import type { Zone } from '../../../entities/zone/model/zone.types';
 
@@ -57,40 +59,58 @@ export function ZoneEditor({
         </div>
         <p className="ops-note">
           <MousePointer2 aria-hidden="true" />
-          {drawing
-            ? 'Marca al menos tres puntos en el mapa. Cierra con el primer vértice o con «Cerrar polígono».'
-            : 'Arrastra los vértices para ajustar el límite. Las sedes deben permanecer dentro de su zona.'}
+          {USE_MAPBOX
+            ? initial
+              ? 'Arrastra los vértices en Mapbox para ajustar el límite. Las sedes deben permanecer dentro de su zona.'
+              : 'Haz clic en el mapa para trazar el polígono de la zona y cierra haciendo doble clic o clic en el primer vértice.'
+            : drawing
+              ? 'Marca al menos tres puntos en el mapa. Cierra con el primer vértice o con «Cerrar polígono».'
+              : 'Arrastra los vértices para ajustar el límite. Las sedes deben permanecer dentro de su zona.'}
         </p>
-        <BaseMap
-          fitZones
-          zones={preview}
-          vertices={vertices}
-          height={380}
-          onPick={
-            drawing
-              ? (point) => setVertices((current) => [...current, point])
-              : undefined
-          }
-          onVertexMove={(index, point) =>
-            setVertices((current) =>
-              current.map((vertex, i) => (i === index ? point : vertex)),
-            )
-          }
-          onClosePolygon={closePolygon}
-        />
-        <PolygonToolbar
-          count={vertices.length}
-          drawing={drawing}
-          onClose={closePolygon}
-          onUndo={() => {
-            setVertices((current) => current.slice(0, -1));
-            setDrawing(true);
-          }}
-          onReset={() => {
-            setVertices([]);
-            setDrawing(true);
-          }}
-        />
+        {USE_MAPBOX ? (
+          <MapboxZoneDrawMap
+            initialVertices={vertices}
+            referenceZones={zones.filter((z) => z.id !== initial?.id)}
+            height={380}
+            onVerticesChange={(nextVertices) => {
+              setVertices(nextVertices);
+              setDrawing(nextVertices.length < 3);
+            }}
+          />
+        ) : (
+          <>
+            <BaseMap
+              fitZones
+              zones={preview}
+              vertices={vertices}
+              height={380}
+              onPick={
+                drawing
+                  ? (point) => setVertices((current) => [...current, point])
+                  : undefined
+              }
+              onVertexMove={(index, point) =>
+                setVertices((current) =>
+                  current.map((vertex, i) => (i === index ? point : vertex)),
+                )
+              }
+              onClosePolygon={closePolygon}
+            />
+            <PolygonToolbar
+              count={vertices.length}
+              drawing={drawing}
+              onClose={closePolygon}
+              onUndo={() => {
+                setVertices((current) => current.slice(0, -1));
+                setDrawing(true);
+              }}
+              onReset={() => {
+                setVertices([]);
+                setDrawing(true);
+              }}
+            />
+          </>
+        )}
         {error && (
           <p role="alert" className="text-sm text-red-700">
             {error}

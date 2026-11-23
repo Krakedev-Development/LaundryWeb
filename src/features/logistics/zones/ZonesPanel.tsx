@@ -1,15 +1,18 @@
 import { ZoneList } from './ZoneList';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Plus, MapPinned } from 'lucide-react';
 import { useZones } from './useZones';
 import { ZoneEditor } from './ZoneEditor';
 import { FacilityLocationPicker } from './FacilityLocationPicker';
-import { BaseMap } from '../../../components/maps/BaseMap';
+import { MapboxZoneMap } from '../../../components/maps/MapboxZoneMap';
 import type { Zone } from '../../../entities/zone/model/zone.types';
 import type { Coordinates } from '../../../services/geo/geo.types';
 import type { Facility } from '../../../types';
 import { facilityZoneId } from '../../../entities/zone/model/zone.rules';
-import { polygonFromVertices } from '../../../entities/zone/model/polygonGeometry';
+import {
+  getZonesMetricsSummary,
+  type ZoneMetricsSummary,
+} from '../../../services/api/geoApi';
 
 export function ZonesPanel({
   facilities,
@@ -27,17 +30,23 @@ export function ZonesPanel({
   const { zones, error, save } = useZones();
   const [editor, setEditor] = useState<Zone | 'new' | null>(null);
   const [selected, setSelected] = useState('');
-  const [moveError, setMoveError] = useState('');
+  const [metrics, setMetrics] = useState<ZoneMetricsSummary[]>([]);
   const visible = zones.filter((zone) => !selected || zone.id === selected);
-  const activeZone = selected
-    ? zones.find((zone) => zone.id === selected)
-    : undefined;
-  const activeVertices: Coordinates[] =
-    editable && activeZone?.polygon.type === 'Polygon'
-      ? activeZone.polygon.coordinates[0]
-          .slice(0, -1)
-          .map(([lng, lat]) => ({ lng, lat }))
-      : [];
+
+  useEffect(() => {
+    let active = true;
+    void getZonesMetricsSummary()
+      .then((rows) => {
+        if (active) setMetrics(rows);
+      })
+      .catch(() => {
+        // Opcional: si no hay sesión o backend disponible, el mapa sigue mostrando polígonos y sedes.
+      });
+    return () => {
+      active = false;
+    };
+  }, [zones.length, facilities.length]);
+
   return (
     <section className="ops-panel" aria-label="Zonas y sedes">
       <div className="ops-panel-header">
@@ -48,7 +57,7 @@ export function ZonesPanel({
           <div>
             <h2 className="ops-heading">Zonas de operación</h2>
             <p className="ops-caption">
-              Define el área y registra varias sedes dentro de cada zona.
+              Define el área con Mapbox y registra varias sedes dentro de cada zona.
             </p>
           </div>
         </div>
@@ -64,9 +73,9 @@ export function ZonesPanel({
           </button>
         )}
       </div>
-      {(error || moveError) && (
+      {error && (
         <p role="alert" className="text-sm text-red-700">
-          {error || moveError}
+          {error}
         </p>
       )}
       <div className="ops-zones-layout">
@@ -85,7 +94,7 @@ export function ZonesPanel({
         <div className="ops-map-content">
           <div className="ops-map-title">
             <div>
-              <p className="ops-eyebrow">Cobertura geográfica</p>
+              <p className="ops-eyebrow">Cobertura geográfica · Mapbox</p>
               <h3 className="mt-1 text-xs font-bold text-slate-700">
                 {selected
                   ? zones.find((zone) => zone.id === selected)?.name
@@ -96,33 +105,11 @@ export function ZonesPanel({
               {visible.length} {visible.length === 1 ? 'zona' : 'zonas'}
             </span>
           </div>
-          <BaseMap
+          <MapboxZoneMap
             fitZones
             zones={visible}
-            vertices={activeVertices}
-            onVertexMove={
-              editable && activeZone
-                ? (index, point) => {
-                    const nextVertices = activeVertices.map((vertex, i) =>
-                      i === index ? point : vertex,
-                    );
-                    // Si el servidor o las reglas rechazan el cambio, se conserva el
-                    // polígono guardado y se informa el motivo.
-                    save({
-                      ...activeZone,
-                      polygon: polygonFromVertices(nextVertices),
-                    })
-                      .then(() => setMoveError(''))
-                      .catch((reason: unknown) =>
-                      setMoveError(
-                        reason instanceof Error
-                          ? reason.message
-                          : 'No se pudo mover el vértice.',
-                      ),
-                    );
-                  }
-                : undefined
-            }
+            selectedZoneId={selected || undefined}
+            metrics={metrics}
             height={420}
             points={facilities
               .filter(
@@ -132,6 +119,7 @@ export function ZonesPanel({
               .map((facility) => ({
                 id: facility.id,
                 label: facility.name,
+                detail: `${facility.address} · ${facility.currentLoadKgDay}/${facility.capacityMaxKgDay} kg`,
                 coordinates: facility.coordinates,
                 kind: 'facility' as const,
               }))}
