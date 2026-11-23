@@ -57,7 +57,7 @@ async function mockRewardsAndRedemptions(page, { failList = false } = {}) {
 test('los canjes se cargan del servidor y aprobar llama al review', async ({ page }) => {
   const calls = await mockRewardsAndRedemptions(page);
   await page.goto('/commercial/rewards', { waitUntil: 'domcontentloaded' });
-  await page.getByRole('button', { name: /Solicitudes de Canje/ }).click();
+  await page.getByRole('tab', { name: /Solicitudes de Canje/ }).click();
   await expect(page.getByText('Luis Mora')).toBeVisible();
   await expect(page.getByText('Planchado gratis')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Marcar Entregado' })).toHaveCount(0);
@@ -88,7 +88,7 @@ test('si fallan los canjes se muestra error con Reintentar', async ({ page }) =>
     return json(404, {});
   });
   await page.goto('/commercial/rewards', { waitUntil: 'domcontentloaded' });
-  await page.getByRole('button', { name: /Solicitudes de Canje/ }).click();
+  await page.getByRole('tab', { name: /Solicitudes de Canje/ }).click();
   await expect(page.getByRole('alert')).toContainText('No se pudieron cargar los canjes');
   fail = false;
   await page.getByRole('button', { name: 'Reintentar' }).click();

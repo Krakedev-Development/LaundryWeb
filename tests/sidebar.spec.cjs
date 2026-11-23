@@ -69,6 +69,8 @@ test('hover and keyboard preview overlay the content, debounce exit, and Escape 
   await page.mouse.move(30, 180);
   await page.clock.runFor(220);
   await expect(sidebar).toHaveAttribute('data-mode', 'preview');
+  // El ancho se anima (rediseño): con el reloj simulado hay que dejarlo terminar antes de medir.
+  await page.clock.runFor(600);
   await expect(sidebar).toHaveCSS('width', '260px');
   await expect(page.locator('main')).toHaveCSS('margin-left', '60px');
   await page.mouse.move(800, 300);
@@ -155,6 +157,9 @@ test('mobile drawer traps focus, closes on Escape, backdrop and route change, an
   await expect(page).toHaveURL(/\/operations\/incidents$/);
   await expect(sidebar).toHaveAttribute('aria-hidden', 'true');
   await trigger.click();
+  // El menú se encoge con animación: con el puntero encima abriría la vista previa. Una persona
+  // que cambia el tamaño de la ventana no tiene el puntero sobre el menú.
+  await page.mouse.move(800, 400);
   await page.setViewportSize({ width: 1024, height: 812 });
   await expect(sidebar).toHaveAttribute('data-mode', 'mini');
   await expect(page.locator('main')).toHaveCSS('margin-left', '60px');

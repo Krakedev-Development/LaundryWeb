@@ -55,6 +55,7 @@ export function Modal({
   return (
     <dialog
       ref={ref}
+      data-variant={variant}
       aria-labelledby={titleId}
       aria-describedby={description ? descriptionId : undefined}
       onCancel={(event) => {

@@ -1,4 +1,5 @@
 const { test, expect } = require('./support/fixtures.cjs');
+const { expectDialogPlacement } = require('./support/dialogPlacement.cjs');
 
 // El directorio de clientes viene del servidor: se simula un cliente aprobado.
 const cors = { 'access-control-allow-origin': '*' };
@@ -44,7 +45,7 @@ async function mockIncidents(page) {
 }
 
 for (const width of [1440, 390]) {
-  test(`remaining forms open centrally and retain their controls at ${width}px`, async ({
+  test(`remaining forms open in place (centered or side panel) and retain their controls at ${width}px`, async ({
     page,
   }) => {
     await page.setViewportSize({ width, height: 900 });
@@ -52,10 +53,7 @@ for (const width of [1440, 390]) {
     await mockIncidents(page);
     const center = async () => {
       const modal = page.getByRole('dialog');
-      await expect(modal).toBeVisible();
-      const bounds = await modal.boundingBox();
-      expect(Math.abs(bounds.x + bounds.width / 2 - width / 2)).toBeLessThan(3);
-      expect(bounds.height).toBeLessThanOrEqual(810);
+      await expectDialogPlacement(page, modal, { width, height: 900 });
       return modal;
     };
     await page.goto('/logistics/drivers');
@@ -84,7 +82,7 @@ for (const width of [1440, 390]) {
     await page.goto('/customers');
     await page.getByRole('row').nth(1).getByRole('cell').first().click();
     modal = await center();
-    await modal.getByRole('button', { name: /Puntos/ }).click();
+    await modal.getByRole('tab', { name: /Puntos/ }).click();
     await modal.getByRole('button', { name: 'Ajuste Manual' }).click();
     await expect(modal.getByRole('button', { name: 'Guardar Ajuste' })).toBeVisible();
     await page.screenshot({

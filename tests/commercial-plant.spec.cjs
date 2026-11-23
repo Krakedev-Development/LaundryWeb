@@ -1,5 +1,6 @@
 const { randomUUID } = require('node:crypto');
 const { test, expect } = require('./support/fixtures.cjs');
+const { expectDialogPlacement } = require('./support/dialogPlacement.cjs');
 
 // Servidor simulado de membresías con estado: la prueba no depende de un backend real.
 const cors = { 'access-control-allow-origin': '*' };
@@ -66,7 +67,7 @@ test('membership creation and editing survive a reload', async ({ page }) => {
 });
 
 for (const width of [1440, 390]) {
-  test(`commercial forms are centered and keyboard dismissible at ${width}px`, async ({
+  test(`commercial forms open in place (centered or side panel) and are keyboard dismissible at ${width}px`, async ({
     page,
   }) => {
     await page.setViewportSize({ width, height: 900 });
@@ -97,11 +98,7 @@ for (const width of [1440, 390]) {
       });
       await trigger.click();
       const modal = page.getByRole('dialog', { name: surface.title });
-      await expect(modal).toBeVisible();
-      const box = await modal.boundingBox();
-      expect(Math.abs(box.x + box.width / 2 - width / 2)).toBeLessThan(3);
-      expect(box.y).toBeGreaterThan(0);
-      expect(box.height).toBeLessThanOrEqual(810);
+      await expectDialogPlacement(page, modal, { width, height: 900 });
       await expect(
         modal.getByRole('button', { name: 'Cerrar modal' }),
       ).toBeVisible();
