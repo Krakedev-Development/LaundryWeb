@@ -8,6 +8,7 @@ import {
   updateGarment,
   createService,
   updateService,
+  serviceHoursError,
   createExtra,
   updateExtra,
   mapGarmentToCatalogItem,
@@ -156,6 +157,18 @@ export const CatalogPage: React.FC = () => {
       status,
     };
 
+    const isService = (editingItem?.category ?? activeTab) === 'SERVICIOS';
+    const hoursError = isService ? serviceHoursError(estimatedHours) : undefined;
+    if (hoursError) {
+      showToast({ type: 'error', title: 'Revisa el tiempo estimado', message: hoursError });
+      return;
+    }
+    // Lo que el servidor guarda del servicio y la app del cliente muestra.
+    const serviceDetails = {
+      description: description.trim() || null,
+      estimatedHours: estimatedHours > 0 ? estimatedHours : null,
+    };
+
     try {
       if (editingItem) {
         const localUpdated: CatalogItem = { ...editingItem, ...draftMeta };
@@ -173,6 +186,7 @@ export const CatalogPage: React.FC = () => {
           const updated = await updateService(editingItem.id, {
             name: draftMeta.name,
             extraPrice: price,
+            ...serviceDetails,
             active: status === 'ACTIVE',
           });
           syncedItem = mapServiceToCatalogItem(updated, localUpdated);
@@ -216,6 +230,7 @@ export const CatalogPage: React.FC = () => {
           let res = await createService({
             name: draftMeta.name,
             extraPrice: price,
+            ...serviceDetails,
           });
           if (status === 'INACTIVE') {
             res = await updateService(res.id, { active: false });
@@ -397,7 +412,9 @@ export const CatalogPage: React.FC = () => {
                   <td className="py-3.5 px-4 font-mono text-slate-700 whitespace-nowrap">
                     {item.estimatedHours > 0
                       ? `${item.estimatedHours} horas`
-                      : 'Inmediato'}
+                      : item.category === 'SERVICIOS'
+                        ? 'Sin definir'
+                        : 'Inmediato'}
                   </td>
                   <td className="py-3.5 px-4 font-mono text-slate-500 text-[11px] whitespace-nowrap">
                     {item.minHours}h - {item.maxHours}h
@@ -514,6 +531,10 @@ export const CatalogPage: React.FC = () => {
                 </label>
                 <input
                   type="number"
+                  min={0}
+                  max={720}
+                  step={1}
+                  aria-label="Tiempo estimado en horas"
                   value={estimatedHours}
                   onChange={(e) =>
                     setEstimatedHours(parseInt(e.target.value) || 0)

@@ -72,18 +72,26 @@ export async function updateGarment(
 export interface CreateServiceTypeDto {
   name: string;
   extraPrice: number;
+  /** null borra la descripción guardada. */
+  description?: string | null;
+  /** Horas enteras de 1 a 720; null deja el servicio sin tiempo estimado. */
+  estimatedHours?: number | null;
 }
 
 export interface UpdateServiceTypeDto {
   name?: string;
   extraPrice?: number;
+  description?: string | null;
+  estimatedHours?: number | null;
   active?: boolean;
 }
 
 export interface ServiceTypeResponse {
   id: string;
   name: string;
+  description?: string | null;
   extraPrice: number | string;
+  estimatedHours?: number | null;
   active: boolean;
 }
 
@@ -402,7 +410,8 @@ export function mapServiceToCatalogItem(
     name: service.name,
     category: 'SERVICIOS',
     type: existing?.type || 'Servicio de Lavandería',
-    description: existing?.description || 'Modalidad de procesamiento y cuidado',
+    // Descripción y tiempo estimado vienen del servidor: lo que ve el cliente en la app.
+    description: service.description ?? '',
     price,
     pricingModel: existing?.pricingModel ?? 'FIXED',
     weightUnit: existing?.weightUnit ?? 'KG',
@@ -411,11 +420,19 @@ export function mapServiceToCatalogItem(
     compatibleWithWeight: existing?.compatibleWithWeight ?? true,
     customerSelectable: existing?.customerSelectable ?? true,
     restrictions: existing?.restrictions ?? [],
-    estimatedHours: existing?.estimatedHours ?? 24,
+    estimatedHours: service.estimatedHours ?? 0,
     minHours: existing?.minHours ?? 12,
     maxHours: existing?.maxHours ?? 48,
     status: service.active === false ? 'INACTIVE' : 'ACTIVE',
   };
+}
+
+/** Horas del formulario para el servidor: vacío o 0 deja el servicio sin tiempo estimado. */
+export function serviceHoursError(hours: number): string | undefined {
+  if (!hours) return undefined;
+  if (!Number.isInteger(hours) || hours < 1 || hours > 720)
+    return 'El tiempo estimado va de 1 a 720 horas enteras (30 días).';
+  return undefined;
 }
 
 export function mapExtraToCatalogItem(
