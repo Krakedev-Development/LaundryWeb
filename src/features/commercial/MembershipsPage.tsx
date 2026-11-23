@@ -344,7 +344,6 @@ export function MembershipsPage() {
       </p>
       {draft && (
         <Modal
-          variant="drawer"
           title={
             plans.some((plan) => plan.id === draft.id)
               ? 'Editar membresía'
