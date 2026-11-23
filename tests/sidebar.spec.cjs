@@ -53,7 +53,7 @@ test('pinned and mini synchronize the content margin and persist the selected mo
   await expect(sidebar.getByAltText('CFL LAUNDRY CLEAN FRESH')).toBeVisible();
   await expect(sidebar.getByAltText('CFL LAUNDRY CLEAN FRESH')).toHaveAttribute(
     'src',
-    /logo-laundry-white\.png/,
+    /logo-laundry-white(?:-[\w-]+)?\.png/,
   );
   await page.screenshot({ path: 'test-results/sidebar-pinned.png' });
   expect(errors).toEqual([]);
@@ -357,7 +357,7 @@ test('focusing a destination preloads its page before navigating', async ({
   await sidebar.getByRole('button', { name: 'COMERCIAL', exact: true }).click();
   const preloaded = page.waitForResponse(
     (response) =>
-      response.url().includes('/src/features/commercial/PromotionsPage.tsx') &&
+      /\/(?:src\/features\/commercial\/PromotionsPage\.tsx|assets\/PromotionsPage-[^/]+\.js)/.test(response.url()) &&
       response.ok(),
   );
   await sidebar.getByRole('link', { name: 'Promociones', exact: true }).focus();
