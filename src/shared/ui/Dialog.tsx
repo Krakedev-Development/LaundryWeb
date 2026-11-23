@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { motion, useIsPresent, useReducedMotion } from 'framer-motion';
+import { overlayVariants, transition } from '../motion/tokens';
 import { MapPinned, X } from 'lucide-react';
 
 export function Dialog({
@@ -11,6 +12,8 @@ export function Dialog({
   onClose(): void;
   children: React.ReactNode;
 }) {
+  const present = useIsPresent();
+  const reduced = useReducedMotion();
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
@@ -18,24 +21,32 @@ export function Dialog({
     const overflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {
+      ref.current?.close();
       document.body.style.overflow = overflow;
       previous?.focus();
     };
   }, []);
   return (
-    <dialog
+    <motion.dialog
       ref={ref}
+      data-present={present}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={reduced ? { duration: 0 } : transition}
       aria-labelledby="logistics-dialog-title"
       onCancel={(event) => {
         event.preventDefault();
-        onClose();
+        if (present) onClose();
       }}
       className="ops-ui ops-dialog backdrop:bg-slate-900/55 backdrop:backdrop-blur-sm"
     >
       <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 8 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ type: 'spring', stiffness: 360, damping: 28 }}
+        variants={reduced ? undefined : overlayVariants}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+        transition={reduced ? { duration: 0 } : transition}
         className="flex max-h-[92dvh] w-full flex-col overflow-hidden"
       >
         <header className="ops-dialog-header">
@@ -62,6 +73,6 @@ export function Dialog({
         </header>
         <div className="ops-dialog-body">{children}</div>
       </motion.div>
-    </dialog>
+    </motion.dialog>
   );
 }

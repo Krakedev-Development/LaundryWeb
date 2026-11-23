@@ -1,3 +1,4 @@
+import { AnimatePresence } from 'framer-motion';
 import React, { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -341,7 +342,7 @@ export function HandoffsPage() {
         </div>
       )}
 
-      {confirming && (
+      <AnimatePresence>{confirming && (
         <Modal
           title="Confirmar la solicitud"
           description="El código se validará en el detalle de esta solicitud."
@@ -377,7 +378,7 @@ export function HandoffsPage() {
             </div>
           </div>
         </Modal>
-      )}
+      )}</AnimatePresence>
     </div>
   );
 }

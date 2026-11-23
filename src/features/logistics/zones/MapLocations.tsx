@@ -41,7 +41,7 @@ export function MapLocations({
         aria-label="Tabla desplazable de ubicaciones"
       >
         <table
-          className="ops-location-table"
+          className="lw-table ops-location-table"
           aria-label="Ubicaciones operativas"
         >
           <thead>

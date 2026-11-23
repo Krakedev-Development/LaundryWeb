@@ -1,3 +1,4 @@
+import { AnimatePresence } from 'framer-motion';
 import '../../shared/ui/operations/operations.css';
 import { Dialog } from '../../shared/ui/Dialog';
 import { FacilityPinPreview } from './zones/FacilityPinPreview';
@@ -500,7 +501,7 @@ export const FacilitiesPage: React.FC = () => {
       </div>
 
       {/* Drawer Crear / Editar Sede */}
-      {isAdmin && isDrawerOpen && (
+      <AnimatePresence>{isAdmin && isDrawerOpen && (
         <Dialog
           title={editingFacility ? 'Editar sede' : 'Registrar Nueva Sede'}
           onClose={() => setIsDrawerOpen(false)}
@@ -745,7 +746,7 @@ export const FacilitiesPage: React.FC = () => {
             </div>
           </form>
         </Dialog>
-      )}
+      )}</AnimatePresence>
     </div>
   );
 };

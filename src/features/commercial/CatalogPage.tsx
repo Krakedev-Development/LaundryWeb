@@ -1,3 +1,6 @@
+import { LayoutGroup, motion } from 'framer-motion';
+import { selectionTransition } from '../../shared/motion/tokens';
+import { AnimatePresence } from 'framer-motion';
 import { Modal } from '../../shared/ui/Modal';
 import React, { useEffect, useState, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
@@ -259,7 +262,7 @@ export const CatalogPage: React.FC = () => {
   // Role Guard
   if (currentUser.role !== 'ADMIN') {
     return (
-      <div className="p-12 text-center bg-white rounded-2xl border border-red-200 shadow-2xs max-w-lg mx-auto my-12">
+      <div className="lw-surface p-12 text-center bg-white rounded-2xl border border-red-200 shadow-2xs max-w-lg mx-auto my-12">
         <div className="w-12 h-12 rounded-full bg-red-100 text-red-700 flex items-center justify-center mx-auto mb-4">
           <Lock className="w-6 h-6" />
         </div>
@@ -323,7 +326,7 @@ export const CatalogPage: React.FC = () => {
       </div>
 
       {/* Category Tabs per spec #36 */}
-      <div className="flex items-center gap-2 border-b border-slate-200">
+      <LayoutGroup id="CatalogPage-tabs"><div className="lw-custom-tabs flex items-center gap-2 overflow-x-auto">
         {[
           { id: 'PRENDAS', label: 'Prendas Individuales', count: prendasCount },
           {
@@ -339,12 +342,13 @@ export const CatalogPage: React.FC = () => {
             type="button"
             aria-pressed={activeTab === tab.id}
             onClick={() => setActiveTab(tab.id as CatalogTab)}
-            className={`px-4 py-3 text-xs font-bold transition-all border-b-2 cursor-pointer ${
+            className={`relative isolate shrink-0 px-4 py-3 text-xs font-bold transition-all border-b-2 cursor-pointer ${
               activeTab === tab.id
-                ? 'border-[#0F4C81] text-[#0F4C81]'
+                ? 'border-transparent text-primary'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
+            {activeTab === tab.id && <motion.span aria-hidden="true" className="lw-tab-indicator" layoutId="selection" transition={selectionTransition} />}
             {tab.label}
             {tab.count !== null && (
               <span className="opacity-75 font-mono text-[11px]">
@@ -353,14 +357,14 @@ export const CatalogPage: React.FC = () => {
             )}
           </button>
         ))}
-      </div>
+      </div></LayoutGroup>
 
       {activeTab === 'PESO' ? (
         <WeightServicePanel />
       ) : (
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.03)] overflow-hidden">
+      <div className="lw-surface bg-white rounded-2xl border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.03)] overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-xs text-left">
+          <table className="lw-table w-full text-xs text-left">
             <thead className="bg-slate-50/80 text-slate-600 font-semibold border-b border-slate-200/80">
               <tr>
                 <th className="py-3.5 px-4">Nombre</th>
@@ -432,7 +436,7 @@ export const CatalogPage: React.FC = () => {
       )}
 
       {/* Drawer Crear / Editar per spec #36 */}
-      {isDrawerOpen && (
+      <AnimatePresence>{isDrawerOpen && (
         <Modal
           title={
             editingItem
@@ -579,7 +583,7 @@ export const CatalogPage: React.FC = () => {
             </div>
           </form>
         </Modal>
-      )}
+      )}</AnimatePresence>
     </div>
   );
 };

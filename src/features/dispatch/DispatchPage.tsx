@@ -228,7 +228,7 @@ export function DispatchPage() {
           </button>
         </div>
       )}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-xs">
+      <div className="lw-surface flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-xs">
         <span className="flex items-center gap-2 px-2 text-xs text-slate-500">
           <ClipboardList className="size-4 text-primary" aria-hidden="true" />
           <strong className="text-ink">{queue.length}</strong> recogidas pendientes
@@ -236,7 +236,7 @@ export function DispatchPage() {
         </span>
       </div>
       <div className="grid items-start gap-5 lg:grid-cols-[300px_minmax(0,1fr)]">
-        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
+        <section className="lw-surface overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
           <div className="flex items-center gap-2 border-b border-slate-200 bg-slate-50 px-4 py-4">
             <ClipboardList
               className="size-4 text-primary"
@@ -281,7 +281,7 @@ export function DispatchPage() {
             ))}
           </div>
         </section>
-        <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-xs sm:p-5">
+        <section className="lw-surface min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-xs sm:p-5">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <h2 className="flex items-center gap-2 text-sm font-bold text-ink">
@@ -330,7 +330,7 @@ export function DispatchPage() {
           />
         </section>
       </div>
-      <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-xs sm:p-5">
+      <section className="lw-surface space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-xs sm:p-5">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="flex items-center gap-2 text-sm font-bold text-ink">

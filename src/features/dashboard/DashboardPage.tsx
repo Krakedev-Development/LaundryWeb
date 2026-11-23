@@ -162,10 +162,10 @@ export const DashboardPage: React.FC = () => {
       </div>
 
       {/* Main 2-Column Section: Operational Flow + Priority Attention */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
         {/* Left Column (7 cols): Flujo Macro-Operativo */}
         <div className="lg:col-span-7 space-y-6">
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-6 sm:p-7 shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
+          <div className="lw-surface bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
             <div className="flex items-center justify-between pb-5 border-b border-slate-100">
               <div>
                 <h2 className="text-base font-bold text-slate-900">
@@ -305,7 +305,7 @@ export const DashboardPage: React.FC = () => {
           </div>
 
           {/* Sedes Operativas Summary */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-6 sm:p-7 shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
+          <div className="lw-surface bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <Building2 className="w-4 h-4 text-sky-700" />
@@ -352,7 +352,7 @@ export const DashboardPage: React.FC = () => {
                     </div>
                     <div className="w-full h-1.5 bg-slate-200 rounded-full mt-2 overflow-hidden">
                       <div
-                        className={`h-full rounded-full transition-all ${loadPct > 80 ? 'bg-amber-500' : 'bg-sky-600'}`}
+                        className={`lw-progress h-full rounded-full transition-all ${loadPct > 80 ? 'bg-amber-500' : 'bg-sky-600'}`}
                         style={{ width: `${loadPct}%` }}
                       />
                     </div>
@@ -365,7 +365,7 @@ export const DashboardPage: React.FC = () => {
 
         {/* Right Column (5 cols): Atención Inmediata & Alertas */}
         <div className="lg:col-span-5 space-y-6">
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-6 sm:p-7 shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
+          <div className="lw-surface bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <div className="p-1.5 rounded-lg bg-amber-50 text-amber-700">
@@ -514,7 +514,7 @@ export const DashboardPage: React.FC = () => {
           </div>
 
           {/* Quick Access to Drivers Status */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
+          <div className="lw-surface bg-white rounded-2xl border border-slate-200/80 p-6 shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <h3 className="text-sm font-bold text-slate-900">
                 Estado de Flota Activa
@@ -561,7 +561,7 @@ export const DashboardPage: React.FC = () => {
       </div>
 
       {/* Actividad Reciente / Bitácora Operacional */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 p-6 sm:p-7 shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
+      <div className="lw-surface bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
         <div className="flex items-center justify-between pb-4 border-b border-slate-100">
           <div>
             <h2 className="text-base font-bold text-slate-900">
@@ -578,7 +578,7 @@ export const DashboardPage: React.FC = () => {
         </div>
 
         <div className="overflow-x-auto mt-4">
-          <table className="w-full text-xs text-left">
+          <table className="lw-table w-full text-xs text-left">
             <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200/80">
               <tr>
                 <th className="py-3 px-4">Hora</th>

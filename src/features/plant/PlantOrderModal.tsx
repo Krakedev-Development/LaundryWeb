@@ -1,3 +1,4 @@
+import { AnimatePresence } from 'framer-motion';
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { PaginatedTable } from "../../shared/ui/TablePagination";
@@ -143,7 +144,7 @@ export function PlantOrderModal({
               >
                 {(itemRows) => (
                   <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm">
+                    <table className="lw-table w-full text-left text-sm">
                       <thead className="border-y border-slate-200 bg-slate-50 text-xs text-slate-600">
                         <tr>
                           <th className="px-3 py-3">Prenda</th>
@@ -226,7 +227,7 @@ export function PlantOrderModal({
           <OrderHistory orderId={order.id} customerName={order.customerName} />
         )}
       </TabPanel>
-      {holding && (
+      <AnimatePresence>{holding && (
         <IncidentModal
           order={order}
           isOpen
@@ -237,7 +238,7 @@ export function PlantOrderModal({
             onChanged?.();
           }}
         />
-      )}
+      )}</AnimatePresence>
     </Modal>
   );
 }

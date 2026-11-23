@@ -15,7 +15,7 @@ export const SettingsPage: React.FC = () => {
 
   if (currentUser.role !== 'ADMIN') {
     return (
-      <div className="p-12 text-center bg-white rounded-2xl border border-red-200 shadow-2xs max-w-lg mx-auto my-12">
+      <div className="lw-surface p-12 text-center bg-white rounded-2xl border border-red-200 shadow-2xs max-w-lg mx-auto my-12">
         <div className="w-12 h-12 rounded-full bg-red-100 text-red-700 flex items-center justify-center mx-auto mb-4">
           <Lock className="w-6 h-6" />
         </div>

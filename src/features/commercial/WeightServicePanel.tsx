@@ -1,3 +1,4 @@
+import { AnimatePresence } from 'framer-motion';
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { AlertTriangle, Edit2, Plus, Power, Scale } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
@@ -66,7 +67,7 @@ function Section({
   children: ReactNode;
 }) {
   return (
-    <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
+    <section className="lw-surface overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
       <header className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 p-5">
         <div>
           <h2 className="text-sm font-bold text-slate-900">{title}</h2>
@@ -244,7 +245,7 @@ export function WeightServicePanel() {
         }
       >
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <table className="lw-table w-full text-left text-xs">
             <caption className="sr-only">Bolsas del servicio por peso</caption>
             <thead className="border-b border-slate-200/80 bg-slate-50/80 font-semibold text-slate-600">
               <tr>
@@ -319,7 +320,7 @@ export function WeightServicePanel() {
         }
       >
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <table className="lw-table w-full text-left text-xs">
             <caption className="sr-only">Restricciones del servicio por peso</caption>
             <thead className="border-b border-slate-200/80 bg-slate-50/80 font-semibold text-slate-600">
               <tr>
@@ -378,7 +379,7 @@ export function WeightServicePanel() {
         <TablePagination pagination={rulePages} label="restricciones" />
       </Section>
 
-      {tierForm && (
+      <AnimatePresence>{tierForm && (
         <Modal
           title={tierForm.id ? `Editar bolsa: ${tierForm.name}` : 'Nueva bolsa'}
           description="El precio por libra se aplica a las solicitudes nuevas; las ya creadas conservan el suyo."
@@ -449,9 +450,9 @@ export function WeightServicePanel() {
             </div>
           </form>
         </Modal>
-      )}
+      )}</AnimatePresence>
 
-      {ruleForm && (
+      <AnimatePresence>{ruleForm && (
         <Modal
           title={ruleForm.id ? 'Editar restricción' : 'Nueva restricción'}
           description="Describe qué prendas o casos no acepta el servicio por peso."
@@ -495,7 +496,7 @@ export function WeightServicePanel() {
             </div>
           </form>
         </Modal>
-      )}
+      )}</AnimatePresence>
     </div>
   );
 }

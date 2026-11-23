@@ -31,7 +31,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   if (!hasCrumbs && !actions && !badge) return null;
 
   return (
-    <div className="mb-6">
+    <div className="lw-page-actions mb-4">
       {hasCrumbs && (
         <nav aria-label="Ruta de navegación" className="flex items-center gap-1.5 text-xs text-subtle mb-2 font-medium">
           {breadcrumbs.map((crumb, idx) => (

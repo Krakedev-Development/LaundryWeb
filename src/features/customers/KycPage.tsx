@@ -1,5 +1,6 @@
+import { overlayVariants, transition } from '../../shared/motion/tokens';
 import React, { useCallback, useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import {
   AlertTriangle,
   Check,
@@ -110,7 +111,7 @@ export const KycPage: React.FC = () => {
   const { currentUser } = useApp();
   if (currentUser.role !== 'ADMIN') {
     return (
-      <div className="p-12 text-center bg-white rounded-2xl border border-red-200 shadow-2xs max-w-lg mx-auto my-12">
+      <div className="lw-surface p-12 text-center bg-white rounded-2xl border border-red-200 shadow-2xs max-w-lg mx-auto my-12">
         <div className="w-12 h-12 rounded-full bg-red-100 text-red-700 flex items-center justify-center mx-auto mb-4">
           <Lock className="w-6 h-6" />
         </div>
@@ -286,12 +287,12 @@ const KycReview: React.FC = () => {
       />
 
       {/* Contenedor principal a todo el ancho (Full width table) */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-5">
+      <div className="lw-surface bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-5">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-1">
-          <div
+          <LayoutGroup id="kyc-status"><div
             role="tablist"
             aria-label="Estado de la verificación"
-            className="flex items-center gap-2 p-1.5 bg-slate-100/90 rounded-2xl flex-1 max-w-2xl relative"
+            className="overflow-x-auto flex items-center gap-2 p-1.5 bg-slate-100/90 rounded-2xl flex-1 max-w-2xl relative"
           >
             {TABS.map((item) => {
               const active = tab === item.id;
@@ -322,12 +323,13 @@ const KycReview: React.FC = () => {
                     setTab(item.id);
                     setSelectedId('');
                   }}
-                  className={`relative flex-1 flex items-center justify-center gap-2.5 px-5 py-2.5 text-xs font-semibold rounded-xl border transition-colors duration-150 cursor-pointer whitespace-nowrap ${
+                  className={`relative isolate flex-1 flex items-center justify-center gap-2.5 px-5 py-2.5 text-xs font-semibold rounded-xl border transition-colors duration-150 cursor-pointer whitespace-nowrap ${
                     active
-                      ? `${activeStyle} font-bold`
+                      ? `border-transparent font-bold`
                       : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
                   }`}
                 >
+                  {active && <motion.span layoutId="status" transition={transition} aria-hidden="true" className={`absolute inset-0 -z-10 rounded-xl border ${activeStyle}`} />}
                   <span>{item.label}</span>
                   <span
                     className={`px-2 py-0.5 text-[11px] font-bold rounded-full transition-colors duration-150 ${
@@ -341,7 +343,7 @@ const KycReview: React.FC = () => {
                 </button>
               );
             })}
-          </div>
+          </div></LayoutGroup>
 
           <div className="relative w-full lg:w-80 shrink-0">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -358,7 +360,7 @@ const KycReview: React.FC = () => {
 
         {/* Tabla amplia de solicitudes */}
         <div className="overflow-x-auto rounded-xl border border-slate-200">
-          <table className="w-full text-left text-xs border-collapse">
+          <table className="lw-table w-full text-left text-xs border-collapse">
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-semibold">
                 <th className="py-3 px-4">Cliente</th>
@@ -496,10 +498,8 @@ const KycReview: React.FC = () => {
               role="dialog"
               aria-modal="true"
               aria-labelledby="kyc-review-title"
-              initial={{ opacity: 0, scale: 0.96, y: 12 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: 12 }}
-              transition={{ type: 'spring', stiffness: 350, damping: 28 }}
+              variants={overlayVariants}
+              initial="hidden" animate="visible" exit="exit" transition={transition}
               className="relative w-full max-w-4xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden z-10 flex flex-col max-h-[90vh]"
             >
               {/* Header del modal */}

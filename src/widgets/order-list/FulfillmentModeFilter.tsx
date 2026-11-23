@@ -14,7 +14,7 @@ export function FulfillmentModeFilter({
           id="fulfillment-mode"
           value={mode}
           onChange={(e) => setMode(e.target.value)}
-          className="p-3 border border-slate-200 rounded-xl bg-white"
+          className="min-w-0 max-w-full p-3 border border-slate-200 rounded-xl bg-white"
         >
           <option value="ALL">Todas las modalidades</option>
           {Object.entries(MODE_LABELS).map(([value, label]) => (

@@ -1,3 +1,4 @@
+import { AnimatePresence } from 'framer-motion';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
@@ -196,7 +197,7 @@ export const OrderDetailPage: React.FC = () => {
 
   if (load.status === 'notFound' || !order) {
     return (
-      <div className="p-12 text-center bg-white rounded-3xl border border-slate-200/80 shadow-xs max-w-md mx-auto my-12">
+      <div className="lw-surface p-12 text-center bg-white rounded-3xl border border-slate-200/80 shadow-xs max-w-md mx-auto my-12">
         <h2 className="text-base font-bold text-slate-900">Solicitud no encontrada</h2>
         <p className="text-xs text-slate-500 mt-1">
           El código {id} no corresponde a ninguna orden registrada en el sistema.
@@ -457,7 +458,7 @@ export const OrderDetailPage: React.FC = () => {
 
       {/* 5. Modals & Drawers */}
       {/* Incident Modal */}
-      {isIncidentModalOpen && (
+      <AnimatePresence>{isIncidentModalOpen && (
         <IncidentModal
           order={order}
           isOpen={true}
@@ -469,10 +470,10 @@ export const OrderDetailPage: React.FC = () => {
             void refreshIncidents();
           }}
         />
-      )}
+      )}</AnimatePresence>
 
       {/* Retención para revisión técnica: incidencia con retención en el servidor */}
-      {isQuarantineModalOpen && !inPlant && (
+      <AnimatePresence>{isQuarantineModalOpen && !inPlant && (
         <IncidentModal
           order={order}
           isOpen={true}
@@ -483,7 +484,7 @@ export const OrderDetailPage: React.FC = () => {
             void refreshIncidents();
           }}
         />
-      )}
+      )}</AnimatePresence>
     </div>
   );
 };

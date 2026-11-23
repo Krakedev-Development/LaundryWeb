@@ -1,3 +1,10 @@
+import {
+  AnimatePresence,
+  LayoutGroup,
+  motion,
+  useReducedMotion,
+} from 'framer-motion';
+import { selectionTransition, transition } from '../motion/tokens';
 import { useRef, type KeyboardEvent, type ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { focusRing } from './controls';
@@ -41,11 +48,19 @@ export function Tabs<T extends string>({
   const onKeyDown = (e: KeyboardEvent<HTMLButtonElement>, index: number) => {
     const last = items.length - 1;
     const next =
-      e.key === 'ArrowRight' ? (index === last ? 0 : index + 1)
-      : e.key === 'ArrowLeft' ? (index === 0 ? last : index - 1)
-      : e.key === 'Home' ? 0
-      : e.key === 'End' ? last
-      : -1;
+      e.key === 'ArrowRight'
+        ? index === last
+          ? 0
+          : index + 1
+        : e.key === 'ArrowLeft'
+          ? index === 0
+            ? last
+            : index - 1
+          : e.key === 'Home'
+            ? 0
+            : e.key === 'End'
+              ? last
+              : -1;
     if (next < 0) return;
     e.preventDefault();
     onChange(items[next].id);
@@ -53,48 +68,70 @@ export function Tabs<T extends string>({
   };
 
   return (
-    <div className={`border-b border-slate-200 ${className}`}>
-      <div role="tablist" aria-label={label} className="-mb-px flex gap-1 overflow-x-auto">
-        {items.map((item, index) => {
-          const selected = item.id === value;
-          const Icon = item.icon;
-          return (
-            <button
-              key={item.id}
-              ref={(el) => {
-                refs.current[index] = el;
-              }}
-              type="button"
-              role="tab"
-              id={`${idPrefix}-tab-${item.id}`}
-              aria-selected={selected}
-              aria-controls={selected ? `${idPrefix}-panel-${item.id}` : undefined}
-              tabIndex={selected ? 0 : -1}
-              onClick={() => onChange(item.id)}
-              onKeyDown={(e) => onKeyDown(e, index)}
-              className={`inline-flex shrink-0 cursor-pointer items-center gap-2 border-b-2 px-3 py-3 text-sm font-semibold transition-colors ${focusRing} focus-visible:outline-offset-[-2px] ${
-                selected
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              {Icon && <Icon className="h-4 w-4" aria-hidden />}
-              <span>{item.label}</span>
-              {item.badge !== undefined && (
-                <span
-                  className={`rounded-full px-1.5 py-0.5 text-[11px] font-semibold tabular-nums ${
-                    item.badgeTone === 'alert' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600'
-                  }`}
-                >
-                  <span aria-hidden={item.badgeLabel ? true : undefined}>{item.badge}</span>
-                  {item.badgeLabel && <span className="sr-only">{item.badgeLabel}</span>}
-                </span>
-              )}
-            </button>
-          );
-        })}
+    <LayoutGroup id={idPrefix}>
+      <div className={`lw-tabs ${className}`}>
+        <div
+          role="tablist"
+          aria-label={label}
+          className="-mb-px flex gap-1 overflow-x-auto"
+        >
+          {items.map((item, index) => {
+            const selected = item.id === value;
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.id}
+                ref={(el) => {
+                  refs.current[index] = el;
+                }}
+                type="button"
+                role="tab"
+                id={`${idPrefix}-tab-${item.id}`}
+                aria-selected={selected}
+                aria-controls={
+                  selected ? `${idPrefix}-panel-${item.id}` : undefined
+                }
+                tabIndex={selected ? 0 : -1}
+                onClick={() => onChange(item.id)}
+                onKeyDown={(e) => onKeyDown(e, index)}
+                className={`inline-flex shrink-0 cursor-pointer items-center gap-2 border-b-2 px-3 py-3 text-sm font-semibold transition-colors ${focusRing} focus-visible:outline-offset-[-2px] ${
+                  selected
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                {selected && (
+                  <motion.span
+                    aria-hidden="true"
+                    className="lw-tab-indicator"
+                    layoutId="selection"
+                    transition={selectionTransition}
+                  />
+                )}
+                {Icon && <Icon className="h-4 w-4" aria-hidden />}
+                <span>{item.label}</span>
+                {item.badge !== undefined && (
+                  <span
+                    className={`rounded-full px-1.5 py-0.5 text-[11px] font-semibold tabular-nums ${
+                      item.badgeTone === 'alert'
+                        ? 'bg-rose-100 text-rose-700'
+                        : 'bg-slate-100 text-slate-600'
+                    }`}
+                  >
+                    <span aria-hidden={item.badgeLabel ? true : undefined}>
+                      {item.badge}
+                    </span>
+                    {item.badgeLabel && (
+                      <span className="sr-only">{item.badgeLabel}</span>
+                    )}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
-    </div>
+    </LayoutGroup>
   );
 }
 
@@ -110,14 +147,25 @@ export function TabPanel({
   children: ReactNode;
   className?: string;
 }) {
+  const reduced = useReducedMotion();
   return (
     <div
       role="tabpanel"
       id={`${idPrefix}-panel-${id}`}
       aria-labelledby={`${idPrefix}-tab-${id}`}
-      className={className}
+      className={`relative min-w-0 ${className ?? ''}`}
     >
-      {children}
+      <AnimatePresence initial={false} mode="popLayout">
+        <motion.div
+          key={id}
+          initial={{ opacity: 0, y: reduced ? 0 : 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, transition: { duration: reduced ? 0 : 0.1 } }}
+          transition={reduced ? { duration: 0 } : transition}
+        >
+          {children}
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 }

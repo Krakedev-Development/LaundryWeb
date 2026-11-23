@@ -1,3 +1,4 @@
+import { AnimatePresence } from 'framer-motion';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { CalendarClock, Edit2, Plus, Power, RefreshCw } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
@@ -248,7 +249,7 @@ export function SlotTemplatesSection({
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-slate-200/80">
-          <table className="w-full text-left text-xs">
+          <table className="lw-table w-full text-left text-xs">
             <caption className="sr-only">Plantilla semanal</caption>
             <thead className="border-b border-slate-200/80 bg-slate-50/80 font-semibold text-slate-600">
               <tr>
@@ -314,7 +315,7 @@ export function SlotTemplatesSection({
         </div>
       )}
 
-      {form && (
+      <AnimatePresence>{form && (
         <Modal
           title="Nueva franja semanal"
           description={`${contextLabel(context)} · ${facilityName}. Se crea una franja semanal por cada día elegido.`}
@@ -428,9 +429,9 @@ export function SlotTemplatesSection({
             </div>
           </form>
         </Modal>
-      )}
+      )}</AnimatePresence>
 
-      {editing && (
+      <AnimatePresence>{editing && (
         <Modal
           title={`Cupos semanales: ${weekdayLabel(editing.row.weekday)} ${range(editing.row)}`}
           description="Aplica a las franjas que se creen desde ahora. Las ya creadas se editan una por una en la agenda."
@@ -462,7 +463,7 @@ export function SlotTemplatesSection({
             </div>
           </form>
         </Modal>
-      )}
+      )}</AnimatePresence>
     </div>
   );
 }

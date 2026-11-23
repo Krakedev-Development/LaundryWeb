@@ -1,3 +1,4 @@
+import { AnimatePresence } from 'framer-motion';
 import { Modal } from '../../shared/ui/Modal';
 import React, { useEffect, useState } from 'react';
 import { useApp } from '../../context/AppContext';
@@ -229,7 +230,7 @@ export const PromotionsPage: React.FC = () => {
   // Role Guard
   if (currentUser.role !== 'ADMIN') {
     return (
-      <div className="p-12 text-center bg-white rounded-2xl border border-red-200 shadow-2xs max-w-lg mx-auto my-12">
+      <div className="lw-surface p-12 text-center bg-white rounded-2xl border border-red-200 shadow-2xs max-w-lg mx-auto my-12">
         <div className="w-12 h-12 rounded-full bg-red-100 text-red-700 flex items-center justify-center mx-auto mb-4">
           <Lock className="w-6 h-6" />
         </div>
@@ -290,9 +291,9 @@ export const PromotionsPage: React.FC = () => {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.03)] overflow-hidden">
+      <div className="lw-surface bg-white rounded-2xl border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.03)] overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-xs text-left">
+          <table className="lw-table w-full text-xs text-left">
             <thead className="bg-slate-50/80 text-slate-600 font-semibold border-b border-slate-200/80">
               <tr>
                 <th className="py-3.5 px-4">Campaña / Promoción</th>
@@ -387,7 +388,7 @@ export const PromotionsPage: React.FC = () => {
       </div>
 
       {/* Drawer Crear / Editar Promoción per spec #37 */}
-      {isDrawerOpen && (
+      <AnimatePresence>{isDrawerOpen && (
         <Modal
           title={
             editingPromo
@@ -590,7 +591,7 @@ export const PromotionsPage: React.FC = () => {
             </div>
           </form>
         </Modal>
-      )}
+      )}</AnimatePresence>
     </div>
   );
 };

@@ -1,3 +1,4 @@
+import { AnimatePresence } from 'framer-motion';
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Activity, KeyRound, Plus, Search, UserCheck, UserX, Users } from 'lucide-react';
 import { StaffActivityModal } from './StaffActivityModal';
@@ -204,7 +205,7 @@ export function StaffPage() {
         subtitle="Cuentas de supervisores por sede: alta, suspensión, contraseñas temporales y actividad."
       />
 
-      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+      <section className="lw-surface overflow-hidden rounded-2xl border border-slate-200 bg-white">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 p-4">
           <div className="relative min-w-0 flex-1 sm:max-w-sm">
             <Search size={17} className="absolute left-3 top-3 text-slate-500" />
@@ -257,7 +258,7 @@ export function StaffPage() {
           </div>
         ) : visible.length ? (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table className="lw-table w-full text-left text-sm">
               <thead className="bg-slate-50 text-xs text-slate-600">
                 <tr>
                   <th className="px-5 py-3">Supervisor</th>
@@ -352,7 +353,7 @@ export function StaffPage() {
         )}
       </section>
 
-      {draft && (
+      <AnimatePresence>{draft && (
         <Modal
           title="Crear supervisor"
           description="La cuenta queda limitada a la sede elegida. En su primer ingreso deberá cambiar la contraseña temporal."
@@ -463,13 +464,13 @@ export function StaffPage() {
             </footer>
           </form>
         </Modal>
-      )}
+      )}</AnimatePresence>
 
-      {watching && (
+      <AnimatePresence>{watching && (
         <StaffActivityModal member={watching} onClose={() => setWatching(null)} />
-      )}
+      )}</AnimatePresence>
 
-      {pending && (
+      <AnimatePresence>{pending && (
         <Modal
           title={pending.kind === 'reset' ? 'Restablecer contraseña' : 'Suspender cuenta'}
           description={
@@ -519,7 +520,7 @@ export function StaffPage() {
             </footer>
           </form>
         </Modal>
-      )}
+      )}</AnimatePresence>
     </div>
   );
 }

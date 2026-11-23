@@ -1,3 +1,4 @@
+import { AnimatePresence } from 'framer-motion';
 import { ZoneList } from './ZoneList';
 import React, { useState } from 'react';
 import { Plus, MapPinned } from 'lucide-react';
@@ -138,7 +139,7 @@ export function ZonesPanel({
           />
         </div>
       </div>
-      {editor && (
+      <AnimatePresence>{editor && (
         <ZoneEditor
           initial={editor === 'new' ? undefined : editor}
           zones={zones}
@@ -148,8 +149,8 @@ export function ZonesPanel({
             setSelected(saved.id);
           }}
         />
-      )}
-      {placing && editable && !error && (
+      )}</AnimatePresence>
+      <AnimatePresence>{placing && editable && !error && (
         <FacilityLocationPicker
           zones={zones}
           initialZone={selected || undefined}
@@ -159,7 +160,7 @@ export function ZonesPanel({
             onPick(zone, point, address);
           }}
         />
-      )}
+      )}</AnimatePresence>
     </section>
   );
 }

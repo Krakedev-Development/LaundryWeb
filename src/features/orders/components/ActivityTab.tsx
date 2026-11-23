@@ -58,7 +58,7 @@ export const ActivityTab: React.FC<ActivityTabProps> = ({
     <div className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left: Operational Lifecycle Timeline */}
-        <section className="lg:col-span-7 bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs space-y-4">
+        <section className="lw-surface lg:col-span-7 bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
             <h2 className="text-sm font-bold text-ink flex items-center gap-2">
               <Clock className="w-4 h-4 text-primary" />
@@ -127,7 +127,7 @@ export const ActivityTab: React.FC<ActivityTabProps> = ({
 
         {/* Right: Incidents only (T-03: sin formularios simulados) */}
         <div className="lg:col-span-5 space-y-6">
-          <section className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs space-y-4">
+          <section className="lw-surface bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <h3 className="text-sm font-bold text-ink flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 text-rose-600" />

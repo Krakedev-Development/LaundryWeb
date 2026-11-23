@@ -15,7 +15,7 @@ export function OrdersTable({
   const pagination = usePagination(sortedOrders, filterKey);
   return (
     <>
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.03)] overflow-hidden">
+      <div className="lw-surface bg-white rounded-2xl border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.03)] overflow-hidden">
         {sortedOrders.length === 0 ? (
           <EmptyState
             title="No se encontraron solicitudes"
@@ -28,7 +28,7 @@ export function OrdersTable({
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full text-xs text-left">
+              <table className="lw-table w-full text-xs text-left">
                 <OrderTableHeader />
                 <tbody className="divide-y divide-slate-100">
                   {pagination.rows.map((order) => (

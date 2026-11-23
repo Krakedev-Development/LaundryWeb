@@ -39,7 +39,7 @@ export function BusinessReportPanel({ facilityId }: { facilityId: string }) {
     ],
   ];
   return (
-    <section className="rounded-2xl bg-white border border-slate-200 shadow-sm p-6 space-y-5">
+    <section className="lw-surface rounded-2xl bg-white border border-slate-200 shadow-sm p-6 space-y-5">
       <h2 className="font-bold text-lg">Modalidades, precios y agenda</h2>
       <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-3">
         {Object.entries(MODE_LABELS).map(([mode, label]) => (

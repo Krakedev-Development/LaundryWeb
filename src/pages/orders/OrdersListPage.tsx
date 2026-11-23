@@ -69,7 +69,7 @@ export const OrdersListPage = () => {
         setSelectedStatus={model.setSelectedStatus}
       />
       <FulfillmentModeFilter mode={model.mode} setMode={model.setMode} />
-      <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-5">
+      <div className="lw-surface bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-5">
         <OrderQuickTabs
           tabCounts={model.tabCounts}
           quickTab={model.quickTab}

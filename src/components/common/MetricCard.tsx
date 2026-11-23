@@ -1,3 +1,4 @@
+import { AnimatedValue } from '../../shared/motion/AnimatedValue';
 import React from 'react';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 
@@ -43,68 +44,55 @@ export const MetricCard: React.FC<MetricCardProps> = ({
     aqua: 'border-sky-200 hover:border-sky-300',
   };
 
-  const topAccent = {
-    default: 'from-slate-300/60 via-sky-500/30 to-transparent',
-    urgent: 'from-rose-500 via-rose-400/50 to-transparent',
-    warning: 'from-amber-500 via-amber-400/50 to-transparent',
-    success: 'from-emerald-500 via-emerald-400/50 to-transparent',
-    aqua: 'from-sky-500 via-cyan-400/50 to-transparent',
-  };
-
   return (
     <div
       onClick={onClick}
-      className={`group relative overflow-hidden bg-white rounded-2xl border p-5 sm:p-6 shadow-[0_1px_3px_rgba(15,23,42,0.04)] hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200 ${highlightBorder[variant]} ${
-        onClick ? 'cursor-pointer' : ''
-      } ${className}`}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={
+        onClick
+          ? (event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                onClick();
+              }
+            }
+          : undefined
+      }
+      className={`lw-metric relative min-w-0 bg-white rounded-2xl border ${highlightBorder[variant]} ${onClick ? 'lw-interactive cursor-pointer' : ''} ${className}`}
     >
-      <span
-        aria-hidden="true"
-        className={`pointer-events-none absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r ${topAccent[variant]}`}
-      />
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0 flex-1">
-          <p className="text-xs font-semibold tracking-wide text-slate-500 truncate">
-            {title}
-          </p>
-          <div className="mt-2 flex flex-wrap items-baseline gap-2">
-            <span className="text-3xl font-extrabold tracking-tight text-slate-900 tabular-nums">
-              {value}
-            </span>
-            {trend && (
-              <span
-                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums border ${
-                  trend.isPositive
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200/70'
-                    : 'bg-rose-50 text-rose-700 border-rose-200/70'
-                }`}
-              >
-                {trend.isPositive ? (
-                  <TrendingUp className="size-3 shrink-0" aria-hidden="true" />
-                ) : (
-                  <TrendingDown
-                    className="size-3 shrink-0"
-                    aria-hidden="true"
-                  />
-                )}
-                {trend.value}
-              </span>
-            )}
-          </div>
-          {subtitle && (
-            <p className="mt-1.5 text-xs font-medium text-slate-500 line-clamp-1">
-              {subtitle}
-            </p>
-          )}
-        </div>
+      <div className="flex items-center gap-2.5">
         {icon && (
-          <div
-            className={`p-3 rounded-xl shrink-0 flex items-center justify-center transition-transform duration-200 group-hover:scale-105 ${iconStyles[variant]}`}
+          <span
+            className={`flex size-8 shrink-0 items-center justify-center rounded-xl [&>svg]:size-4 ${iconStyles[variant]}`}
           >
             {icon}
-          </div>
+          </span>
+        )}
+        <p className="text-xs font-medium text-slate-600">{title}</p>
+      </div>
+      <div className="mt-4 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+        <span className="text-3xl font-semibold tracking-tight text-ink tabular-nums">
+          <AnimatedValue value={value} />
+        </span>
+        {trend && (
+          <span
+            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${trend.isPositive ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}
+          >
+            {trend.isPositive ? (
+              <TrendingUp className="size-3" aria-hidden="true" />
+            ) : (
+              <TrendingDown className="size-3" aria-hidden="true" />
+            )}
+            {trend.value}
+          </span>
         )}
       </div>
+      {subtitle && (
+        <p className="mt-2 text-xs leading-relaxed text-slate-500">
+          {subtitle}
+        </p>
+      )}
     </div>
   );
 };

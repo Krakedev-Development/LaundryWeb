@@ -1,3 +1,5 @@
+import { LayoutGroup, motion } from 'framer-motion';
+import { selectionTransition } from '../../shared/motion/tokens';
 import { QuickTab } from '../../entities/order/model/orderList.types';
 import { OrderListModel } from '../../features/orders/model/useOrderList';
 export function OrderQuickTabs({
@@ -6,8 +8,8 @@ export function OrderQuickTabs({
   setQuickTab,
 }: Pick<OrderListModel, 'tabCounts' | 'quickTab' | 'setQuickTab'>) {
   return (
-    <>
-      <div className="flex items-center gap-2 overflow-x-auto pb-1">
+    <LayoutGroup id="order-filters">
+      <div className="lw-quick-tabs flex items-center gap-2 overflow-x-auto pb-1">
         {(
           [
             { key: 'ALL', label: 'Todas', count: tabCounts.ALL },
@@ -34,13 +36,22 @@ export function OrderQuickTabs({
         ).map((tab) => (
           <button
             key={tab.key}
+            aria-pressed={quickTab === tab.key}
             onClick={() => setQuickTab(tab.key)}
             className={`px-3.5 py-2 text-xs font-semibold rounded-xl transition-all shrink-0 flex items-center gap-2 cursor-pointer ${
               quickTab === tab.key
-                ? 'bg-sky-50 text-sky-800 font-bold border border-sky-200'
+                ? 'text-primary font-bold border border-transparent'
                 : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent'
             }`}
           >
+            {quickTab === tab.key && (
+              <motion.span
+                aria-hidden="true"
+                layoutId="selection"
+                className="lw-tab-indicator lw-filter-indicator"
+                transition={selectionTransition}
+              />
+            )}
             <span>{tab.label}</span>
             <span
               className={`text-[11px] font-mono px-2 py-0.5 rounded-full tabular-nums ${
@@ -56,6 +67,6 @@ export function OrderQuickTabs({
           </button>
         ))}
       </div>
-    </>
+    </LayoutGroup>
   );
 }

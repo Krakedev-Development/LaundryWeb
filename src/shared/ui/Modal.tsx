@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react';
-import { motion } from 'framer-motion';
+import { motion, useIsPresent, useReducedMotion } from 'framer-motion';
+import { overlayVariants, transition } from '../motion/tokens';
 import { X } from 'lucide-react';
 
 export function Modal({
@@ -18,6 +19,8 @@ export function Modal({
   /** Para formularios cortos (p. ej. registrar una incidencia). */
   narrow?: boolean;
 }) {
+  const present = useIsPresent();
+  const reduced = useReducedMotion();
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   const descriptionId = useId();
@@ -34,20 +37,27 @@ export function Modal({
     };
   }, []);
   return (
-    <dialog
+    <motion.dialog
       ref={ref}
+      data-present={present}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={reduced ? { duration: 0 } : transition}
       aria-labelledby={titleId}
       aria-describedby={description ? descriptionId : undefined}
       onCancel={(event) => {
         event.preventDefault();
-        onClose();
+        if (present) onClose();
       }}
       className={`m-auto max-h-[90dvh] w-[calc(100%_-_2rem)] overflow-hidden rounded-2xl border border-slate-200 bg-transparent p-0 text-slate-900 shadow-none backdrop:bg-slate-900/55 backdrop:backdrop-blur-sm open:flex open:flex-col ${wide ? 'max-w-5xl' : narrow ? 'max-w-md' : 'max-w-2xl'}`}
     >
       <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 8 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ type: 'spring', stiffness: 360, damping: 28 }}
+        variants={reduced ? undefined : overlayVariants}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+        transition={reduced ? { duration: 0 } : transition}
         className="flex max-h-[90dvh] w-full flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-2xl"
       >
         <header className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-200 bg-slate-50/90 px-5 py-4 sm:px-6">
@@ -74,6 +84,6 @@ export function Modal({
           {children}
         </div>
       </motion.div>
-    </dialog>
+    </motion.dialog>
   );
 }

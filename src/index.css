@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./shared/ui/design-system.css";
 
 /*
  * Tokens de color de la marca, registrados en Tailwind: generan utilidades como `bg-primary`,

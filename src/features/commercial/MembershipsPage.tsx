@@ -1,3 +1,4 @@
+import { AnimatePresence } from 'framer-motion';
 import { useEffect, useState, type FormEvent } from 'react';
 import { CreditCard, Pencil, Plus, Search } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
@@ -204,7 +205,7 @@ export function MembershipsPage() {
           </button>
         }
       />
-      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+      <section className="lw-surface overflow-hidden rounded-2xl border border-slate-200 bg-white">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 p-4">
           <div className="relative min-w-0 flex-1 sm:max-w-sm">
             <Search
@@ -235,7 +236,7 @@ export function MembershipsPage() {
         </div>
         {visible.length ? (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table className="lw-table w-full text-left text-sm">
               <thead className="bg-slate-50 text-xs text-slate-600">
                 <tr>
                   <th className="px-5 py-3">Plan</th>
@@ -342,7 +343,7 @@ export function MembershipsPage() {
         La contratación por clientes, el consumo de cupos y los cobros recurrentes
         se incorporarán a su flujo de suscripción.
       </p>
-      {draft && (
+      <AnimatePresence>{draft && (
         <Modal
           title={
             plans.some((plan) => plan.id === draft.id)
@@ -554,7 +555,7 @@ export function MembershipsPage() {
             </footer>
           </form>
         </Modal>
-      )}
+      )}</AnimatePresence>
     </div>
   );
 }

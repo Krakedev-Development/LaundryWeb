@@ -1,3 +1,5 @@
+import { AnimatePresence, LayoutGroup, motion } from 'framer-motion';
+import { selectionTransition } from '../../shared/motion/tokens';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
@@ -264,28 +266,29 @@ export const IncidentsPage: React.FC = () => {
         />
       </div>
 
-      <div className="space-y-5 rounded-2xl border border-slate-200/80 bg-white p-5 sm:p-6">
+      <div className="lw-surface space-y-5 rounded-2xl border border-slate-200/80 bg-white p-5 sm:p-6">
         <div className="flex flex-col items-center justify-between gap-4 lg:flex-row">
-          <div className="flex w-full items-center gap-2 overflow-x-auto pb-1 lg:w-auto lg:pb-0">
+          <LayoutGroup id="incident-filters"><div className="lw-quick-tabs flex w-full items-center gap-2 overflow-x-auto pb-1 lg:w-auto lg:pb-0">
             {TABS.map((tab) => (
               <button
                 key={tab.id}
                 type="button"
                 aria-pressed={activeTab === tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex shrink-0 items-center gap-1.5 rounded-xl border px-3.5 py-2 text-xs font-semibold ${
+                className={`relative isolate flex shrink-0 items-center gap-1.5 rounded-xl border px-3.5 py-2 text-xs font-semibold ${
                   activeTab === tab.id
-                    ? 'border-sky-200 bg-sky-50 text-sky-800'
+                    ? 'border-transparent text-primary'
                     : 'border-transparent text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                 }`}
               >
+                {activeTab === tab.id && <motion.span aria-hidden="true" layoutId="selection" className="lw-tab-indicator lw-filter-indicator" transition={selectionTransition} />}
                 <span>{tab.label}</span>
                 <span className="font-mono text-[11px] opacity-75">
                   ({tab.id === 'ALL' ? incidents.length : count(tab.id)})
                 </span>
               </button>
             ))}
-          </div>
+          </div></LayoutGroup>
           <div className="flex w-full items-center gap-2 lg:w-auto">
             <div className="relative w-full lg:w-72">
               <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
@@ -332,7 +335,7 @@ export const IncidentsPage: React.FC = () => {
         ) : filtered.length > 0 ? (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+              <table className="lw-table w-full text-left text-xs">
                 <thead className="border-b border-slate-200/80 bg-slate-50 font-semibold text-slate-600">
                   <tr>
                     <th className="px-4 py-3.5">Solicitud</th>
@@ -398,7 +401,7 @@ export const IncidentsPage: React.FC = () => {
         ) : null}
       </div>
 
-      {selected && (
+      <AnimatePresence>{selected && (
         <Modal
           wide
           title={`Incidencia en ${refOf(selected.orderId).trackingNumber}`}
@@ -553,7 +556,7 @@ export const IncidentsPage: React.FC = () => {
             ) : null}
           </div>
         </Modal>
-      )}
+      )}</AnimatePresence>
     </div>
   );
 };

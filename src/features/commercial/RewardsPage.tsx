@@ -1,3 +1,6 @@
+import { LayoutGroup, motion } from 'framer-motion';
+import { selectionTransition } from '../../shared/motion/tokens';
+import { AnimatePresence } from 'framer-motion';
 import { Modal } from '../../shared/ui/Modal';
 import React, { useCallback, useEffect, useState } from 'react';
 import { storageService } from '../../services/storage';
@@ -104,7 +107,7 @@ export const RewardsPage: React.FC = () => {
   // Role Guard
   if (currentUser.role !== 'ADMIN') {
     return (
-      <div className="p-12 text-center bg-white rounded-2xl border border-red-200 shadow-2xs max-w-lg mx-auto my-12">
+      <div className="lw-surface p-12 text-center bg-white rounded-2xl border border-red-200 shadow-2xs max-w-lg mx-auto my-12">
         <div className="w-12 h-12 rounded-full bg-red-100 text-red-700 flex items-center justify-center mx-auto mb-4">
           <Lock className="w-6 h-6" />
         </div>
@@ -312,7 +315,7 @@ export const RewardsPage: React.FC = () => {
       </div>
 
       {/* Tabs per spec #38 */}
-      <div className="flex items-center gap-2 border-b border-slate-200">
+      <LayoutGroup id="RewardsPage-tabs"><div className="lw-custom-tabs flex items-center gap-2 overflow-x-auto">
         {[
           {
             id: 'REWARDS',
@@ -329,13 +332,15 @@ export const RewardsPage: React.FC = () => {
         ].map((tab) => (
           <button
             key={tab.id}
+            aria-pressed={activeTab === tab.id}
             onClick={() => setActiveTab(tab.id as any)}
-            className={`px-4 py-3 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 cursor-pointer ${
+            className={`relative isolate shrink-0 px-4 py-3 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 cursor-pointer ${
               activeTab === tab.id
-                ? 'border-[#0F4C81] text-[#0F4C81]'
+                ? 'border-transparent text-primary'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
+            {activeTab === tab.id && <motion.span aria-hidden="true" className="lw-tab-indicator" layoutId="selection" transition={selectionTransition} />}
             <span>{tab.label}</span>
             {tab.count !== undefined && (
               <span
@@ -350,7 +355,7 @@ export const RewardsPage: React.FC = () => {
             )}
           </button>
         ))}
-      </div>
+      </div></LayoutGroup>
 
       {/* Tab 1: Recompensas */}
       {activeTab === 'REWARDS' && (
@@ -421,7 +426,7 @@ export const RewardsPage: React.FC = () => {
 
       {/* Tab 2: Reglas de acumulación */}
       {activeTab === 'RULES' && (
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-7 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-5">
+        <div className="lw-surface bg-white rounded-2xl border border-slate-200/80 p-7 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-5">
           <h3 className="text-sm font-bold text-slate-900">
             Reglas de Acumulación y Equivalencias de Puntos Clean & Fresh
           </h3>
@@ -439,7 +444,7 @@ export const RewardsPage: React.FC = () => {
 
       {/* Tab 3: Solicitudes de Canje (servidor) */}
       {activeTab === 'REDEMPTIONS' && (
-        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.03)] overflow-hidden">
+        <div className="lw-surface bg-white rounded-2xl border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.03)] overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
             <div>
               <h3 className="text-sm font-bold text-slate-900">Canjes del servidor</h3>
@@ -491,7 +496,7 @@ export const RewardsPage: React.FC = () => {
           {redemptionState === 'ready' && serverRedemptions.length > 0 && (
             <>
               <div className="overflow-x-auto">
-                <table className="w-full text-xs text-left">
+                <table className="lw-table w-full text-xs text-left">
                   <thead className="bg-slate-50/80 text-slate-600 font-semibold border-b border-slate-200/80">
                     <tr>
                       <th className="py-3.5 px-4">Cliente</th>
@@ -585,7 +590,7 @@ export const RewardsPage: React.FC = () => {
       )}
 
       {/* Drawer Crear / Editar Recompensa */}
-      {isDrawerOpen && (
+      <AnimatePresence>{isDrawerOpen && (
         <Modal
           title={
             editingReward
@@ -718,7 +723,7 @@ export const RewardsPage: React.FC = () => {
             </div>
           </form>
         </Modal>
-      )}
+      )}</AnimatePresence>
     </div>
   );
 };

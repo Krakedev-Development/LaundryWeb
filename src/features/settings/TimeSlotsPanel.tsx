@@ -1,3 +1,4 @@
+import { AnimatePresence } from 'framer-motion';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { CalendarDays, Edit2, Info, Plus, Power } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
@@ -224,7 +225,7 @@ export function TimeSlotsPanel() {
   const repeatCount = form ? datesBetween(form.date, form.until || undefined).length : 0;
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
+    <section className="lw-surface overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
       <header className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 p-5">
         <div>
           <h2 className="flex items-center gap-2 text-sm font-bold text-slate-900">
@@ -355,7 +356,7 @@ export function TimeSlotsPanel() {
             ) : (
               <>
                 <div className="overflow-x-auto rounded-xl border border-slate-200/80">
-                  <table className="w-full text-left text-xs">
+                  <table className="lw-table w-full text-left text-xs">
                     <caption className="sr-only">Franjas horarias</caption>
                     <thead className="border-b border-slate-200/80 bg-slate-50/80 font-semibold text-slate-600">
                       <tr>
@@ -428,7 +429,7 @@ export function TimeSlotsPanel() {
         )}
       </div>
 
-      {form && (
+      <AnimatePresence>{form && (
         <Modal
           title="Nueva franja"
           description="Si eliges una fecha final, se crea la misma franja para cada día del rango."
@@ -572,9 +573,9 @@ export function TimeSlotsPanel() {
             </div>
           </form>
         </Modal>
-      )}
+      )}</AnimatePresence>
 
-      {editing && (
+      <AnimatePresence>{editing && (
         <Modal
           title={`Cupos: ${formatSlotDate(editing.slot.date)} ${range(editing.slot)}`}
           description={`${contextLabel(editing.slot.context)} · ${siteName(editing.slot.facilityId)}. Ya hay ${editing.slot.reservedCount} cupos reservados.`}
@@ -606,7 +607,7 @@ export function TimeSlotsPanel() {
             </div>
           </form>
         </Modal>
-      )}
+      )}</AnimatePresence>
     </section>
   );
 }

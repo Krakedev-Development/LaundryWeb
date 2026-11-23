@@ -253,7 +253,7 @@ export const DeliveriesPage: React.FC = () => {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-4">
+        <div className="lw-surface lg:col-span-7 bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
             <div>
               <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
@@ -314,7 +314,7 @@ export const DeliveriesPage: React.FC = () => {
           {state === 'ready' && filtered.length > 0 && (
             <>
               <div className="overflow-x-auto">
-                <table className="w-full text-xs text-left">
+                <table className="lw-table w-full text-xs text-left">
                   <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200/80">
                     <tr>
                       <th className="py-3 px-4">Solicitud y cliente</th>
@@ -416,7 +416,7 @@ export const DeliveriesPage: React.FC = () => {
           )}
         </div>
 
-        <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200/80 p-6 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-5">
+        <div className="lw-surface lg:col-span-5 bg-white rounded-2xl border border-slate-200/80 p-6 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-5">
           {selected && state === 'ready' ? (
             <>
               <div className="flex items-center justify-between pb-4 border-b border-slate-100">

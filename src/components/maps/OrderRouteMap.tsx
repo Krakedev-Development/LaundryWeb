@@ -87,7 +87,7 @@ export function OrderRouteMap({ order }: { order: Order }) {
       coordinates: driver.location,
     });
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-5 space-y-3">
+    <section className="lw-surface rounded-2xl border border-slate-200 bg-white p-5 space-y-3">
       <h2 className="font-semibold">Ubicaciones y ruta de la etapa actual</h2>
       <BaseMap points={points} route={route} center={target} />
       {loading && <p role="status">Calculando ruta…</p>}

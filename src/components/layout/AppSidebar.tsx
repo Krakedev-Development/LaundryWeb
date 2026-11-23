@@ -1,4 +1,9 @@
-import { isIncidentActive, useServerIncidents } from '../../services/api/incidentsApi';
+import { LayoutGroup, motion } from 'framer-motion';
+import { selectionTransition } from '../../shared/motion/tokens';
+import {
+  isIncidentActive,
+  useServerIncidents,
+} from '../../services/api/incidentsApi';
 import { useEffect, useMemo, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
@@ -143,50 +148,25 @@ export function AppSidebar() {
           mobile={!isLargeScreen}
           onNavigate={closeMobile}
         />
-        <nav
-          aria-label="Navegación principal"
-          className={`sidebar-nav-scroll min-h-0 flex-1 overflow-y-auto py-5 ${compact ? 'px-2.5' : 'px-3'}`}
-        >
-          <div className={compact ? 'space-y-3' : 'space-y-1.5'}>
-            {modules.map((module) => {
-              const Icon = module.icon;
-              const active = module.id === accordion.activeModuleId;
-              const expanded = !compact && accordion.expanded.has(module.id);
-              const moduleStyle = `sidebar-focus flex items-center rounded-xl border text-xs font-semibold tracking-wide transition-colors ${compact ? 'size-10 justify-center' : 'min-h-11 w-full gap-3 px-3'} ${active ? 'border-white/25 bg-white/15 text-white' : 'border-transparent text-blue-100 hover:bg-white/10 hover:text-white'}`;
-              return (
-                <div key={module.id} data-sidebar-module={module.id}>
-                  {module.id === 'home' ? (
-                    <PrefetchNavLink
-                      to={module.items[0].path}
-                      title={module.label}
-                      aria-label={module.label}
-                      onClick={closeMobile}
-                      className={moduleStyle}
-                    >
-                      <Icon
-                        className="size-[18px] shrink-0"
-                        aria-hidden="true"
-                      />
-                      {!compact && (
-                        <span className="flex-1 text-left">{module.label}</span>
-                      )}
-                    </PrefetchNavLink>
-                  ) : (
-                    <>
-                      <button
-                        type="button"
+        <LayoutGroup id="sidebar-navigation">
+          <nav
+            aria-label="Navegación principal"
+            className={`sidebar-nav-scroll min-h-0 flex-1 overflow-y-auto py-5 ${compact ? 'px-2.5' : 'px-3'}`}
+          >
+            <div className={compact ? 'space-y-3' : 'space-y-1.5'}>
+              {modules.map((module) => {
+                const Icon = module.icon;
+                const active = module.id === accordion.activeModuleId;
+                const expanded = !compact && accordion.expanded.has(module.id);
+                const moduleStyle = `sidebar-focus flex items-center rounded-xl border text-xs font-semibold tracking-wide transition-colors ${compact ? 'size-10 justify-center' : 'min-h-11 w-full gap-3 px-3'} ${active ? 'border-white/25 bg-white/15 text-white' : 'border-transparent text-blue-100 hover:bg-white/10 hover:text-white'}`;
+                return (
+                  <div key={module.id} data-sidebar-module={module.id}>
+                    {module.id === 'home' ? (
+                      <PrefetchNavLink
+                        to={module.items[0].path}
                         title={module.label}
                         aria-label={module.label}
-                        aria-expanded={expanded}
-                        aria-controls={`sidebar-module-${module.id}`}
-                        data-sidebar-module-button
-                        data-active={active}
-                        onClick={() => {
-                          if (compact) {
-                            hover.openPreview();
-                            accordion.openModule(module.id);
-                          } else accordion.toggleModule(module.id);
-                        }}
+                        onClick={closeMobile}
                         className={moduleStyle}
                       >
                         <Icon
@@ -194,72 +174,111 @@ export function AppSidebar() {
                           aria-hidden="true"
                         />
                         {!compact && (
-                          <>
-                            <span className="flex-1 text-left">
-                              {module.label}
-                            </span>
-                            <ChevronRight
-                              aria-hidden="true"
-                              className={`size-3.5 shrink-0 transition-transform duration-200 ease-out ${expanded ? 'rotate-90' : ''}`}
-                            />
-                          </>
+                          <span className="flex-1 text-left">
+                            {module.label}
+                          </span>
                         )}
-                      </button>
-                      <div
-                        id={`sidebar-module-${module.id}`}
-                        aria-hidden={!expanded}
-                        inert={!expanded}
-                        className={`grid transition-[grid-template-rows] duration-200 ease-out ${expanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
-                      >
-                        <div className="min-h-0 overflow-hidden">
-                          <div className="ml-5 mt-1 space-y-0.5 border-l border-white/20 pb-1 pl-3">
-                            {module.items.map((item) => {
-                              const itemActive =
-                                item.path === accordion.activePath;
-                              const count = item.badge ? badges[item.badge] : 0;
-                              return (
-                                <PrefetchNavLink
-                                  key={item.path}
-                                  to={item.path}
-                                  end={
-                                    item.path === '/customers' && !itemActive
-                                  }
-                                  data-sidebar-subitem
-                                  title={item.label}
-                                  onClick={closeMobile}
-                                  aria-current={itemActive ? 'page' : false}
-                                  className={`sidebar-focus flex min-h-10 items-center gap-2 rounded-lg px-3 text-[13px] transition-colors ${itemActive ? 'bg-white/15 font-semibold text-white' : 'text-blue-100 hover:bg-white/10 hover:text-white'}`}
-                                >
-                                  {itemActive && (
-                                    <span
-                                      className="size-1.5 shrink-0 rounded-full bg-brand-lime"
-                                      aria-hidden="true"
-                                    />
-                                  )}
-                                  <span className="min-w-0 flex-1">
-                                    {item.label}
-                                  </span>
-                                  {count > 0 && (
-                                    <span
-                                      aria-label={`${count} pendientes`}
-                                      className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums ${item.badge === 'incidents' ? 'bg-amber-50 text-amber-800' : 'bg-white/15 text-white'}`}
-                                    >
-                                      {count}
+                      </PrefetchNavLink>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          title={module.label}
+                          aria-label={module.label}
+                          aria-expanded={expanded}
+                          aria-controls={`sidebar-module-${module.id}`}
+                          data-sidebar-module-button
+                          data-active={active}
+                          onClick={() => {
+                            if (compact) {
+                              hover.openPreview();
+                              accordion.openModule(module.id);
+                            } else accordion.toggleModule(module.id);
+                          }}
+                          className={moduleStyle}
+                        >
+                          <Icon
+                            className="size-[18px] shrink-0"
+                            aria-hidden="true"
+                          />
+                          {!compact && (
+                            <>
+                              <span className="flex-1 text-left">
+                                {module.label}
+                              </span>
+                              <ChevronRight
+                                aria-hidden="true"
+                                className={`size-3.5 shrink-0 transition-transform duration-200 ease-out ${expanded ? 'rotate-90' : ''}`}
+                              />
+                            </>
+                          )}
+                        </button>
+                        <div
+                          id={`sidebar-module-${module.id}`}
+                          aria-hidden={!expanded}
+                          inert={!expanded}
+                          className={`grid transition-[grid-template-rows] duration-200 ease-out ${expanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
+                        >
+                          <div className="min-h-0 overflow-hidden">
+                            <div className="ml-5 mt-1 space-y-0.5 border-l border-white/20 pb-1 pl-3">
+                              {module.items.map((item) => {
+                                const itemActive =
+                                  item.path === accordion.activePath;
+                                const count = item.badge
+                                  ? badges[item.badge]
+                                  : 0;
+                                return (
+                                  <PrefetchNavLink
+                                    key={item.path}
+                                    to={item.path}
+                                    end={
+                                      item.path === '/customers' && !itemActive
+                                    }
+                                    data-sidebar-subitem
+                                    title={item.label}
+                                    onClick={closeMobile}
+                                    aria-current={itemActive ? 'page' : false}
+                                    className={`sidebar-focus relative isolate flex min-h-10 items-center gap-2 rounded-lg px-3 text-[13px] transition-colors ${itemActive ? 'font-semibold text-white' : 'text-blue-100 hover:bg-white/10 hover:text-white'}`}
+                                  >
+                                    {itemActive && (
+                                      <motion.span
+                                        aria-hidden="true"
+                                        layoutId="active-page"
+                                        className="absolute inset-0 -z-10 rounded-lg bg-white/15"
+                                        transition={selectionTransition}
+                                      />
+                                    )}
+                                    {itemActive && (
+                                      <span
+                                        className="size-1.5 shrink-0 rounded-full bg-brand-lime"
+                                        aria-hidden="true"
+                                      />
+                                    )}
+                                    <span className="min-w-0 flex-1">
+                                      {item.label}
                                     </span>
-                                  )}
-                                </PrefetchNavLink>
-                              );
-                            })}
+                                    {count > 0 && (
+                                      <span
+                                        aria-label={`${count} pendientes`}
+                                        className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums ${item.badge === 'incidents' ? 'bg-amber-50 text-amber-800' : 'bg-white/15 text-white'}`}
+                                      >
+                                        {count}
+                                      </span>
+                                    )}
+                                  </PrefetchNavLink>
+                                );
+                              })}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </nav>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </nav>
+        </LayoutGroup>
         <div className="shrink-0 space-y-3 pt-3">
           <SidebarControls compact={compact} />
           <SidebarUserCard compact={compact} onNavigate={closeMobile} />

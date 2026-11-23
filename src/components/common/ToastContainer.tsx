@@ -1,3 +1,4 @@
+import { transition } from '../../shared/motion/tokens';
 import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useApp } from '../../context/AppContext';
@@ -42,10 +43,10 @@ export const ToastContainer: React.FC = () => {
             <motion.div
               key={toast.id}
               layout
-              initial={{ opacity: 0, x: 48, scale: 0.96 }}
+              initial={{ opacity: 0, x: 12, scale: 0.98 }}
               animate={{ opacity: 1, x: 0, scale: 1 }}
-              exit={{ opacity: 0, x: 48, scale: 0.94 }}
-              transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+              exit={{ opacity: 0, x: 12, scale: 0.98 }}
+              transition={transition}
               role={
                 toast.type === 'error' || toast.type === 'warning'
                   ? 'alert'

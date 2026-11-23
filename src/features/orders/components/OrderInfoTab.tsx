@@ -100,7 +100,7 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
   return (
     <div className="space-y-6">
       {/* Customer & Facility Information Card */}
-      <section className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs">
+      <section className="lw-surface bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs">
         <h2 className="text-sm font-bold text-ink mb-4 flex items-center gap-2">
           <User className="w-4 h-4 text-primary" />
           <span>Información del Cliente y Sede Operativa</span>
@@ -160,7 +160,7 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
       </section>
 
       {/* Garments and Services Breakdown */}
-      <section className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs space-y-4">
+      <section className="lw-surface bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-bold text-ink flex items-center gap-2">
             <Receipt className="w-4 h-4 text-primary" />
@@ -175,7 +175,7 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
         <div className="border border-slate-200 rounded-xl overflow-hidden">
           <PaginatedTable items={order.items || []} label="prendas" hideWhenSinglePage>
             {(itemRows) => (
-              <table className="w-full text-xs text-left">
+              <table className="lw-table w-full text-xs text-left">
                 <thead className="bg-surface-muted text-slate-500 font-semibold border-b border-slate-200">
                   <tr>
                     <th className="py-2.5 px-3">Prenda / Ítem</th>
@@ -261,7 +261,7 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
       {/* Financial Breakdown & Payment Reconciliation (Solving Finding H-05) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Reconciled Breakdown Card */}
-        <section className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs space-y-3">
+        <section className="lw-surface bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs space-y-3">
           <h3 className="text-sm font-bold text-ink flex items-center gap-2">
             <Receipt className="w-4 h-4 text-primary" />
             <span>Desglose Económico Conciliado</span>
@@ -330,7 +330,7 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
         </section>
 
         {/* Payment Method & Confirm Action */}
-        <section className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs space-y-4">
+        <section className="lw-surface bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs space-y-4">
           <h3 className="text-sm font-bold text-ink flex items-center gap-2">
             <CreditCard className="w-4 h-4 text-primary" />
             <span>Método y Estado de Pago</span>

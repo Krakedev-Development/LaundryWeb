@@ -287,7 +287,7 @@ export function PlantProcessPanel({
       )}
 
       {['INSPECTION', 'PRICING_PENDING', 'CUSTOMER_APPROVAL_PENDING'].includes(status) && (
-        <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
+        <div className="lw-surface space-y-3 rounded-xl border border-slate-200 bg-white p-4">
           <h4 className="text-xs font-bold uppercase tracking-wide text-slate-600">Ajustes de precio</h4>
           {adjustments.length === 0 ? (
             <p className="text-xs text-slate-500">Sin ajustes.</p>

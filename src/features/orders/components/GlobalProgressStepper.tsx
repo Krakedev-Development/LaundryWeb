@@ -57,7 +57,7 @@ export const GlobalProgressStepper: React.FC<{ order: Order }> = ({ order }) => 
     Boolean(order.intakeHold && !order.intakeHold.resolvedAt);
 
   return (
-    <div className="w-full bg-white rounded-2xl border border-slate-200/90 p-4 sm:p-5 shadow-2xs">
+    <div className="lw-surface w-full bg-white rounded-2xl border border-slate-200/90 p-4 sm:p-5 shadow-2xs">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
           Progreso Global de la Solicitud

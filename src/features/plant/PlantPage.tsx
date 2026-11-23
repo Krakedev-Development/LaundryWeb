@@ -1,3 +1,4 @@
+import { AnimatePresence } from 'framer-motion';
 import { useCallback, useEffect, useState } from 'react';
 import { ArrowUpRight, ListFilter, RefreshCw, Search } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
@@ -72,7 +73,7 @@ export const PlantPage = () => {
         title="Planta de lavado"
         subtitle="Consulta el avance de cada pedido y abre su proceso, historial y bitácora."
       />
-      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+      <section className="lw-surface overflow-hidden rounded-2xl border border-slate-200 bg-white">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
           <p className="text-sm text-slate-600">
             <strong className="text-slate-900">{plantOrders.length}</strong>{' '}
@@ -212,7 +213,7 @@ export const PlantPage = () => {
               ))}
             </ul>
             <div className="relative hidden overflow-x-auto md:block">
-              <table className="w-full min-w-[800px] text-left text-sm">
+              <table className="lw-table w-full min-w-[800px] text-left text-sm">
                 <thead className="bg-slate-50 text-xs text-slate-600">
                   <tr>
                     <th className="px-5 py-3">Pedido y cliente</th>
@@ -314,14 +315,14 @@ export const PlantPage = () => {
           pedido para consultar el detalle.
         </p>
       </section>
-      {selected && (
+      <AnimatePresence>{selected && (
         <PlantOrderModal
           key={selected.id}
           order={selected}
           onClose={() => setSelectedId(null)}
           onChanged={() => void load()}
         />
-      )}
+      )}</AnimatePresence>
     </div>
   );
 };

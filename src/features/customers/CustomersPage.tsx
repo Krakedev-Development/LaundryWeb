@@ -1,3 +1,5 @@
+import { Tabs } from '../../shared/ui/Tabs';
+import { AnimatePresence } from 'framer-motion';
 import { Modal } from '../../shared/ui/Modal';
 import { operationalStage } from '../../services/fulfillment';
 import React, { useState, useMemo, useEffect } from 'react';
@@ -172,7 +174,7 @@ export const CustomersPage: React.FC = () => {
       </div>
 
       {/* Filter Bar & Table Container */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-5">
+      <div className="lw-surface bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-5">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="relative w-full sm:max-w-md">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -213,7 +215,7 @@ export const CustomersPage: React.FC = () => {
 
         {/* Customers Table */}
         <div className="overflow-x-auto">
-          <table className="w-full text-xs text-left">
+          <table className="lw-table w-full text-xs text-left">
             <thead className="bg-slate-50/80 text-slate-600 font-semibold border-b border-slate-200/80">
               <tr>
                 <th className="py-3.5 px-4">Cliente</th>
@@ -311,7 +313,7 @@ export const CustomersPage: React.FC = () => {
       </div>
 
       {/* Customer 360 Drawer per spec #34 */}
-      {selectedCustomer && (
+      <AnimatePresence>{selectedCustomer && (
         <Modal
           wide
           title={selectedCustomer.fullName}
@@ -347,41 +349,15 @@ export const CustomersPage: React.FC = () => {
           </div>
 
           {/* Drawer Tabs */}
-          <div className="px-5 border-b border-slate-200 flex items-center gap-4 text-xs font-semibold">
-            <button
-              onClick={() => setDrawerTab('PROFILE')}
-              className={`py-3 border-b-2 transition-colors cursor-pointer ${
-                drawerTab === 'PROFILE'
-                  ? 'border-[#0F4C81] text-[#0F4C81]'
-                  : 'border-transparent text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              Perfil & Direcciones
-            </button>
-            <button
-              onClick={() => setDrawerTab('ORDERS')}
-              className={`py-3 border-b-2 transition-colors cursor-pointer ${
-                drawerTab === 'ORDERS'
-                  ? 'border-[#0F4C81] text-[#0F4C81]'
-                  : 'border-transparent text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              Solicitudes ({customerOrders.length})
-            </button>
-            <button
-              onClick={() => setDrawerTab('POINTS')}
-              className={`py-3 border-b-2 transition-colors cursor-pointer ${
-                drawerTab === 'POINTS'
-                  ? 'border-[#0F4C81] text-[#0F4C81]'
-                  : 'border-transparent text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              Ledger de Puntos
-            </button>
-          </div>
+          <Tabs<typeof drawerTab> label="Detalle del cliente" idPrefix="customer-detail" value={drawerTab}
+            onChange={setDrawerTab} className="px-5 pt-3" items={[
+              { id: 'PROFILE', label: 'Perfil & Direcciones' },
+              { id: 'ORDERS', label: `Solicitudes (${customerOrders.length})` },
+              { id: 'POINTS', label: 'Ledger de Puntos' },
+            ]} />
 
           {/* Tab Content */}
-          <div className="p-5 overflow-y-auto space-y-4 flex-1 text-xs">
+          <div role="tabpanel" id={`customer-detail-panel-${drawerTab}`} aria-labelledby={`customer-detail-tab-${drawerTab}`} className="p-5 overflow-y-auto space-y-4 flex-1 text-xs">
             {drawerTab === 'PROFILE' && (
               <div className="space-y-4">
                 <div className="space-y-2">
@@ -547,7 +523,7 @@ export const CustomersPage: React.FC = () => {
                   </form>
                 )}
 
-                <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden bg-white">
+                <div className="lw-surface divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden bg-white">
                   {customerLedger.length === 0 ? (
                     <p className="text-slate-400 italic p-4 text-center">
                       Sin movimientos de puntos registrados.
@@ -584,7 +560,7 @@ export const CustomersPage: React.FC = () => {
             )}
           </div>
         </Modal>
-      )}
+      )}</AnimatePresence>
     </div>
   );
 };

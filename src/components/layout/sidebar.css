@@ -33,3 +33,14 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Fixed icon columns keep the mini and expanded navigation aligned. */
+#app-sidebar { transition-duration: 240ms; transition-timing-function: cubic-bezier(.22,1,.36,1); }
+#app-sidebar [data-sidebar-subitem] { min-height: 2.5rem; }
+#app-sidebar [data-sidebar-module-button] { font-size: .6875rem; letter-spacing: .065em; }
+#app-sidebar [data-sidebar-module-button][data-active="true"] { border-color: rgb(255 255 255 / .12); background: rgb(255 255 255 / .08); }
+#app-sidebar .sidebar-brand { border-bottom: 1px solid rgb(255 255 255 / .1); }
+@media (prefers-reduced-motion: no-preference) {
+  #app-sidebar [data-sidebar-subitem] > span:not([aria-hidden]) { animation: sidebar-label-in 180ms ease-out; }
+}
+@keyframes sidebar-label-in { from { opacity: 0; } to { opacity: 1; } }

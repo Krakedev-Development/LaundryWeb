@@ -267,7 +267,7 @@ export const OperationTab: React.FC<OperationTabProps> = ({
         {/* Left: Current Plant Stage & Action (2 cols) */}
         <div className="lg:col-span-2 space-y-6">
           {/* Plant Process Main Card */}
-          <section className="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-2xs space-y-5">
+          <section className="lw-surface bg-white rounded-2xl border border-slate-200/90 p-6 shadow-2xs space-y-5">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
               <div className="flex items-center gap-2.5">
                 <div className="p-2.5 rounded-xl bg-sky-100 text-primary">
@@ -372,7 +372,7 @@ export const OperationTab: React.FC<OperationTabProps> = ({
         {/* Right: Compact Request Summary & Last Event (1 col) */}
         <div className="space-y-6">
           {/* Compact Summary Card */}
-          <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs space-y-4">
+          <div className="lw-surface bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs space-y-4">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
               <PackageCheck className="w-4 h-4 text-primary" />
               <span>Resumen de la solicitud</span>
@@ -432,7 +432,7 @@ export const OperationTab: React.FC<OperationTabProps> = ({
 
           {/* Last Relevant Event Snippet */}
           {latestEvent && (
-            <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs space-y-3">
+            <div className="lw-surface bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
                   <Clock className="w-3.5 h-3.5 text-primary" />

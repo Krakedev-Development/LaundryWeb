@@ -1,0 +1,318 @@
+/* Shared application system. Brand colors and semantic status tones stay in index.css. */
+:root {
+  --lw-radius: 1.25rem;
+  --lw-control-radius: 0.75rem;
+  --lw-shadow:
+    0 2px 5px -3px rgb(16 42 67 / 0.12), 0 10px 28px -22px rgb(16 42 67 / 0.18);
+  --lw-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --lw-duration: 240ms;
+}
+.lw-app {
+  background: var(--color-canvas);
+}
+.lw-workspace {
+  width: 100%;
+  max-width: 1680px;
+  margin-inline: auto;
+}
+.lw-page {
+  width: 100%;
+  min-width: 0;
+}
+.lw-page > .space-y-8 > :not(:last-child) {
+  margin-block-end: 1.5rem;
+}
+.lw-surface,
+.lw-metric,
+.ops-ui .ops-panel {
+  border-radius: var(--lw-radius);
+  border-color: var(--color-line);
+  box-shadow: var(--lw-shadow);
+}
+.lw-metric {
+  padding: 1.25rem;
+}
+.lw-metric [class*='text-3xl'] {
+  font-size: clamp(1.6rem, 2vw, 2rem);
+  font-weight: 650;
+  letter-spacing: -0.055em;
+}
+.lw-interactive {
+  transition:
+    border-color var(--lw-duration),
+    box-shadow var(--lw-duration),
+    transform var(--lw-duration) var(--lw-ease);
+}
+.lw-interactive:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px -12px rgb(15 76 129 / 0.24);
+  border-color: var(--color-primary);
+}
+.lw-interactive:focus-visible,
+.lw-app
+  :where(button, a, input, select, textarea, [tabindex='0']):focus-visible,
+dialog :where(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+}
+.lw-app :where(button),
+dialog :where(button) {
+  transition:
+    background-color 160ms,
+    border-color 160ms,
+    color 160ms,
+    box-shadow 160ms,
+    transform 160ms var(--lw-ease);
+}
+.lw-app :where(button:not(:disabled)):active,
+dialog :where(button:not(:disabled)):active {
+  transform: translateY(1px);
+}
+.lw-app :where(button:disabled),
+dialog :where(button:disabled) {
+  cursor: not-allowed;
+}
+.lw-app
+  :where(input:not([type='checkbox']):not([type='radio']), select, textarea),
+dialog
+  :where(input:not([type='checkbox']):not([type='radio']), select, textarea) {
+  min-height: 2.625rem;
+  border-radius: var(--lw-control-radius);
+  transition:
+    border-color 160ms,
+    box-shadow 160ms,
+    background-color 160ms;
+}
+.lw-app :where(input, select, textarea):focus,
+dialog :where(input, select, textarea):focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgb(15 76 129 / 0.09);
+}
+.lw-app :where(input[type='checkbox'], input[type='radio']),
+dialog :where(input[type='checkbox'], input[type='radio']) {
+  accent-color: var(--color-primary);
+}
+.lw-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.lw-table thead {
+  background: var(--color-surface-muted);
+}
+.lw-table th {
+  padding-block: 0.9rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.lw-table td {
+  padding-block: 1rem;
+}
+.lw-table tbody tr {
+  transition: background-color 160ms;
+}
+.lw-table tbody tr:hover {
+  background-color: var(--color-primary-soft);
+}
+.lw-table td:first-child,
+.lw-table th:first-child {
+  padding-left: 1.25rem;
+}
+.lw-table td:last-child,
+.lw-table th:last-child {
+  padding-right: 1.25rem;
+}
+.lw-tabs {
+  min-width: 0;
+}
+.lw-tabs [role='tablist'] {
+  gap: 0.375rem;
+  padding: 0.25rem;
+  border-radius: 1rem;
+  background: var(--color-surface-muted);
+}
+.lw-tabs [role='tab'] {
+  position: relative;
+  isolation: isolate;
+  border: 0;
+  border-radius: 0.75rem;
+  padding: 0.65rem 1rem;
+}
+.lw-tabs [role='tab'] > :not(.lw-tab-indicator) {
+  position: relative;
+}
+.lw-tab-indicator {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: white;
+  box-shadow: 0 1px 4px rgb(16 42 67 / 0.1);
+  border: 1px solid var(--color-line);
+}
+.lw-filter-indicator {
+  background: var(--color-primary-soft);
+  border-color: rgb(15 76 129 / 0.15);
+  box-shadow: none;
+}
+.lw-quick-tabs {
+  padding: 0.25rem;
+}
+.lw-quick-tabs button {
+  position: relative;
+  isolation: isolate;
+  border-radius: 999px;
+}
+.lw-quick-tabs button > span:not(.lw-tab-indicator) {
+  position: relative;
+}
+.lw-topbar {
+  background: var(--color-canvas);
+  border-bottom-color: transparent;
+  align-items: flex-start;
+  padding-top: 1.75rem;
+  padding-bottom: 0.75rem;
+}
+.lw-topbar h1 {
+  font-size: clamp(1.25rem, 2vw, 1.85rem);
+  font-weight: 650;
+  letter-spacing: -0.045em;
+}
+.lw-page-actions {
+  padding-bottom: 0.25rem;
+}
+.lw-chart-bar {
+  border-radius: 0.5rem 0.5rem 0.15rem 0.15rem;
+  transform-origin: bottom;
+  animation: lw-grow var(--lw-duration) var(--lw-ease) both;
+  transition:
+    height var(--lw-duration) var(--lw-ease),
+    opacity 160ms;
+}
+.lw-chart-bar:hover {
+  opacity: 0.75;
+}
+.lw-progress {
+  transform-origin: left;
+  animation: lw-grow-x 320ms var(--lw-ease) both;
+  transition: width 320ms var(--lw-ease);
+}
+@keyframes lw-grow {
+  from {
+    transform: scaleY(0.2);
+    opacity: 0.2;
+  }
+  to {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+@keyframes lw-grow-x {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+dialog[data-present] {
+  border-radius: 1.5rem;
+  border-color: var(--color-line);
+  box-shadow: 0 28px 80px -24px rgb(16 42 67 / 0.35);
+}
+dialog[data-present]::backdrop {
+  background: rgb(16 42 67 / 0.35);
+  backdrop-filter: blur(3px);
+  animation: lw-backdrop 240ms var(--lw-ease) both;
+}
+dialog[data-present='false']::backdrop {
+  animation: lw-backdrop-out 240ms var(--lw-ease) forwards;
+}
+@keyframes lw-backdrop {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes lw-backdrop-out {
+  to {
+    opacity: 0;
+  }
+}
+.ops-ui .ops-panel:hover {
+  box-shadow: var(--lw-shadow);
+  border-color: var(--color-line);
+}
+.lw-login {
+  background: var(--color-canvas);
+}
+.lw-login > .lw-surface {
+  box-shadow: 0 20px 64px -32px rgb(16 42 67 / 0.25);
+}
+@media (max-width: 639px) {
+  .lw-workspace {
+    padding: 1rem;
+  }
+  .lw-topbar {
+    padding-top: 1.25rem;
+  }
+  .lw-surface {
+    border-radius: 1rem;
+  }
+  .lw-page-actions > div:last-child {
+    width: 100%;
+  }
+  .lw-page-actions > div:last-child > div {
+    flex-wrap: wrap;
+  }
+  .lw-table th,
+  .lw-table td {
+    padding-inline: 0.75rem;
+  }
+  .lw-metric {
+    padding: 1rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .lw-interactive:hover {
+    transform: none;
+  }
+}
+.lw-custom-tabs {
+  padding: 0.3rem;
+  border-radius: 1rem;
+  background: var(--color-surface-muted);
+}
+.lw-custom-tabs button {
+  border-radius: 0.75rem;
+}
+.lw-custom-tabs button > span:not(.lw-tab-indicator) {
+  position: relative;
+}
+
+.lw-app :where(select),
+dialog :where(select) {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.lw-table {
+  font-size: 0.8125rem;
+}
+.lw-metric p:first-child {
+  font-size: 0.8125rem;
+  letter-spacing: 0;
+  line-height: 1.5;
+}

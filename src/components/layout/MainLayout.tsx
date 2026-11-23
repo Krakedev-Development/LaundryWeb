@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { MotionConfig } from 'framer-motion';
+import { PageTransition } from '../../shared/motion/PageTransition';
 import { LoaderCircle } from 'lucide-react';
 import { AppSidebar } from './AppSidebar';
 import { TopBar } from './TopBar';
@@ -15,7 +15,6 @@ import { PageTitleProvider } from '../../context/PageTitleContext';
 function Workspace() {
   const { collapsed, isLargeScreen, mobileOpen, openMobile } =
     useSidebarState();
-  const location = useLocation();
 
   const margin = isLargeScreen
     ? collapsed
@@ -24,7 +23,7 @@ function Workspace() {
     : 0;
 
   return (
-    <div className="min-h-screen bg-canvas text-slate-900">
+    <div className="lw-app min-h-screen bg-canvas text-slate-900">
       <a
         href="#main-content"
         className="sidebar-focus sr-only fixed left-3 top-3 z-50 rounded-lg bg-white px-4 py-3 text-sm text-primary focus:not-sr-only"
@@ -36,13 +35,13 @@ function Workspace() {
         id="main-content"
         tabIndex={-1}
         style={{ marginLeft: margin }}
-        className="sidebar-motion flex min-h-screen min-w-0 flex-col transition-[margin] duration-200 ease-out focus:outline-none"
+        className="sidebar-motion flex min-h-screen min-w-0 flex-col transition-[margin] duration-[240ms] ease-out focus:outline-none"
       >
         <TopBar
           onOpenMobileSidebar={openMobile}
           mobileSidebarOpen={mobileOpen}
         />
-        <div className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
+        <div className="lw-workspace min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
           <Suspense
             fallback={
               <div className="space-y-6 py-4" role="status">
@@ -65,14 +64,7 @@ function Workspace() {
               </div>
             }
           >
-            <motion.div
-              key={location.pathname}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.22, ease: 'easeOut' }}
-            >
-              <Outlet />
-            </motion.div>
+            <PageTransition />
           </Suspense>
         </div>
       </main>
@@ -83,10 +75,12 @@ function Workspace() {
 
 export function MainLayout() {
   return (
-    <SidebarProvider>
-      <PageTitleProvider>
-        <Workspace />
-      </PageTitleProvider>
-    </SidebarProvider>
+    <MotionConfig reducedMotion="user">
+      <SidebarProvider>
+        <PageTitleProvider>
+          <Workspace />
+        </PageTitleProvider>
+      </SidebarProvider>
+    </MotionConfig>
   );
 }

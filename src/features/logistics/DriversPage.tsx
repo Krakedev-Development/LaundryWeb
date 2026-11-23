@@ -1,3 +1,4 @@
+import { AnimatePresence } from 'framer-motion';
 import { Modal } from '../../shared/ui/Modal';
 import { useZones } from './zones/useZones';
 import { IconPlaceholder } from '../../components/common/IconPlaceholder';
@@ -330,9 +331,9 @@ export const DriversPage: React.FC = () => {
       </div>
 
       {/* Table per spec #40 */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.03)] overflow-hidden">
+      <div className="lw-surface bg-white rounded-2xl border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.03)] overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-xs text-left">
+          <table className="lw-table w-full text-xs text-left">
             <thead className="bg-slate-50/80 text-slate-600 font-semibold border-b border-slate-200/80">
               <tr>
                 <th className="py-3.5 px-4">Chofer</th>
@@ -471,7 +472,7 @@ export const DriversPage: React.FC = () => {
       </div>
 
       {/* Drawer Crear / Editar Chofer (Solo Admin) */}
-      {isAdmin && isDrawerOpen && (
+      <AnimatePresence>{isAdmin && isDrawerOpen && (
         <Modal
           title={
             editingDriver
@@ -672,7 +673,7 @@ export const DriversPage: React.FC = () => {
             </div>
           </form>
         </Modal>
-      )}
+      )}</AnimatePresence>
     </div>
   );
 };

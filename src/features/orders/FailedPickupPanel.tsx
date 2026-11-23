@@ -167,7 +167,7 @@ export function FailedPickupPanel({
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="space-y-2 rounded-xl border border-slate-200 bg-white p-4">
+        <div className="lw-surface space-y-2 rounded-xl border border-slate-200 bg-white p-4">
           <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-600">
             <CalendarClock className="h-4 w-4" aria-hidden />
             Reprogramar recogida
@@ -201,7 +201,7 @@ export function FailedPickupPanel({
           </button>
         </div>
 
-        <div className="space-y-2 rounded-xl border border-slate-200 bg-white p-4">
+        <div className="lw-surface space-y-2 rounded-xl border border-slate-200 bg-white p-4">
           <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-600">
             <XCircle className="h-4 w-4" aria-hidden />
             Cancelar solicitud

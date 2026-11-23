@@ -1,3 +1,5 @@
+import { LayoutGroup, motion } from 'framer-motion';
+import { selectionTransition } from '../../shared/motion/tokens';
 import { operationalStage } from '../../services/fulfillment';
 import {BusinessReportPanel} from './BusinessReportPanel';
 import React, { useState } from 'react';
@@ -132,7 +134,7 @@ export const ReportsPage: React.FC = () => {
       />
 
       {/* Common Filters Bar per spec #43 */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-[0_1px_3px_rgba(0,0,0,0.03)] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
+      <div className="lw-surface bg-white rounded-2xl border border-slate-200/80 p-5 shadow-[0_1px_3px_rgba(0,0,0,0.03)] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
         <div className="flex items-center gap-2.5 text-slate-600">
           <Calendar className="w-4 h-4 text-sky-800" />
           <span className="font-medium">Rango temporal:</span>
@@ -203,7 +205,7 @@ export const ReportsPage: React.FC = () => {
       </div>
 
       {/* Tabs per spec #43 */}
-      <div className="flex items-center gap-2 border-b border-slate-200">
+      <LayoutGroup id="ReportsPage-tabs"><div className="lw-custom-tabs flex items-center gap-2 overflow-x-auto">
         {[
           { id: 'OPERACION', label: 'Operación & Rutas' },
           { id: 'CLIENTES', label: 'Clientes & Billetera' },
@@ -213,22 +215,24 @@ export const ReportsPage: React.FC = () => {
         ].map((tab) => (
           <button
             key={tab.id}
+            aria-pressed={activeTab === tab.id}
             onClick={() => setActiveTab(tab.id as any)}
-            className={`px-4 py-3 text-xs font-bold transition-all border-b-2 cursor-pointer ${
+            className={`relative isolate shrink-0 px-4 py-3 text-xs font-bold transition-all border-b-2 cursor-pointer ${
               activeTab === tab.id
-                ? 'border-[#0F4C81] text-[#0F4C81]'
+                ? 'border-transparent text-primary'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
+            {activeTab === tab.id && <motion.span aria-hidden="true" className="lw-tab-indicator" layoutId="selection" transition={selectionTransition} />}
             {tab.label}
           </button>
         ))}
-      </div>
+      </div></LayoutGroup>
 
       {/* Clean Visual Charts (SVG charts without clunky external deps) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Chart 1: Daily Orders Volume Trend */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-4">
+        <div className="lw-surface bg-white rounded-2xl border border-slate-200/80 p-6 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-sm font-bold text-slate-900">
@@ -248,13 +252,13 @@ export const ReportsPage: React.FC = () => {
                 <div className="w-full flex items-end justify-center gap-1.5 h-36">
                   {/* Orders bar */}
                   <div
-                    className="w-4 bg-[#0F4C81] rounded-t-sm transition-all"
+                    className="lw-chart-bar w-4 bg-[#0F4C81] rounded-t-sm transition-all"
                     style={{ height: `${(d.orders / seriesMax) * 100}%` }}
                     title={`Solicitudes: ${d.orders}`}
                   />
                   {/* Delivered bar */}
                   <div
-                    className="w-4 bg-sky-400 rounded-t-sm transition-all"
+                    className="lw-chart-bar w-4 bg-sky-400 rounded-t-sm transition-all"
                     style={{ height: `${(d.delivered / seriesMax) * 100}%` }}
                     title={`Entregadas: ${d.delivered}`}
                   />
@@ -275,7 +279,7 @@ export const ReportsPage: React.FC = () => {
         </div>
 
         {/* Chart 2: SLA & Quality Distribution */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-4">
+        <div className="lw-surface bg-white rounded-2xl border border-slate-200/80 p-6 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-sm font-bold text-slate-900">
@@ -304,7 +308,7 @@ export const ReportsPage: React.FC = () => {
                 </div>
                 <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
                   <div
-                    className={`h-full rounded-full transition-all duration-300 ${row.color}`}
+                    className={`lw-progress h-full rounded-full transition-all duration-300 ${row.color}`}
                     style={{ width: `${row.pct}%` }}
                   />
                 </div>
