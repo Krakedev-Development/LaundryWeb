@@ -67,6 +67,15 @@
   }
 }
 
+@keyframes lw-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 .skeleton-shimmer {
   background: linear-gradient(
     90deg,
@@ -76,6 +85,21 @@
   );
   background-size: 200% 100%;
   animation: lw-shimmer 1.6s infinite linear;
+}
+
+.lw-fade-in {
+  animation: lw-fade-in 180ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-shimmer {
+    animation: none;
+    background: #e2e8f0;
+  }
+
+  .lw-fade-in {
+    animation: none;
+  }
 }
 
 /* Leaflet tactical popup, tile filter & attribution refinements */

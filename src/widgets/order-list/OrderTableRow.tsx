@@ -1,17 +1,13 @@
-import { useNavigate } from 'react-router-dom';
 import { PriorityBadge, SLABadge } from '../../components/common/PriorityBadge';
 import { Order } from '../../types';
 import { OrderIdentityCells } from './OrderIdentityCells';
 import { OrderScheduleCells } from './OrderScheduleCells';
 import { OrderStatusCell } from './OrderStatusCell';
 import { OrderActionCell } from './OrderActionCell';
+
 export function OrderTableRow({ order }: { order: Order }) {
-  const navigate = useNavigate();
   return (
-    <tr
-      className="hover:bg-slate-50/70 transition-colors group cursor-pointer"
-      onClick={() => navigate(`/operations/orders/${order.id}`)}
-    >
+    <tr className="hover:bg-slate-50/70 transition-colors duration-150 group">
       <OrderIdentityCells order={order} />
       <OrderScheduleCells order={order} />
       <OrderStatusCell order={order} />

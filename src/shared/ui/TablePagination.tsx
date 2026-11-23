@@ -74,11 +74,14 @@ export function TablePagination<T>({
   label,
   hideWhenSinglePage = false,
   className = '',
+  statusText,
 }: {
   pagination: Pagination<T>;
   label: string;
   hideWhenSinglePage?: boolean;
   className?: string;
+  /** Sustituye el texto «inicio–fin de total» cuando la vista necesita un resumen propio. */
+  statusText?: ReactNode;
 }) {
   const { page, totalPages, total, pageSize, start, setPage } = pagination;
   if (total === 0 || (hideWhenSinglePage && totalPages === 1)) return null;
@@ -89,7 +92,7 @@ export function TablePagination<T>({
       className={`flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-4 py-3 text-xs text-slate-600 ${className}`}
     >
       <p role="status" aria-live="polite">
-        {start + 1}–{end} de {total}
+        {statusText ?? `${start + 1}–${end} de ${total}`}
       </p>
       <div className="flex items-center gap-2">
         <button

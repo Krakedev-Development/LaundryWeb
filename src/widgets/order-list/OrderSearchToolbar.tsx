@@ -38,16 +38,16 @@ export function OrderSearchToolbar({
             type="button"
             aria-expanded={showAdvancedFilters}
             onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-            className={`px-3.5 py-2 text-xs font-medium rounded-xl border transition-colors flex items-center gap-1.5 cursor-pointer ${
+            className={`px-3.5 py-2 text-xs font-medium rounded-xl border transition-colors duration-150 flex items-center gap-1.5 cursor-pointer ${
               showAdvancedFilters || activeFiltersCount > 0
-                ? 'bg-sky-50 text-sky-800 border-sky-200'
+                ? 'bg-primary-soft text-primary border-primary/25'
                 : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
             }`}
           >
-            <SlidersHorizontal className="w-3.5 h-3.5" />
+            <SlidersHorizontal className="w-3.5 h-3.5" aria-hidden />
             <span>Filtros avanzados</span>
             {activeFiltersCount > 0 && (
-              <span className="w-5 h-5 rounded-full bg-sky-600 text-white text-[10px] font-bold flex items-center justify-center">
+              <span className="w-5 h-5 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center">
                 {activeFiltersCount}
               </span>
             )}
@@ -55,8 +55,9 @@ export function OrderSearchToolbar({
 
           {(searchQuery || activeFiltersCount > 0 || quickTab !== 'ALL') && (
             <button
+              type="button"
               onClick={resetFilters}
-              className="text-xs font-medium text-slate-500 hover:text-slate-800 flex items-center gap-1 cursor-pointer"
+              className="text-xs font-medium text-slate-500 hover:text-slate-800 flex items-center gap-1 cursor-pointer transition-colors duration-150"
             >
               <RotateCcw className="w-3.5 h-3.5" />
               <span>Restablecer</span>

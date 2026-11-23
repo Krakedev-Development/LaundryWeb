@@ -1,8 +1,12 @@
 import { operationalStage } from '../../../services/fulfillment';
 import { Order } from '../../../types';
+import { isProblematicOrder } from './orderListCounts';
 import { OrderListFilters } from './orderList.types';
 import { matchesOrderSearch } from './orderListSearch';
 import { matchesQuickTab } from './orderListTabs';
+
+/** Valor de filtro alineado con getProblematicOrders / el aviso de excepciones. */
+export const EXCEPTIONS_STATUS = 'EXCEPTIONS';
 
 export function filterOrderList(orders: Order[], filters: OrderListFilters) {
   const {
@@ -18,7 +22,9 @@ export function filterOrderList(orders: Order[], filters: OrderListFilters) {
     if (mode !== 'ALL' && order.fulfillment?.mode !== mode) return false;
     if (!matchesOrderSearch(order, searchQuery)) return false;
     if (!matchesQuickTab(order, quickTab)) return false;
-    if (
+    if (selectedStatus === EXCEPTIONS_STATUS) {
+      if (!isProblematicOrder(order)) return false;
+    } else if (
       selectedStatus !== 'ALL' &&
       operationalStage(order) !== selectedStatus &&
       order.status !== selectedStatus

@@ -53,13 +53,17 @@ export function countOrderTabs(orders: Order[]) {
   };
 }
 
-export function getProblematicOrders(orders: Order[]) {
-  return orders.filter(
-    (o) =>
-      operationalStage(o) === 'QUARANTINE' ||
-      o.status === 'QUARANTINE' ||
-      o.status === 'INCIDENT' ||
-      o.slaStatus === 'OVERDUE' ||
-      o.incidentsCount > 0,
+/** Misma regla para el aviso de excepciones y el filtro «Excepciones». */
+export function isProblematicOrder(order: Order) {
+  return (
+    operationalStage(order) === 'QUARANTINE' ||
+    order.status === 'QUARANTINE' ||
+    order.status === 'INCIDENT' ||
+    order.slaStatus === 'OVERDUE' ||
+    order.incidentsCount > 0
   );
+}
+
+export function getProblematicOrders(orders: Order[]) {
+  return orders.filter(isProblematicOrder);
 }
