@@ -8,7 +8,7 @@ export const PriorityBadge: React.FC<{ priority: OrderPriority; showIcon?: boole
 }) => {
   if (priority === 'URGENT') {
     return (
-      <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 border border-rose-200/80 whitespace-nowrap">
+      <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200/80 whitespace-nowrap">
         <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
         {showIcon && <AlertCircle className="w-3 h-3 text-rose-600" />}
         Urgente
@@ -18,7 +18,7 @@ export const PriorityBadge: React.FC<{ priority: OrderPriority; showIcon?: boole
 
   if (priority === 'HIGH') {
     return (
-      <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200/80 whitespace-nowrap">
+      <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200/80 whitespace-nowrap">
         <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
         Alta
       </span>
@@ -27,16 +27,16 @@ export const PriorityBadge: React.FC<{ priority: OrderPriority; showIcon?: boole
 
   if (priority === 'NORMAL') {
     return (
-      <span className="inline-flex items-center gap-1.5 text-xs text-slate-600 font-medium whitespace-nowrap">
-        <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
+      <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-0.5 rounded-full bg-slate-100/80 text-slate-600 font-medium whitespace-nowrap">
+        <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
         Normal
       </span>
     );
   }
 
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs text-slate-500 font-normal whitespace-nowrap">
-      <span className="w-1.5 h-1.5 rounded-full bg-slate-200" />
+    <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-0.5 rounded-full bg-slate-50 text-slate-500 font-normal whitespace-nowrap">
+      <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
       Baja
     </span>
   );
