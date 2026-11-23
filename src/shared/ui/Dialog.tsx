@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { MapPinned, X } from 'lucide-react';
+import { focusRing } from './controls';
 
 export function Dialog({
   title,
@@ -30,13 +31,13 @@ export function Dialog({
         event.preventDefault();
         onClose();
       }}
-      className="ops-ui ops-dialog backdrop:bg-slate-900/55 backdrop:backdrop-blur-sm"
+      className="ops-ui ops-dialog rounded-3xl backdrop:bg-slate-900/45 backdrop:backdrop-blur-sm"
     >
       <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 8 }}
+        initial={{ opacity: 0, scale: 0.96, y: 8 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ type: 'spring', stiffness: 360, damping: 28 }}
-        className="flex max-h-[92dvh] w-full flex-col overflow-hidden"
+        transition={{ type: 'spring', stiffness: 360, damping: 30 }}
+        className="flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-3xl bg-white"
       >
         <header className="ops-dialog-header">
           <span className="ops-icon">
@@ -51,14 +52,15 @@ export function Dialog({
               {title}
             </h2>
           </div>
-          <button
+          <motion.button
             type="button"
             aria-label="Cerrar"
+            whileTap={{ scale: 0.94 }}
             onClick={onClose}
-            className="flex size-8 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-200 hover:text-slate-700 focus-visible:outline-sky-600 cursor-pointer"
+            className={`flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-slate-200/70 bg-white text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 ${focusRing}`}
           >
             <X size={18} />
-          </button>
+          </motion.button>
         </header>
         <div className="ops-dialog-body">{children}</div>
       </motion.div>

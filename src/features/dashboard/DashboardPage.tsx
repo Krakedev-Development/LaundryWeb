@@ -2,10 +2,14 @@ import { IconPlaceholder } from '../../components/common/IconPlaceholder';
 import { operationalStage } from '../../services/fulfillment';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'motion/react';
 import { useApp } from '../../context/AppContext';
 import { usePendingKyc } from '../../services/api/kycApi';
 import { PageHeader } from '../../components/common/PageHeader';
 import { MetricCard } from '../../components/common/MetricCard';
+import { StaggerContainer, StaggerItem } from '../../components/ui/StaggerList';
+import { AnimatedMetricValue } from '../../components/ui/AnimatedMetricValue';
+import { btnPrimary, btnSecondary } from '../../shared/ui/controls';
 import {
   ClipboardList,
   Clock,
@@ -99,85 +103,97 @@ export const DashboardPage: React.FC = () => {
         subtitle="Monitoreo central en tiempo real del ciclo de recogida, planta de lavado y entregas."
         actions={
           <div className="flex items-center gap-3">
-            <button
+            <motion.button
+              type="button"
+              whileTap={{ scale: 0.98 }}
               onClick={() => navigate('/operations/dispatch')}
-              className="px-4 py-2.5 text-xs font-bold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
+              className={btnPrimary}
             >
               <Send className="w-3.5 h-3.5" />
               <span>Consola de Despacho</span>
-            </button>
-            <button
+            </motion.button>
+            <motion.button
+              type="button"
+              whileTap={{ scale: 0.98 }}
               onClick={() => navigate('/operations/orders')}
-              className="px-4 py-2.5 text-xs font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 hover:text-slate-900 rounded-xl transition-colors shadow-xs cursor-pointer"
+              className={btnSecondary}
             >
               Ver Solicitudes
-            </button>
+            </motion.button>
           </div>
         }
       />
 
       {/* Primary KPI Grid: High breathing room & clean light surfaces */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <MetricCard
-          title="Solicitudes del Día"
-          value={totalOrdersToday}
-          subtitle="Órdenes activas en sistema"
-          trend={{ value: '+12% hoy', isPositive: true }}
-          icon={<ClipboardList className="w-5 h-5 text-sky-600" />}
-          onClick={() => navigate('/operations/orders')}
-        />
-        <MetricCard
-          title="Pendientes de Chofer"
-          value={unassignedOrders.length}
-          subtitle="Requieren asignación en despacho"
-          trend={
-            unassignedOrders.length > 0
-              ? { value: 'Atención', isPositive: false }
-              : { value: 'Al día', isPositive: true }
-          }
-          variant={unassignedOrders.length > 0 ? 'warning' : 'default'}
-          icon={<Clock className="w-5 h-5" />}
-          onClick={() => navigate('/operations/dispatch')}
-        />
-        <MetricCard
-          title="Entregas en Ruta"
-          value={inDeliveryOrders.length}
-          subtitle="Vehículos en trayecto"
-          trend={{ value: 'GPS Activo', isPositive: true }}
-          variant="aqua"
-          icon={<Truck className="w-5 h-5 text-sky-600" />}
-          onClick={() => navigate('/operations/deliveries')}
-        />
-        <MetricCard
-          title="Cumplimiento SLA"
-          value={`${slaCompliance}%`}
-          subtitle="Compromiso horario cumplido"
-          trend={{
-            value: slaCompliance >= 95 ? 'Óptimo' : 'Revisar',
-            isPositive: slaCompliance >= 95,
-          }}
-          variant={slaCompliance >= 95 ? 'success' : 'warning'}
-          icon={<ShieldCheck className="w-5 h-5 text-emerald-600" />}
-        />
-      </div>
+      <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <StaggerItem>
+          <MetricCard
+            title="Solicitudes del Día"
+            value={totalOrdersToday}
+            subtitle="Órdenes activas en sistema"
+            trend={{ value: '+12% hoy', isPositive: true }}
+            icon={<ClipboardList className="w-5 h-5 text-sky-600" />}
+            onClick={() => navigate('/operations/orders')}
+          />
+        </StaggerItem>
+        <StaggerItem>
+          <MetricCard
+            title="Pendientes de Chofer"
+            value={unassignedOrders.length}
+            subtitle="Requieren asignación en despacho"
+            trend={
+              unassignedOrders.length > 0
+                ? { value: 'Atención', isPositive: false }
+                : { value: 'Al día', isPositive: true }
+            }
+            variant={unassignedOrders.length > 0 ? 'warning' : 'default'}
+            icon={<Clock className="w-5 h-5" />}
+            onClick={() => navigate('/operations/dispatch')}
+          />
+        </StaggerItem>
+        <StaggerItem>
+          <MetricCard
+            title="Entregas en Ruta"
+            value={inDeliveryOrders.length}
+            subtitle="Vehículos en trayecto"
+            trend={{ value: 'GPS Activo', isPositive: true }}
+            variant="aqua"
+            icon={<Truck className="w-5 h-5 text-sky-600" />}
+            onClick={() => navigate('/operations/deliveries')}
+          />
+        </StaggerItem>
+        <StaggerItem>
+          <MetricCard
+            title="Cumplimiento SLA"
+            value={`${slaCompliance}%`}
+            subtitle="Compromiso horario cumplido"
+            trend={{
+              value: slaCompliance >= 95 ? 'Óptimo' : 'Revisar',
+              isPositive: slaCompliance >= 95,
+            }}
+            variant={slaCompliance >= 95 ? 'success' : 'warning'}
+            icon={<ShieldCheck className="w-5 h-5 text-emerald-600" />}
+          />
+        </StaggerItem>
+      </StaggerContainer>
 
       {/* Main 2-Column Section: Operational Flow + Priority Attention */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Left Column (7 cols): Flujo Macro-Operativo */}
         <div className="lg:col-span-7 space-y-6">
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-6 sm:p-7 shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
+          <div className="fintech-card p-6 sm:p-7">
             <div className="flex items-center justify-between pb-5 border-b border-slate-100">
               <div>
-                <h2 className="text-base font-bold text-slate-900">
+                <h2 className="text-base font-bold tracking-tight text-ink">
                   Flujo del Ciclo Operativo
                 </h2>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="text-xs text-subtle mt-0.5">
                   Distribución organizada por las tres grandes fases de servicio
                 </p>
               </div>
               <button
                 onClick={() => navigate('/operations/orders')}
-                className="text-xs font-semibold text-sky-700 hover:text-sky-800 hover:underline flex items-center gap-1"
+                className="text-xs font-semibold text-primary hover:text-primary-hover hover:underline flex items-center gap-1 cursor-pointer"
               >
                 Ver todas <ChevronRight className="w-3.5 h-3.5" />
               </button>
@@ -186,69 +202,81 @@ export const DashboardPage: React.FC = () => {
             {/* 3 Macro Phases Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
               {/* Phase 1: Recogida */}
-              <div
+              <motion.div
+                whileHover={{ y: -2 }}
+                whileTap={{ scale: 0.99 }}
+                transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
                 onClick={() => navigate('/operations/dispatch')}
-                className="p-5 rounded-xl border border-slate-200/80 bg-slate-50/50 hover:bg-white hover:border-sky-300 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200 cursor-pointer group"
+                className="p-5 rounded-2xl border border-slate-200/80 bg-slate-50/60 hover:bg-white hover:border-sky-300/80 hover:shadow-[var(--shadow-card-hover)] transition-colors duration-200 cursor-pointer group"
               >
                 <div className="flex items-center justify-between">
-                  <div className="p-2 rounded-lg bg-sky-100 text-sky-700">
+                  <div className="p-2.5 rounded-xl bg-sky-100/90 text-sky-700">
                     <Truck className="w-4 h-4" />
                   </div>
-                  <span className="text-xl font-extrabold text-slate-900 font-sans tabular-nums">
-                    {phasePickup}
-                  </span>
+                  <AnimatedMetricValue
+                    value={phasePickup}
+                    className="text-2xl font-extrabold tracking-tight text-ink"
+                  />
                 </div>
-                <h3 className="text-xs font-bold text-slate-800 mt-3 group-hover:text-sky-700 transition-colors">
+                <h3 className="text-xs font-bold text-ink mt-3 group-hover:text-primary transition-colors">
                   1. Recogida y Despacho
                 </h3>
-                <p className="text-[11px] text-slate-500 mt-1 leading-snug">
+                <p className="text-[11px] text-subtle mt-1 leading-snug">
                   {unassignedOrders.length} sin chofer asignado
                 </p>
-              </div>
+              </motion.div>
 
               {/* Phase 2: Planta */}
-              <div
+              <motion.div
+                whileHover={{ y: -2 }}
+                whileTap={{ scale: 0.99 }}
+                transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
                 onClick={() => navigate('/operations/plant')}
-                className="p-5 rounded-xl border border-slate-200/80 bg-slate-50/50 hover:bg-white hover:border-indigo-300 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200 cursor-pointer group"
+                className="p-5 rounded-2xl border border-slate-200/80 bg-slate-50/60 hover:bg-white hover:border-indigo-300/80 hover:shadow-[var(--shadow-card-hover)] transition-colors duration-200 cursor-pointer group"
               >
                 <div className="flex items-center justify-between">
-                  <div className="p-2 rounded-lg bg-indigo-100 text-indigo-700">
+                  <div className="p-2.5 rounded-xl bg-indigo-100/90 text-indigo-700">
                     <Boxes className="w-4 h-4" />
                   </div>
-                  <span className="text-xl font-extrabold text-slate-900 font-sans tabular-nums">
-                    {phasePlant}
-                  </span>
+                  <AnimatedMetricValue
+                    value={phasePlant}
+                    className="text-2xl font-extrabold tracking-tight text-ink"
+                  />
                 </div>
-                <h3 className="text-xs font-bold text-slate-800 mt-3 group-hover:text-indigo-700 transition-colors">
+                <h3 className="text-xs font-bold text-ink mt-3 group-hover:text-indigo-700 transition-colors">
                   2. Planta de Lavado
                 </h3>
-                <p className="text-[11px] text-slate-500 mt-1 leading-snug">
+                <p className="text-[11px] text-subtle mt-1 leading-snug">
                   {quarantineOrders.length > 0
                     ? `${quarantineOrders.length} en inscidencia`
                     : 'Proceso regular'}
                 </p>
-              </div>
+              </motion.div>
 
               {/* Phase 3: Entrega */}
-              <div
+              <motion.div
+                whileHover={{ y: -2 }}
+                whileTap={{ scale: 0.99 }}
+                transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
                 onClick={() => navigate('/operations/deliveries')}
-                className="p-5 rounded-xl border border-slate-200/80 bg-slate-50/50 hover:bg-white hover:border-emerald-300 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200 cursor-pointer group"
+                className="p-5 rounded-2xl border border-slate-200/80 bg-slate-50/60 hover:bg-white hover:border-emerald-300/80 hover:shadow-[var(--shadow-card-hover)] transition-colors duration-200 cursor-pointer group"
               >
                 <div className="flex items-center justify-between">
-                  <div className="p-2 rounded-lg bg-emerald-100 text-emerald-700">
+                  <div className="p-2.5 rounded-xl bg-emerald-100/90 text-emerald-700">
                     <CheckCircle2 className="w-4 h-4" />
                   </div>
-                  <span className="text-xl font-extrabold text-slate-900 font-sans tabular-nums">
-                    {phaseDelivery}
-                  </span>
+                  <AnimatedMetricValue
+                    value={phaseDelivery}
+                    className="text-2xl font-extrabold tracking-tight text-ink"
+                  />
                 </div>
-                <h3 className="text-xs font-bold text-slate-800 mt-3 group-hover:text-emerald-700 transition-colors">
+                <h3 className="text-xs font-bold text-ink mt-3 group-hover:text-emerald-700 transition-colors">
                   3. Entrega a Domicilio
                 </h3>
-                <p className="text-[11px] text-slate-500 mt-1 leading-snug">
+                <p className="text-[11px] text-subtle mt-1 leading-snug">
                   {inDeliveryOrders.length} en ruta final
                 </p>
-              </div>
+              </motion.div>
             </div>
 
             {/* Visual Breakdown of Stages */}
@@ -257,65 +285,69 @@ export const DashboardPage: React.FC = () => {
                 Distribución detallada por estado operativo:
               </h4>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
-                  <span className="text-slate-400 block text-[11px]">
+                <div className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200/60">
+                  <span className="text-slate-500 block text-[11px]">
                     Sin asignar
                   </span>
-                  <span className="text-sm font-bold text-amber-700 font-mono tabular-nums">
-                    {unassignedOrders.length}
-                  </span>
+                  <AnimatedMetricValue
+                    value={unassignedOrders.length}
+                    className="mt-1 block text-base font-bold text-amber-700 font-mono"
+                  />
                 </div>
-                <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
-                  <span className="text-slate-400 block text-[11px]">
+                <div className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200/60">
+                  <span className="text-slate-500 block text-[11px]">
                     En lavado
                   </span>
-                  <span className="text-sm font-bold text-slate-800 font-mono tabular-nums">
-                    {
+                  <AnimatedMetricValue
+                    value={
                       orders.filter((o) => operationalStage(o) === 'IN_PROCESS')
                         .length
                     }
-                  </span>
+                    className="mt-1 block text-base font-bold text-ink font-mono"
+                  />
                 </div>
-                <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
-                  <span className="text-slate-400 block text-[11px]">
+                <div className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200/60">
+                  <span className="text-slate-500 block text-[11px]">
                     Control Calidad
                   </span>
-                  <span className="text-sm font-bold text-slate-800 font-mono tabular-nums">
-                    {
+                  <AnimatedMetricValue
+                    value={
                       orders.filter(
                         (o) => operationalStage(o) === 'QUALITY_CONTROL',
                       ).length
                     }
-                  </span>
+                    className="mt-1 block text-base font-bold text-ink font-mono"
+                  />
                 </div>
-                <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
-                  <span className="text-slate-400 block text-[11px]">
+                <div className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200/60">
+                  <span className="text-slate-500 block text-[11px]">
                     Listas p/ entrega
                   </span>
-                  <span className="text-sm font-bold text-emerald-700 font-mono tabular-nums">
-                    {
+                  <AnimatedMetricValue
+                    value={
                       orders.filter(
                         (o) => operationalStage(o) === 'READY_FOR_DELIVERY',
                       ).length
                     }
-                  </span>
+                    className="mt-1 block text-base font-bold text-emerald-700 font-mono"
+                  />
                 </div>
               </div>
             </div>
           </div>
 
           {/* Sedes Operativas Summary */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-6 sm:p-7 shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
+          <div className="fintech-card p-6 sm:p-7">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100">
               <div className="flex items-center gap-2">
-                <Building2 className="w-4 h-4 text-sky-700" />
-                <h3 className="text-sm font-bold text-slate-900">
+                <Building2 className="w-4 h-4 text-primary" />
+                <h3 className="text-sm font-bold tracking-tight text-ink">
                   Capacidad en Sedes de Lavado
                 </h3>
               </div>
               <button
                 onClick={() => navigate('/logistics/facilities')}
-                className="text-xs font-semibold text-sky-700 hover:text-sky-800 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                className="text-xs font-semibold text-primary hover:text-primary-hover hover:underline inline-flex items-center gap-1 cursor-pointer"
               >
                 <span>Ver sedes</span>
                 <ArrowUpRight className="w-3.5 h-3.5" />
@@ -330,30 +362,32 @@ export const DashboardPage: React.FC = () => {
                 return (
                   <div
                     key={fac.id}
-                    className="p-4 rounded-xl border border-slate-200/70 bg-slate-50/50"
+                    className="p-4 rounded-2xl border border-slate-200/75 bg-slate-50/60"
                   >
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-bold text-slate-900">
+                    <div className="flex items-center justify-between text-xs gap-2">
+                      <span className="font-bold text-ink truncate">
                         {fac.name}
                       </span>
-                      <span className="text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60">
+                      <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200/70 shrink-0">
                         {fac.status === 'ACTIVE'
                           ? 'Operativa'
                           : 'Mantenimiento'}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-500 mt-1">{fac.zone}</p>
-                    <div className="mt-3 flex items-center justify-between text-xs text-slate-600 font-mono">
+                    <p className="text-xs text-subtle mt-1">{fac.zone}</p>
+                    <div className="mt-3 flex items-center justify-between text-xs text-slate-600 font-mono tabular-nums">
                       <span>Carga diaria:</span>
-                      <span className="font-bold text-slate-800">
+                      <span className="font-bold text-ink">
                         {fac.currentLoadKgDay} / {fac.capacityMaxKgDay} kg (
                         {loadPct}%)
                       </span>
                     </div>
-                    <div className="w-full h-1.5 bg-slate-200 rounded-full mt-2 overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all ${loadPct > 80 ? 'bg-amber-500' : 'bg-sky-600'}`}
-                        style={{ width: `${loadPct}%` }}
+                    <div className="w-full h-1.5 bg-slate-200/80 rounded-full mt-2 overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${Math.min(100, loadPct)}%` }}
+                        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                        className={`h-full rounded-full ${loadPct > 80 ? 'bg-amber-500' : 'bg-primary'}`}
                       />
                     </div>
                   </div>
@@ -365,22 +399,22 @@ export const DashboardPage: React.FC = () => {
 
         {/* Right Column (5 cols): Atención Inmediata & Alertas */}
         <div className="lg:col-span-5 space-y-6">
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-6 sm:p-7 shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
+          <div className="fintech-card p-6 sm:p-7">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-amber-50 text-amber-700">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-amber-50 text-amber-700 border border-amber-200/60">
                   <Flame className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900">
+                  <h3 className="text-sm font-bold tracking-tight text-ink">
                     Atención Requerida
                   </h3>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-subtle">
                     Casos que necesitan decisión del operador
                   </p>
                 </div>
               </div>
-              <span className="text-xs font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-full font-mono tabular-nums">
+              <span className="text-xs font-bold text-ink bg-slate-100 px-2.5 py-1 rounded-full font-mono tabular-nums">
                 {unassignedOrders.length +
                   atRiskOrders.length +
                   quarantineOrders.length +
@@ -514,14 +548,14 @@ export const DashboardPage: React.FC = () => {
           </div>
 
           {/* Quick Access to Drivers Status */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
+          <div className="fintech-card p-6">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="text-sm font-bold text-slate-900">
+              <h3 className="text-sm font-bold tracking-tight text-ink">
                 Estado de Flota Activa
               </h3>
               <button
                 onClick={() => navigate('/logistics/drivers')}
-                className="text-xs font-semibold text-sky-700 hover:text-sky-800 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                className="text-xs font-semibold text-primary hover:text-primary-hover hover:underline inline-flex items-center gap-1 cursor-pointer"
               >
                 <span>Ver todos ({drivers.length})</span>
                 <ArrowUpRight className="w-3.5 h-3.5" />
@@ -531,25 +565,25 @@ export const DashboardPage: React.FC = () => {
               {drivers.slice(0, 3).map((driver) => (
                 <div
                   key={driver.id}
-                  className="flex items-center justify-between text-xs py-1"
+                  className="flex items-center justify-between text-xs py-1.5"
                 >
                   <div className="flex items-center gap-2.5">
                     <IconPlaceholder
                       kind="user"
                       label={driver.name}
-                      className="size-7 rounded-full"
+                      className="size-8 rounded-full"
                     />
                     <div>
-                      <p className="font-semibold text-slate-800">
+                      <p className="font-semibold text-ink">
                         {driver.name}
                       </p>
-                      <p className="text-[11px] text-slate-400 font-mono">
+                      <p className="text-[11px] text-slate-500 font-mono">
                         {driver.vehiclePlate} · {driver.facilityName}
                       </p>
                     </div>
                   </div>
                   <span
-                    className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${driver.status === 'AVAILABLE' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60' : 'bg-amber-50 text-amber-800 border border-amber-200/60'}`}
+                    className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${driver.status === 'AVAILABLE' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/70' : 'bg-amber-50 text-amber-800 border border-amber-200/70'}`}
                   >
                     {driver.status === 'AVAILABLE' ? 'Disponible' : 'En ruta'}
                   </span>
@@ -561,25 +595,25 @@ export const DashboardPage: React.FC = () => {
       </div>
 
       {/* Actividad Reciente / Bitácora Operacional */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 p-6 sm:p-7 shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
+      <div className="fintech-card p-6 sm:p-7">
         <div className="flex items-center justify-between pb-4 border-b border-slate-100">
           <div>
-            <h2 className="text-base font-bold text-slate-900">
+            <h2 className="text-base font-bold tracking-tight text-ink">
               Bitácora Operacional Reciente
             </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-subtle mt-0.5">
               Registro trazable de cambios de estado, asignaciones y eventos de
               auditoría
             </p>
           </div>
-          <span className="text-xs text-slate-400 font-mono">
+          <span className="rounded-full border border-slate-200/80 bg-slate-50 px-3 py-1 text-[11px] font-semibold text-slate-600">
             Trazabilidad activa
           </span>
         </div>
 
         <div className="overflow-x-auto mt-4">
           <table className="w-full text-xs text-left">
-            <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200/80">
+            <thead className="bg-slate-50/80 text-slate-600 font-semibold border-b border-slate-200/80">
               <tr>
                 <th className="py-3 px-4">Hora</th>
                 <th className="py-3 px-4">Acción</th>
@@ -593,7 +627,7 @@ export const DashboardPage: React.FC = () => {
               {auditLogs.slice(0, 5).map((log) => (
                 <tr
                   key={log.id}
-                  className="hover:bg-slate-50/70 transition-colors"
+                  className="hover:bg-primary-soft/40 transition-colors"
                 >
                   <td className="py-3.5 px-4 font-mono text-slate-500 whitespace-nowrap">
                     {log.timestamp}

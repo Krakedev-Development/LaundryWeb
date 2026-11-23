@@ -1,5 +1,6 @@
 import { Modal } from '../../shared/ui/Modal';
 import React, { useEffect, useState } from 'react';
+import { motion } from 'motion/react';
 import { useApp } from '../../context/AppContext';
 import { storageService } from '../../services/storage';
 import {
@@ -12,6 +13,8 @@ import { ApiError } from '../../services/api/apiConfig';
 import { PageHeader } from '../../components/common/PageHeader';
 import { TablePagination, usePagination } from '../../shared/ui/TablePagination';
 import { MetricCard } from '../../components/common/MetricCard';
+import { StaggerContainer, StaggerItem } from '../../components/ui/StaggerList';
+import { btnPrimary } from '../../shared/ui/controls';
 import { DiscountType, Promotion } from '../../types';
 import {
   Tag,
@@ -249,48 +252,58 @@ export const PromotionsPage: React.FC = () => {
         title="Promociones y Cupones"
         subtitle="Gestión de códigos de descuento, campañas estacionales y reglas de canje comercial."
         actions={
-          <button
+          <motion.button
+            type="button"
+            whileTap={{ scale: 0.98 }}
             onClick={handleOpenCreate}
-            className="px-4 py-2.5 text-xs font-bold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
+            className={btnPrimary}
           >
             <Plus className="w-4 h-4" />
             <span>Nueva Promoción</span>
-          </button>
+          </motion.button>
         }
       />
 
       {/* KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <MetricCard
-          title="Total Promociones"
-          value={totalCount}
-          subtitle="Campañas en sistema"
-          icon={<Tag className="w-5 h-5 text-sky-600" />}
-        />
-        <MetricCard
-          title="Activas"
-          value={activeCount}
-          subtitle="Vigentes para aplicar"
-          variant="success"
-          icon={<CheckCircle2 className="w-5 h-5 text-emerald-600" />}
-        />
-        <MetricCard
-          title="Programadas"
-          value={scheduledCount}
-          subtitle="Inicio futuro"
-          variant="aqua"
-          icon={<Calendar className="w-4 h-4" />}
-        />
-        <MetricCard
-          title="Vencidas"
-          value={expiredCount}
-          subtitle="Límite o fecha cumplida"
-          icon={<AlertCircle className="w-4 h-4 text-slate-400" />}
-        />
-      </div>
+      <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <StaggerItem>
+          <MetricCard
+            title="Total Promociones"
+            value={totalCount}
+            subtitle="Campañas en sistema"
+            icon={<Tag className="w-5 h-5 text-sky-600" />}
+          />
+        </StaggerItem>
+        <StaggerItem>
+          <MetricCard
+            title="Activas"
+            value={activeCount}
+            subtitle="Vigentes para aplicar"
+            variant="success"
+            icon={<CheckCircle2 className="w-5 h-5 text-emerald-600" />}
+          />
+        </StaggerItem>
+        <StaggerItem>
+          <MetricCard
+            title="Programadas"
+            value={scheduledCount}
+            subtitle="Inicio futuro"
+            variant="aqua"
+            icon={<Calendar className="w-4 h-4" />}
+          />
+        </StaggerItem>
+        <StaggerItem>
+          <MetricCard
+            title="Vencidas"
+            value={expiredCount}
+            subtitle="Límite o fecha cumplida"
+            icon={<AlertCircle className="w-4 h-4 text-slate-400" />}
+          />
+        </StaggerItem>
+      </StaggerContainer>
 
       {/* Table */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.03)] overflow-hidden">
+      <div className="fintech-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-xs text-left">
             <thead className="bg-slate-50/80 text-slate-600 font-semibold border-b border-slate-200/80">
@@ -357,7 +370,7 @@ export const PromotionsPage: React.FC = () => {
                   <td className="py-3.5 px-4 text-right whitespace-nowrap">
                     <div className="inline-flex items-center justify-end gap-2">
                       <span
-                        className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-md border ${
+                        className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${
                           promo.status === 'ACTIVE'
                             ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                             : promo.status === 'SCHEDULED'
@@ -389,6 +402,7 @@ export const PromotionsPage: React.FC = () => {
       {/* Drawer Crear / Editar Promoción per spec #37 */}
       {isDrawerOpen && (
         <Modal
+          variant="drawer"
           title={
             editingPromo
               ? `Editar promoción: ${editingPromo.code}`

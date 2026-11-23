@@ -6,6 +6,7 @@ import {
 } from '../../services/api/incidentsApi';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { AnimatePresence, motion } from 'motion/react';
 import {
   Bell,
   Menu,
@@ -110,20 +111,27 @@ export function TopBar({
   ];
 
   return (
-    <header className="sticky top-0 z-20 flex h-24 shrink-0 items-center justify-between gap-3 border-b border-slate-200/80 bg-white/90 backdrop-blur-md px-4 sm:px-6 lg:px-8 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+    <header className="fintech-glass sticky top-0 z-20 flex h-24 shrink-0 items-center justify-between gap-3 border-b border-slate-200/75 px-4 sm:px-6 lg:px-8 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
       <div className="flex min-w-0 items-center gap-3">
-        <button
+        <motion.button
           type="button"
+          whileTap={{ scale: 0.94 }}
           onClick={onOpenMobileSidebar}
           aria-label="Abrir menú"
           aria-controls={SIDEBAR_ID}
           aria-expanded={mobileSidebarOpen}
-          className="sidebar-focus flex size-10 shrink-0 items-center justify-center rounded-xl text-primary hover:bg-slate-100 lg:hidden"
+          className="sidebar-focus flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-xl text-primary hover:bg-slate-100 lg:hidden"
         >
           <Menu className="size-5" aria-hidden="true" />
-        </button>
+        </motion.button>
         {pageTitle && (
-          <div className="min-w-0">
+          <motion.div
+            key={pageTitle}
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            className="min-w-0"
+          >
             <h1 className="truncate text-xl font-bold leading-tight tracking-tight text-ink sm:text-2xl lg:text-[1.65rem]">
               {pageTitle}
             </h1>
@@ -132,81 +140,89 @@ export function TopBar({
                 {pageSubtitle}
               </p>
             )}
-          </div>
+          </motion.div>
         )}
       </div>
       <div ref={menus} className="flex shrink-0 items-center gap-2 sm:gap-3">
-        <p className="mr-2 hidden text-xs first-letter:uppercase text-slate-500 xl:block">
+        <p className="mr-1 hidden rounded-full border border-slate-200/80 bg-slate-50/90 px-3.5 py-1.5 text-xs font-medium first-letter:uppercase text-slate-600 xl:block">
           {date}
         </p>
         <div className="relative">
-          <button
+          <motion.button
             ref={notificationButton}
             type="button"
             aria-label="Notificaciones"
             title="Notificaciones"
             aria-expanded={showNotifications}
             aria-controls="operational-notifications"
+            whileTap={{ scale: 0.94 }}
             onClick={() => {
               setShowNotifications((previous) => !previous);
             }}
-            className="sidebar-focus relative flex size-10 items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100"
+            className="sidebar-focus relative flex size-10 cursor-pointer items-center justify-center rounded-xl border border-slate-200/75 bg-white text-slate-600 shadow-2xs transition-colors hover:bg-slate-50 hover:text-ink"
           >
             <Bell className="size-[18px]" aria-hidden="true" />
             {notices.length > 0 && (
-              <span className="absolute right-1 top-1 flex min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[9px] font-semibold leading-4 text-white">
+              <span className="absolute -right-1 -top-1 flex min-w-4.5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold leading-4 text-white ring-2 ring-white tabular-nums">
                 {notices.length > 99 ? '99+' : notices.length}
               </span>
             )}
-          </button>
-          {showNotifications && (
-            <section
-              id="operational-notifications"
-              aria-label="Notificaciones operativas"
-              className="fixed inset-x-4 top-[104px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:mt-3 sm:w-[360px]"
-            >
-              <div className="flex items-center justify-between gap-2 border-b border-slate-100 px-4 py-3">
-                <h2 className="text-sm font-semibold text-primary">
-                  Notificaciones
-                </h2>
-                <span className="text-[11px] text-slate-500">
-                  {notices.length} pendientes
-                </span>
-              </div>
-              <div className="sidebar-nav-scroll max-h-80 overflow-y-auto p-2">
-                {notices.map(({ id, title, detail, path, Icon, tone }) => (
-                  <button
-                    type="button"
-                    key={id}
-                    onClick={() => {
-                      navigate(path);
-                      setShowNotifications(false);
-                    }}
-                    className="sidebar-focus flex w-full items-start gap-3 rounded-xl p-3 text-left transition-colors hover:bg-slate-50"
-                  >
-                    <span
-                      className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${tone}`}
+          </motion.button>
+          <AnimatePresence>
+            {showNotifications && (
+              <motion.section
+                id="operational-notifications"
+                aria-label="Notificaciones operativas"
+                initial={{ opacity: 0, y: 6, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 4, scale: 0.97 }}
+                transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
+                className="fixed inset-x-4 top-[104px] overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-xl sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:mt-3 sm:w-[360px]"
+              >
+                <div className="flex items-center justify-between gap-2 border-b border-slate-100 bg-slate-50/70 px-4 py-3">
+                  <h2 className="text-sm font-bold tracking-tight text-ink">
+                    Notificaciones
+                  </h2>
+                  <span className="rounded-full bg-slate-200/70 px-2 py-0.5 text-[11px] font-semibold text-slate-600 tabular-nums">
+                    {notices.length} pendientes
+                  </span>
+                </div>
+                <div className="sidebar-nav-scroll max-h-80 overflow-y-auto p-2">
+                  {notices.map(({ id, title, detail, path, Icon, tone }) => (
+                    <motion.button
+                      type="button"
+                      key={id}
+                      whileTap={{ scale: 0.99 }}
+                      onClick={() => {
+                        navigate(path);
+                        setShowNotifications(false);
+                      }}
+                      className="sidebar-focus flex w-full cursor-pointer items-start gap-3 rounded-xl p-3 text-left transition-colors hover:bg-slate-50"
                     >
-                      <Icon className="size-4" aria-hidden="true" />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-xs font-semibold leading-5 text-slate-800">
-                        {title}
+                      <span
+                        className={`flex size-8 shrink-0 items-center justify-center rounded-xl ${tone}`}
+                      >
+                        <Icon className="size-4" aria-hidden="true" />
                       </span>
-                      <span className="mt-0.5 block truncate text-xs text-slate-500">
-                        {detail}
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-xs font-semibold leading-5 text-slate-800">
+                          {title}
+                        </span>
+                        <span className="mt-0.5 block truncate text-xs text-slate-500">
+                          {detail}
+                        </span>
                       </span>
-                    </span>
-                  </button>
-                ))}
-                {notices.length === 0 && (
-                  <p className="px-3 py-6 text-center text-sm text-slate-500">
-                    No hay alertas operativas pendientes.
-                  </p>
-                )}
-              </div>
-            </section>
-          )}
+                    </motion.button>
+                  ))}
+                  {notices.length === 0 && (
+                    <p className="px-3 py-6 text-center text-sm text-slate-500">
+                      No hay alertas operativas pendientes.
+                    </p>
+                  )}
+                </div>
+              </motion.section>
+            )}
+          </AnimatePresence>
         </div>
       </div>
     </header>

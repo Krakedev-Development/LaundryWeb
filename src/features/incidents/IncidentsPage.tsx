@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { motion } from 'motion/react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   AlertTriangle,
@@ -15,6 +16,9 @@ import { useApp } from '../../context/AppContext';
 import { PageHeader } from '../../components/common/PageHeader';
 import { TablePagination, usePagination } from '../../shared/ui/TablePagination';
 import { MetricCard } from '../../components/common/MetricCard';
+import { AnimatedPillTabs } from '../../components/ui/AnimatedPillTabs';
+import { StaggerContainer, StaggerItem } from '../../components/ui/StaggerList';
+import { btnSecondarySm } from '../../shared/ui/controls';
 import { STATUS_LABELS_HUMAN } from '../orders/components/ActivityTab';
 import {
   fetchIncidentOrderRef,
@@ -76,7 +80,7 @@ const statusLabel = (status?: string | null) =>
 function SeverityBadge({ severity }: { severity: ServerIncidentSeverity }) {
   return (
     <span
-      className={`inline-flex items-center rounded-md border px-2.5 py-0.5 text-[11px] font-semibold ${SEVERITY_STYLE[severity] ?? SEVERITY_STYLE.MEDIUM}`}
+      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${SEVERITY_STYLE[severity] ?? SEVERITY_STYLE.MEDIUM}`}
     >
       {INCIDENT_SEVERITY_LABEL[severity] ?? severity}
     </span>
@@ -86,7 +90,7 @@ function SeverityBadge({ severity }: { severity: ServerIncidentSeverity }) {
 function StatusBadge({ status }: { status: ServerIncidentStatus }) {
   return (
     <span
-      className={`inline-flex items-center rounded-lg border px-2.5 py-0.5 text-xs font-semibold ${STATUS_STYLE[status] ?? STATUS_STYLE.OPEN}`}
+      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${STATUS_STYLE[status] ?? STATUS_STYLE.OPEN}`}
     >
       {INCIDENT_STATUS_LABEL[status] ?? status}
     </span>
@@ -233,80 +237,83 @@ export const IncidentsPage: React.FC = () => {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricCard
-          title="Abiertas"
-          value={count('OPEN')}
-          subtitle="Sin revisar"
-          variant={count('OPEN') > 0 ? 'urgent' : 'default'}
-          icon={<AlertTriangle className="h-5 w-5 text-rose-600" />}
-        />
-        <MetricCard
-          title="En revisión"
-          value={count('IN_REVIEW')}
-          subtitle="En análisis por la sede"
-          variant={count('IN_REVIEW') > 0 ? 'warning' : 'default'}
-          icon={<Clock className="h-5 w-5 text-amber-600" />}
-        />
-        <MetricCard
-          title="Resueltas"
-          value={count('RESOLVED')}
-          subtitle="Con resolución registrada"
-          variant="success"
-          icon={<CheckCircle2 className="h-5 w-5 text-emerald-600" />}
-        />
-        <MetricCard
-          title="Cerradas"
-          value={count('CLOSED')}
-          subtitle="Archivadas"
-          variant="aqua"
-          icon={<Lock className="h-5 w-5 text-sky-600" />}
-        />
-      </div>
+      <StaggerContainer className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <StaggerItem>
+          <MetricCard
+            title="Abiertas"
+            value={count('OPEN')}
+            subtitle="Sin revisar"
+            variant={count('OPEN') > 0 ? 'urgent' : 'default'}
+            icon={<AlertTriangle className="h-5 w-5 text-rose-600" />}
+          />
+        </StaggerItem>
+        <StaggerItem>
+          <MetricCard
+            title="En revisión"
+            value={count('IN_REVIEW')}
+            subtitle="En análisis por la sede"
+            variant={count('IN_REVIEW') > 0 ? 'warning' : 'default'}
+            icon={<Clock className="h-5 w-5 text-amber-600" />}
+          />
+        </StaggerItem>
+        <StaggerItem>
+          <MetricCard
+            title="Resueltas"
+            value={count('RESOLVED')}
+            subtitle="Con resolución registrada"
+            variant="success"
+            icon={<CheckCircle2 className="h-5 w-5 text-emerald-600" />}
+          />
+        </StaggerItem>
+        <StaggerItem>
+          <MetricCard
+            title="Cerradas"
+            value={count('CLOSED')}
+            subtitle="Archivadas"
+            variant="aqua"
+            icon={<Lock className="h-5 w-5 text-sky-600" />}
+          />
+        </StaggerItem>
+      </StaggerContainer>
 
-      <div className="space-y-5 rounded-2xl border border-slate-200/80 bg-white p-5 sm:p-6">
+      <div className="fintech-card space-y-5 p-5 sm:p-6">
         <div className="flex flex-col items-center justify-between gap-4 lg:flex-row">
-          <div className="flex w-full items-center gap-2 overflow-x-auto pb-1 lg:w-auto lg:pb-0">
-            {TABS.map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                aria-pressed={activeTab === tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex shrink-0 items-center gap-1.5 rounded-xl border px-3.5 py-2 text-xs font-semibold ${
-                  activeTab === tab.id
-                    ? 'border-sky-200 bg-sky-50 text-sky-800'
-                    : 'border-transparent text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                }`}
-              >
-                <span>{tab.label}</span>
-                <span className="font-mono text-[11px] opacity-75">
-                  ({tab.id === 'ALL' ? incidents.length : count(tab.id)})
-                </span>
-              </button>
-            ))}
+          <div className="w-full overflow-x-auto pb-1 lg:w-auto lg:pb-0">
+            <AnimatedPillTabs<Tab>
+              layoutId="incidents-tabs"
+              ariaLabel="Estados de incidencias"
+              value={activeTab}
+              onChange={setActiveTab}
+              items={TABS.map((tab) => ({
+                id: tab.id,
+                label: tab.label,
+                count: tab.id === 'ALL' ? incidents.length : count(tab.id),
+                alert: tab.id === 'OPEN' && count('OPEN') > 0,
+              }))}
+            />
           </div>
           <div className="flex w-full items-center gap-2 lg:w-auto">
             <div className="relative w-full lg:w-72">
-              <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+              <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 aria-label="Buscar incidencia"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Buscar solicitud, cliente o tipo..."
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-xs focus:outline-2 focus:-outline-offset-1 focus:outline-primary"
+                className="w-full rounded-xl border border-slate-200/90 bg-slate-50/70 py-2.5 pl-10 pr-4 text-xs text-ink placeholder:text-slate-400 transition-all hover:border-slate-300 focus:border-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/15"
               />
             </div>
-            <button
+            <motion.button
               type="button"
+              whileTap={{ scale: 0.98 }}
               onClick={() => void refresh()}
               disabled={loading}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              className={btnSecondarySm}
             >
               <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
               Actualizar
-            </button>
+            </motion.button>
           </div>
         </div>
 
@@ -400,6 +407,7 @@ export const IncidentsPage: React.FC = () => {
 
       {selected && (
         <Modal
+          variant="drawer"
           wide
           title={`Incidencia en ${refOf(selected.orderId).trackingNumber}`}
           description={`${incidentTypeLabel(selected.type)} · ${refOf(selected.orderId).customerName}`}
