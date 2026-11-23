@@ -185,7 +185,7 @@ export function HandoffsPage() {
 
       <section
         aria-label="Leer código"
-        className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs space-y-3"
+        className="fintech-card p-5 space-y-3"
       >
         <form onSubmit={onSubmit} className="flex flex-wrap items-end gap-3">
           <label className="min-w-0 flex-1 text-xs font-semibold text-slate-600" htmlFor="handoff-scan">
@@ -294,17 +294,17 @@ export function HandoffsPage() {
               <section
                 key={q.status}
                 aria-label={q.title}
-                className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs"
+                className="fintech-card overflow-hidden"
               >
-                <header className="flex items-start justify-between gap-2 border-b border-slate-200 bg-slate-50 p-4">
+                <header className="flex items-start justify-between gap-2 border-b border-slate-200/80 bg-slate-50/70 p-4">
                   <div>
-                    <h2 className="flex items-center gap-2 text-sm font-bold text-ink">
+                    <h2 className="flex items-center gap-2 text-sm font-bold tracking-tight text-ink">
                       <q.icon className="size-4 text-primary" aria-hidden="true" />
                       {q.title}
                     </h2>
-                    <p className="mt-0.5 text-[11px] text-slate-500">{q.hint}</p>
+                    <p className="mt-0.5 text-[11px] text-subtle">{q.hint}</p>
                   </div>
-                  <span className="rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-slate-500">
+                  <span className="rounded-full border border-slate-200/70 bg-white px-2.5 py-0.5 text-xs font-bold text-ink tabular-nums">
                     {list.length}
                   </span>
                 </header>

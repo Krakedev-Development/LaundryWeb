@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { AnimatePresence, motion } from 'motion/react';
 import {
   Sparkles,
   Receipt,
@@ -313,69 +314,77 @@ export const OrderDetailPage: React.FC = () => {
         actions={
           <div className="flex items-center gap-2.5">
             {/* Secondary Action: Registrar incidencia */}
-            <button
+            <motion.button
+              type="button"
+              whileTap={{ scale: 0.98 }}
               onClick={() => setIsIncidentModalOpen(true)}
-              className="px-3.5 py-2 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer"
+              className="px-3.5 py-2 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200/80 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
             >
               <AlertTriangle className="w-3.5 h-3.5" />
               <span>Registrar incidencia</span>
-            </button>
+            </motion.button>
 
             {/* Actions Menu Dropdown */}
             <div className="relative" ref={actionsMenu}>
-              <button
+              <motion.button
                 ref={actionsTrigger}
                 type="button"
+                whileTap={{ scale: 0.98 }}
                 aria-expanded={isActionsMenuOpen}
                 aria-controls="detail-actions"
                 onClick={() => setIsActionsMenuOpen(!isActionsMenuOpen)}
-                className={`px-3 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-xl transition-colors flex items-center gap-1 cursor-pointer ${focusRing}`}
+                className={`px-3.5 py-2 text-xs font-semibold text-ink bg-white hover:bg-slate-50 border border-slate-200/90 rounded-xl shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer ${focusRing}`}
                 title="Más opciones operacionales y administrativas"
               >
                 <span>Acciones</span>
-                <MoreVertical className="w-3.5 h-3.5" aria-hidden />
-              </button>
+                <MoreVertical className="w-3.5 h-3.5 text-slate-500" aria-hidden />
+              </motion.button>
 
-              {isActionsMenuOpen && (
-                <div
-                  id="detail-actions"
-                  role="group"
-                  aria-label="Acciones de la solicitud"
-                  className="absolute right-0 mt-1 w-52 bg-white rounded-2xl shadow-xl border border-slate-200 py-1.5 z-40 text-xs text-slate-700"
-                >
-                  <button
-                    onClick={handleCopyIdentifier}
-                    className="w-full text-left px-3.5 py-2 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+              <AnimatePresence>
+                {isActionsMenuOpen && (
+                  <motion.div
+                    id="detail-actions"
+                    role="group"
+                    aria-label="Acciones de la solicitud"
+                    initial={{ opacity: 0, y: 6, scale: 0.97 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 4, scale: 0.97 }}
+                    transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
+                    className="absolute right-0 mt-1.5 w-56 bg-white rounded-2xl shadow-xl border border-slate-200/90 py-1.5 z-40 text-xs text-slate-700"
                   >
-                    <Copy className="w-3.5 h-3.5 text-slate-500" />
-                    <span>Copiar identificador</span>
-                  </button>
-
-                  {/* En planta la retención se hace en Planta (decisión P-1): aquí solo se navega. */}
-                  {inPlant ? (
-                    <Link
-                      to={plantHref(order.id, 'proceso')}
-                      onClick={() => setIsActionsMenuOpen(false)}
-                      className="w-full text-left px-3.5 py-2 hover:bg-slate-50 flex items-center gap-2 text-amber-700"
-                    >
-                      <AlertTriangle className="w-3.5 h-3.5" />
-                      <span>Retener en Planta</span>
-                    </Link>
-                  ) : (
                     <button
-                      onClick={() => {
-                        setIsQuarantineModalOpen(true);
-                        setIsActionsMenuOpen(false);
-                      }}
-                      className="w-full text-left px-3.5 py-2 hover:bg-slate-50 flex items-center gap-2 cursor-pointer text-amber-700"
+                      onClick={handleCopyIdentifier}
+                      className="w-full text-left px-3.5 py-2.5 hover:bg-slate-50 flex items-center gap-2 cursor-pointer transition-colors"
                     >
-                      <AlertTriangle className="w-3.5 h-3.5" />
-                      <span>Retener para revisión técnica</span>
+                      <Copy className="w-3.5 h-3.5 text-slate-500" />
+                      <span>Copiar identificador</span>
                     </button>
-                  )}
 
-                </div>
-              )}
+                    {/* En planta la retención se hace en Planta (decisión P-1): aquí solo se navega. */}
+                    {inPlant ? (
+                      <Link
+                        to={plantHref(order.id, 'proceso')}
+                        onClick={() => setIsActionsMenuOpen(false)}
+                        className="w-full text-left px-3.5 py-2.5 hover:bg-slate-50 flex items-center gap-2 text-amber-700 transition-colors"
+                      >
+                        <AlertTriangle className="w-3.5 h-3.5" />
+                        <span>Retener en Planta</span>
+                      </Link>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setIsQuarantineModalOpen(true);
+                          setIsActionsMenuOpen(false);
+                        }}
+                        className="w-full text-left px-3.5 py-2.5 hover:bg-slate-50 flex items-center gap-2 cursor-pointer text-amber-700 transition-colors"
+                      >
+                        <AlertTriangle className="w-3.5 h-3.5" />
+                        <span>Retener para revisión técnica</span>
+                      </button>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
         }

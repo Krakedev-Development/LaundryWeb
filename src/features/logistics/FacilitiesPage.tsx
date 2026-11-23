@@ -2,12 +2,15 @@ import '../../shared/ui/operations/operations.css';
 import { Dialog } from '../../shared/ui/Dialog';
 import { FacilityPinPreview } from './zones/FacilityPinPreview';
 import React, { useEffect, useState } from 'react';
+import { motion } from 'motion/react';
 import { ZonesPanel } from './zones/ZonesPanel';
 import { useZones } from './zones/useZones';
 import { facilityZoneId } from '../../entities/zone/model/zone.rules';
 import { useApp } from '../../context/AppContext';
 import { PageHeader } from '../../components/common/PageHeader';
 import { MetricCard } from '../../components/common/MetricCard';
+import { StaggerContainer, StaggerItem } from '../../components/ui/StaggerList';
+import { btnPrimary } from '../../shared/ui/controls';
 import { Facility } from '../../types';
 import { storageService } from '../../services/storage';
 import {
@@ -330,46 +333,56 @@ export const FacilitiesPage: React.FC = () => {
         }
         actions={
           isAdmin ? (
-            <button
+            <motion.button
+              type="button"
+              whileTap={{ scale: 0.98 }}
               onClick={() => setPlacing(true)}
-              className="px-4 py-2.5 text-xs font-bold text-white bg-[#0F4C81] hover:bg-[#0A3660] rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
+              className={btnPrimary}
             >
               <Plus className="w-4 h-4" />
               <span>Registrar Sede</span>
-            </button>
+            </motion.button>
           ) : undefined
         }
       />
 
       {/* KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <MetricCard
-          title="Sedes Totales"
-          value={totalFacilities}
-          subtitle="Hubs en red activa"
-          icon={<Building2 className="w-5 h-5 text-sky-600" />}
-        />
-        <MetricCard
-          title="Capacidad Instalada"
-          value={`${totalCapacityKg.toLocaleString()} kg/día`}
-          subtitle="Máximo de procesamiento"
-          variant="aqua"
-          icon={<Boxes className="w-5 h-5 text-sky-600" />}
-        />
-        <MetricCard
-          title="Carga Actual"
-          value={`${currentTotalLoadKg.toLocaleString()} kg/día`}
-          subtitle="Volumen en túneles"
-          icon={<Truck className="w-4 h-4 text-emerald-600" />}
-        />
-        <MetricCard
-          title="Ocupación Global"
-          value={`${avgUtilization}%`}
-          subtitle="Eficiencia de planta"
-          variant={avgUtilization > 85 ? 'warning' : 'success'}
-          icon={<CheckCircle2 className="w-4 h-4" />}
-        />
-      </div>
+      <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <StaggerItem>
+          <MetricCard
+            title="Sedes Totales"
+            value={totalFacilities}
+            subtitle="Hubs en red activa"
+            icon={<Building2 className="w-5 h-5 text-sky-600" />}
+          />
+        </StaggerItem>
+        <StaggerItem>
+          <MetricCard
+            title="Capacidad Instalada"
+            value={`${totalCapacityKg} kg/día`}
+            subtitle="Máximo de procesamiento"
+            variant="aqua"
+            icon={<Boxes className="w-5 h-5 text-sky-600" />}
+          />
+        </StaggerItem>
+        <StaggerItem>
+          <MetricCard
+            title="Carga Actual"
+            value={`${currentTotalLoadKg} kg/día`}
+            subtitle="Volumen en túneles"
+            icon={<Truck className="w-4 h-4 text-emerald-600" />}
+          />
+        </StaggerItem>
+        <StaggerItem>
+          <MetricCard
+            title="Ocupación Global"
+            value={`${avgUtilization}%`}
+            subtitle="Eficiencia de planta"
+            variant={avgUtilization > 85 ? 'warning' : 'success'}
+            icon={<CheckCircle2 className="w-4 h-4" />}
+          />
+        </StaggerItem>
+      </StaggerContainer>
 
       <ZonesPanel
         facilities={facilities}
@@ -387,23 +400,23 @@ export const FacilitiesPage: React.FC = () => {
       />
 
       {/* Facilities Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <StaggerContainer className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {facilities.map((fac) => {
           const loadPct = Math.round(
             (fac.currentLoadKgDay / fac.capacityMaxKgDay) * 100,
           );
           return (
+            <StaggerItem key={fac.id}>
             <div
-              key={fac.id}
-              className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-[0_1px_3px_rgba(0,0,0,0.03)] flex flex-col justify-between"
+              className="fintech-card fintech-card-interactive h-full p-6 flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <span className="font-mono text-xs font-bold text-sky-800 bg-sky-50 px-2 py-0.5 rounded border border-sky-200">
+                  <span className="font-mono text-xs font-bold text-primary bg-primary-soft px-2.5 py-0.5 rounded-full border border-primary/15">
                     {fac.code}
                   </span>
                   <span
-                    className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-md border ${
+                    className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${
                       fac.status === 'ACTIVE'
                         ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                         : 'bg-amber-50 text-amber-800 border-amber-200'
@@ -487,7 +500,7 @@ export const FacilitiesPage: React.FC = () => {
                 <div className="mt-5 pt-3 border-t border-slate-100 flex justify-end">
                   <button
                     onClick={() => handleOpenEdit(fac)}
-                    className="text-xs font-bold text-sky-800 hover:text-sky-900 flex items-center gap-1.5 hover:underline cursor-pointer"
+                    className="text-xs font-bold text-primary hover:text-primary-hover flex items-center gap-1.5 hover:underline cursor-pointer"
                   >
                     <Edit2 className="w-3.5 h-3.5" />
                     <span>Editar Sede</span>
@@ -495,9 +508,10 @@ export const FacilitiesPage: React.FC = () => {
                 </div>
               )}
             </div>
+            </StaggerItem>
           );
         })}
-      </div>
+      </StaggerContainer>
 
       {/* Drawer Crear / Editar Sede */}
       {isAdmin && isDrawerOpen && (
