@@ -278,7 +278,7 @@ export function BaseMap({
 
   return (
     <div className="space-y-2.5">
-      <div className="relative overflow-hidden rounded-2xl border border-slate-200/90 shadow-sm ring-1 ring-slate-900/5">
+      <div className="relative isolate z-0 overflow-hidden rounded-2xl border border-slate-200/90 shadow-sm ring-1 ring-slate-900/5">
         {/* Tactical HUD Top Overlay */}
         <div className="pointer-events-none absolute inset-x-3 top-3 z-[500] flex flex-wrap items-center justify-between gap-2">
           <div

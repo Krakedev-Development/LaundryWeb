@@ -354,7 +354,6 @@ export function StaffPage() {
 
       {draft && (
         <Modal
-          variant="drawer"
           title="Crear supervisor"
           description="La cuenta queda limitada a la sede elegida. En su primer ingreso deberá cambiar la contraseña temporal."
           onClose={() => setDraft(null)}

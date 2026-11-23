@@ -402,7 +402,6 @@ export const PromotionsPage: React.FC = () => {
       {/* Drawer Crear / Editar Promoción per spec #37 */}
       {isDrawerOpen && (
         <Modal
-          variant="drawer"
           title={
             editingPromo
               ? `Editar promoción: ${editingPromo.code}`

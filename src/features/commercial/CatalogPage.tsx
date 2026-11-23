@@ -448,7 +448,6 @@ export const CatalogPage: React.FC = () => {
       {/* Drawer Crear / Editar per spec #36 */}
       {isDrawerOpen && (
         <Modal
-          variant="drawer"
           title={
             editingItem
               ? `Editar: ${editingItem.name}`

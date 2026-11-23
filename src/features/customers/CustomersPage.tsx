@@ -328,7 +328,6 @@ export const CustomersPage: React.FC = () => {
       {/* Customer 360 Drawer per spec #34 */}
       {selectedCustomer && (
         <Modal
-          variant="drawer"
           wide
           title={selectedCustomer.fullName}
           description={`${selectedCustomer.id} · ${selectedCustomer.documentType} ${selectedCustomer.documentNumber} · KYC ${selectedCustomer.kycStatus}`}

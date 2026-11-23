@@ -407,7 +407,6 @@ export const IncidentsPage: React.FC = () => {
 
       {selected && (
         <Modal
-          variant="drawer"
           wide
           title={`Incidencia en ${refOf(selected.orderId).trackingNumber}`}
           description={`${incidentTypeLabel(selected.type)} · ${refOf(selected.orderId).customerName}`}
