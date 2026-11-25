@@ -1,4 +1,4 @@
-import {storageService} from '../../services/storage';
+import { storageService } from '../../services/storage';
 import { useEffect, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { dispatchService } from '../../services/geo';
@@ -8,13 +8,18 @@ import {
   type DriverCandidate,
   type ExcludedDriver,
 } from '../../services/geo/DispatchService';
+import { getOrderDriverCandidates } from '../../services/api/ordersApi';
 import type { Order } from '../../types';
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export function useDriverCandidates(
   order: Order | undefined,
   type: 'pickup' | 'delivery',
 ) {
   const { drivers } = useApp();
-  const policy=storageService.getWorkflow().businessPolicy;
+  const policy = storageService.getWorkflow().businessPolicy;
   const [candidates, setCandidates] = useState<DriverCandidate[]>([]),
     [excluded, setExcluded] = useState<ExcludedDriver[]>([]),
     [loading, setLoading] = useState(false),
@@ -40,9 +45,11 @@ export function useDriverCandidates(
     }
     const controller = new AbortController();
     setLoading(true);
-    const area = serviceAreaService.findArea(coordinates);
-    dispatchService
-      .evaluate(
+    const leg = type === 'pickup' ? 'INBOUND' : 'OUTBOUND';
+
+    const evaluateLocalFallback = () => {
+      const area = serviceAreaService.findArea(coordinates);
+      return dispatchService.evaluate(
         drivers.map((d) => ({
           id: d.id,
           status: d.status,
@@ -51,7 +58,7 @@ export function useDriverCandidates(
           facilityId: d.facilityId,
           zoneId: d.zoneId,
           activeOrders: d.activeOrders,
-          maxOrders: policy.driverLimit??d.maxOrders,
+          maxOrders: policy.driverLimit ?? d.maxOrders,
           rating: d.rating,
           authorizedZoneIds: d.authorizedZoneIds,
         })),
@@ -63,14 +70,50 @@ export function useDriverCandidates(
         },
         controller.signal,
         policy.enforceDriverLimit,
-      )
-      .then((value) => {
-        if (controller.signal.aborted) return;
-        setCandidates(value.candidates);
-        setExcluded(value.excluded);
-      })
+      );
+    };
+
+    const run = async () => {
+      if (UUID_RE.test(order.id)) {
+        try {
+          const remote = await getOrderDriverCandidates(order.id, leg);
+          if (controller.signal.aborted) return;
+          setCandidates(
+            remote.candidates.map((c) => ({
+              driverId: c.driverId,
+              eligible: true,
+              etaSeconds: c.etaSeconds,
+              distanceMeters: c.distanceMeters,
+              detourMeters: c.detourMeters,
+              routeFit: c.routeFit,
+              activeStopsCount: c.activeStopsCount,
+              score: c.score,
+              reasons: c.reasons,
+            })),
+          );
+          setExcluded(
+            remote.excluded.map((e) => ({
+              driverId: e.driverId,
+              reasons: e.reasons,
+              locationAt: e.locationAt ?? '',
+            })),
+          );
+          return;
+        } catch {
+          // Si falla el servidor, conservar respaldo local de elegibilidad.
+        }
+      }
+      const value = await evaluateLocalFallback();
+      if (controller.signal.aborted) return;
+      setCandidates(value.candidates);
+      setExcluded(value.excluded);
+    };
+
+    void run()
       .catch((e) => {
-        if (!controller.signal.aborted) setError(e.message);
+        if (!controller.signal.aborted) {
+          setError(e instanceof Error ? e.message : 'No se pudieron evaluar choferes.');
+        }
       })
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);

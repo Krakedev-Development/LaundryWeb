@@ -10,6 +10,32 @@ import {
 import type { Driver } from '../../types';
 import type { DriverCandidate } from '../../services/geo/DispatchService';
 
+const ROUTE_FIT_BADGE: Record<
+  NonNullable<DriverCandidate['routeFit']>,
+  { label: string; tone: string }
+> = {
+  ON_ROUTE: {
+    label: 'De paso en su ruta',
+    tone: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  },
+  NEAR_ROUTE: {
+    label: 'Cerca de su ruta',
+    tone: 'border-sky-200 bg-sky-50 text-sky-700',
+  },
+  DIRECT: {
+    label: 'Disponible · ruta directa',
+    tone: 'border-sky-200 bg-sky-50 text-sky-700',
+  },
+  DETOUR: {
+    label: 'Requiere desvío',
+    tone: 'border-amber-200 bg-amber-50 text-amber-800',
+  },
+  GPS_PENDING: {
+    label: 'GPS pendiente',
+    tone: 'border-slate-200 bg-slate-100 text-slate-600',
+  },
+};
+
 export function DriverCandidateCard({
   driver,
   candidate,
@@ -40,12 +66,21 @@ export function DriverCandidateCard({
           <span className="block text-sm font-bold tracking-tight text-ink">
             {driver.name}
           </span>
-          {recommended && (
-            <span className="mt-1 inline-flex items-center gap-1 rounded-full border border-emerald-200/70 bg-emerald-50 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-700">
-              <ShieldCheck className="size-3" aria-hidden="true" />
-              Recomendado
-            </span>
-          )}
+          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+            {recommended && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200/70 bg-emerald-50 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-700">
+                <ShieldCheck className="size-3" aria-hidden="true" />
+                Recomendado
+              </span>
+            )}
+            {candidate.routeFit && ROUTE_FIT_BADGE[candidate.routeFit] ? (
+              <span
+                className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${ROUTE_FIT_BADGE[candidate.routeFit].tone}`}
+              >
+                {ROUTE_FIT_BADGE[candidate.routeFit].label}
+              </span>
+            ) : null}
+          </div>
         </div>
         <input
           type="radio"

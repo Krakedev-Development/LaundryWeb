@@ -20,6 +20,10 @@ import { TablePagination, usePagination } from '../../shared/ui/TablePagination'
 import { ApiError } from '../../services/api/apiConfig';
 import type { BackendDriver } from '../../services/api/driversApi';
 import {
+  getOrderDriverCandidates,
+  type ServerDriverCandidate,
+} from '../../services/api/ordersApi';
+import {
   assignDeliveryDriver,
   deliveryDriverOptions,
   DELIVERY_STATUS_LABEL,
@@ -72,6 +76,9 @@ export const DeliveriesPage: React.FC = () => {
   const [assignDriverId, setAssignDriverId] = useState('');
   const [assigning, setAssigning] = useState(false);
   const [assignError, setAssignError] = useState('');
+  const [rankedCandidates, setRankedCandidates] = useState<
+    ServerDriverCandidate[]
+  >([]);
   // `?pedido=<id>` (enlace desde el detalle o Despacho): se preselecciona en la primera carga.
   const [searchParams] = useSearchParams();
   const requestedId = useRef(searchParams.get('pedido'));
@@ -125,7 +132,20 @@ export const DeliveriesPage: React.FC = () => {
   useEffect(() => {
     setAssignDriverId(selected?.driverId ?? '');
     setAssignError('');
-  }, [selected?.id, selected?.driverId]);
+    setRankedCandidates([]);
+    if (!selected || selected.status !== 'READY_FOR_DELIVERY') return;
+    let active = true;
+    void getOrderDriverCandidates(selected.id, 'OUTBOUND')
+      .then((res) => {
+        if (active) setRankedCandidates(res.candidates);
+      })
+      .catch(() => {
+        // Fallback: usa el orden estándar de `deliveryDriverOptions`.
+      });
+    return () => {
+      active = false;
+    };
+  }, [selected?.id, selected?.driverId, selected?.status]);
 
   const toDeliverToday = rows.filter((r) => isScheduledToday(r.scheduledDate)).length;
   const onRoute = rows.filter(
@@ -137,12 +157,27 @@ export const DeliveriesPage: React.FC = () => {
 
   // Misma regla de elegibilidad que Despacho: no se ofrecen choferes no disponibles, de otra sede
   // o sin capacidad.
-  const options = useMemo(
-    () =>
-      selected
-        ? deliveryDriverOptions(drivers, selected.facilityId, storageService.getWorkflow().businessPolicy)
-        : { eligible: [], excluded: [] },
-    [drivers, selected?.id, selected?.facilityId],
+  const options = useMemo(() => {
+    if (!selected) return { eligible: [], excluded: [] };
+    const base = deliveryDriverOptions(
+      drivers,
+      selected.facilityId,
+      storageService.getWorkflow().businessPolicy,
+    );
+    if (rankedCandidates.length === 0) return base;
+    const rankOrder = new Map(
+      rankedCandidates.map((c, idx) => [c.driverId, idx]),
+    );
+    const sortedEligible = [...base.eligible].sort(
+      (a, b) =>
+        (rankOrder.get(a.id) ?? 999) - (rankOrder.get(b.id) ?? 999),
+    );
+    return { eligible: sortedEligible, excluded: base.excluded };
+  }, [drivers, selected?.id, selected?.facilityId, rankedCandidates]);
+
+  const candidateByDriverId = useMemo(
+    () => new Map(rankedCandidates.map((c) => [c.driverId, c])),
+    [rankedCandidates],
   );
 
   const canAssign =
@@ -502,12 +537,30 @@ export const DeliveriesPage: React.FC = () => {
                       required
                     >
                       <option value="">Seleccionar chofer…</option>
-                      {options.eligible.map((d) => (
-                        <option key={d.id} value={d.id}>
-                          {d.name}
-                          {d.status === 'AVAILABLE' ? ' · Disponible' : ' · En servicio'}
-                        </option>
-                      ))}
+                      {options.eligible.map((d, idx) => {
+                        const rank = candidateByDriverId.get(d.id);
+                        const routeHint =
+                          rank?.routeFit === 'ON_ROUTE'
+                            ? ' · De paso en su ruta'
+                            : rank?.routeFit === 'NEAR_ROUTE'
+                              ? ' · Cerca de su ruta'
+                              : rank?.routeFit === 'DIRECT'
+                                ? ' · Ruta directa'
+                                : '';
+                        const etaHint =
+                          rank?.etaSeconds != null
+                            ? ` · ~${Math.ceil(rank.etaSeconds / 60)} min`
+                            : '';
+                        return (
+                          <option key={d.id} value={d.id}>
+                            {idx === 0 && rank ? '[Recomendado] ' : ''}
+                            {d.name}
+                            {d.status === 'AVAILABLE' ? ' · Disponible' : ' · En servicio'}
+                            {routeHint}
+                            {etaHint}
+                          </option>
+                        );
+                      })}
                     </select>
                   </label>
                   {options.eligible.length === 0 && (
