@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BaseMap } from '../../../components/maps/BaseMap';
+import { MapboxZoneMap } from '../../../components/maps/MapboxZoneMap';
 import type { Zone } from '../../../entities/zone/model/zone.types';
 import { zoneContains } from '../../../entities/zone/model/zone.rules';
 import type { Coordinates } from '../../../services/geo/geo.types';
@@ -70,9 +70,10 @@ export function FacilityLocationPicker({
             pick(point, address);
           }}
         />
-        <BaseMap
+        <MapboxZoneMap
           fitZones
           zones={zone ? [zone] : []}
+          selectedZoneId={zone?.id}
           center={located}
           onPick={(point) => pick(point)}
           height={400}

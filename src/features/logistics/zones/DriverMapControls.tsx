@@ -8,7 +8,7 @@ export function DriverMapControls({
   following,
   onFollow,
 }: {
-  drivers: Driver[];
+  drivers: Array<Pick<Driver, 'id' | 'name'>>;
   selected: string;
   onSelect(id: string): void;
   following: boolean;

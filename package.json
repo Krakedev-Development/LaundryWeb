@@ -20,6 +20,7 @@
     "test:app": "playwright test --config playwright.app.config.cjs"
   },
   "dependencies": {
+    "@mapbox/mapbox-gl-draw": "^1.5.2",
     "@number-flow/react": "^0.6.2",
     "@tailwindcss/vite": "^4.3.3",
     "@turf/boolean-point-in-polygon": "^7.4.0",
@@ -28,12 +29,14 @@
     "framer-motion": "^14.9.1",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.546.0",
+    "mapbox-gl": "^3.35.2",
     "motion": "^14.14.0",
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
     "react-qr-code": "^2.2.0",
     "react-router-dom": "^7.18.4",
     "recharts": "^3.11.0",
+    "socket.io-client": "^4.8.4",
     "sonner": "^2.0.8",
     "vite": "^8.3.0"
   },
@@ -41,6 +44,7 @@
     "@playwright/test": "^1.63.0",
     "@types/geojson": "^7946.0.16",
     "@types/leaflet": "^1.9.22",
+    "@types/mapbox__mapbox-gl-draw": "^1.4.9",
     "@types/node": "^22.14.0",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",

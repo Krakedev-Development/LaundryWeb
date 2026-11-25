@@ -72,6 +72,161 @@ export async function updateZone(
   });
 }
 
+export interface ZoneMetricsSummary {
+  zoneId: string;
+  zoneName: string;
+  active: boolean;
+  totalFacilities: number;
+  activeFacilities: number;
+  onlineDrivers: number;
+  availableDrivers: number;
+  onServiceDrivers: number;
+  activeOrders: number;
+  activePickups: number;
+  activeDeliveries: number;
+}
+
+export interface OperationalMapDriver {
+  driverId: string;
+  name: string;
+  phone: string | null;
+  vehicle: string | null;
+  plate: string | null;
+  status: string;
+  facilityId: string;
+  zoneId: string;
+  lat: number | null;
+  lng: number | null;
+  heading?: number;
+  speed?: number;
+  locationAt: string | null;
+}
+
+export interface OperationalMapOrder {
+  orderId: string;
+  orderNumber: number;
+  status: string;
+  kind: 'pickup' | 'delivery';
+  facilityId: string;
+  zoneId: string;
+  customerName: string;
+  addressText: string;
+  lat: number;
+  lng: number;
+}
+
+export interface OperationalMapIncident {
+  incidentId: string;
+  orderId: string;
+  orderNumber: number;
+  facilityId: string;
+  zoneId: string;
+  description: string;
+  severity: string;
+  status: string;
+  lat: number;
+  lng: number;
+}
+
+export interface DriverInactivityAlert {
+  driverId: string;
+  driverName: string;
+  facilityId: string;
+  zoneId: string;
+  status: string;
+  code:
+    | 'NO_SIGNAL_ON_SERVICE'
+    | 'NO_SIGNAL_AVAILABLE'
+    | 'STATIONARY_ON_SERVICE';
+  severity: 'WARNING' | 'CRITICAL';
+  message: string;
+  minutesSinceSignal: number | null;
+  lat: number | null;
+  lng: number | null;
+  detectedAt: string;
+}
+
+export interface DriverLocationHistoryPoint {
+  id: string;
+  orderId: string | null;
+  lat: number;
+  lng: number;
+  heading: number | null;
+  speed: number | null;
+  recordedAt: string;
+}
+
+export interface DriverLocationHistoryResponse {
+  driverId: string;
+  driverName: string;
+  facilityId: string;
+  from: string;
+  to: string;
+  totalPoints: number;
+  distanceMeters: number;
+  firstAt: string | null;
+  lastAt: string | null;
+  points: DriverLocationHistoryPoint[];
+}
+
+export interface OperationalSnapshotResponse {
+  scope: 'ADMIN' | 'SUPERVISOR';
+  scopedFacilityId: string | null;
+  zones: ZoneResponse[];
+  facilities: FacilityResponse[];
+  drivers: OperationalMapDriver[];
+  orders: OperationalMapOrder[];
+  incidents: OperationalMapIncident[];
+  alerts?: DriverInactivityAlert[];
+}
+
+export async function getDriverLocationHistory(
+  driverId: string,
+  params?: { from?: string; to?: string; orderId?: string; limit?: number },
+): Promise<DriverLocationHistoryResponse> {
+  const qs = new URLSearchParams();
+  if (params?.from) qs.set('from', params.from);
+  if (params?.to) qs.set('to', params.to);
+  if (params?.orderId) qs.set('orderId', params.orderId);
+  if (params?.limit) qs.set('limit', String(params.limit));
+  const query = qs.toString();
+  return apiRequest<DriverLocationHistoryResponse>(
+    `/drivers/${driverId}/location-history${query ? `?${query}` : ''}`,
+    {
+      method: 'GET',
+      token: session.getToken(),
+    },
+  );
+}
+
+export async function findZoneByPoint(
+  lat: number,
+  lng: number,
+): Promise<ZoneResponse> {
+  return apiRequest<ZoneResponse>('/zones/by-point', {
+    method: 'POST',
+    token: session.getToken(),
+    body: JSON.stringify({ lat, lng }),
+  });
+}
+
+export async function getZonesMetricsSummary(): Promise<ZoneMetricsSummary[]> {
+  const res = await apiRequest<
+    ZoneMetricsSummary[] | { data?: ZoneMetricsSummary[] }
+  >('/zones/metrics/summary', {
+    method: 'GET',
+    token: session.getToken(),
+  });
+  return unwrapList(res);
+}
+
+export async function getOperationalSnapshot(): Promise<OperationalSnapshotResponse> {
+  return apiRequest<OperationalSnapshotResponse>('/zones/operational-snapshot', {
+    method: 'GET',
+    token: session.getToken(),
+  });
+}
+
 // --- 2. FACILITIES (/facilities) ---
 
 export interface CreateFacilityDto {

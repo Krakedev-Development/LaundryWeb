@@ -105,6 +105,8 @@
 /* Leaflet tactical popup, tile filter & attribution refinements */
 .leaflet-container {
   font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
+  isolation: isolate;
+  z-index: 0;
 }
 
 .leaflet-container img.leaflet-tile {

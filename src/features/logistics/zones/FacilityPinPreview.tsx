@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BaseMap } from '../../../components/maps/BaseMap';
+import { MapboxZoneMap } from '../../../components/maps/MapboxZoneMap';
 import type { Zone } from '../../../entities/zone/model/zone.types';
 import { zoneContains } from '../../../entities/zone/model/zone.rules';
 import type { Coordinates } from '../../../services/geo/geo.types';
@@ -23,12 +23,13 @@ export function FacilityPinPreview({
         {zone?.name ?? 'Ubicación de la sede'}
       </p>
       <p className="text-xs text-slate-500">
-        El pin marca la sede. Puedes ajustar su ubicación dentro del polígono.
+        El pin marca la sede. Haz clic dentro del polígono para ajustar su ubicación.
       </p>
-      <BaseMap
+      <MapboxZoneMap
         fitZones
         height={220}
         zones={zone ? [zone] : zones}
+        selectedZoneId={zone?.id}
         center={point}
         points={[
           {

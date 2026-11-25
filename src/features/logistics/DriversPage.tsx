@@ -488,7 +488,6 @@ export const DriversPage: React.FC = () => {
       {/* Drawer Crear / Editar Chofer (Solo Admin) */}
       {isAdmin && isDrawerOpen && (
         <Modal
-          variant="drawer"
           title={
             editingDriver
               ? `Editar: ${editingDriver.name}`
