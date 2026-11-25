@@ -5,6 +5,7 @@ import {
   getZonesMetricsSummary,
   mapFacilityResponseToFacility,
   mapZoneResponseToZone,
+  type DriverInactivityAlert,
   type OperationalMapDriver,
   type OperationalMapIncident,
   type OperationalMapOrder,
@@ -23,6 +24,7 @@ export interface OperationalMapRealtimeState {
   drivers: OperationalMapDriver[];
   orders: OperationalMapOrder[];
   incidents: OperationalMapIncident[];
+  alerts: DriverInactivityAlert[];
   metrics: ZoneMetricsSummary[];
 }
 
@@ -32,6 +34,7 @@ interface AdminMapSnapshotWire {
   drivers?: OperationalMapDriver[];
   orders?: OperationalMapOrder[];
   incidents?: OperationalMapIncident[];
+  alerts?: DriverInactivityAlert[];
 }
 
 const POLL_SOCKET_CONNECTED_MS = 120_000;
@@ -52,6 +55,7 @@ export function useOperationalMapRealtime(enabled = true): OperationalMapRealtim
   const [drivers, setDrivers] = useState<OperationalMapDriver[]>([]);
   const [orders, setOrders] = useState<OperationalMapOrder[]>([]);
   const [incidents, setIncidents] = useState<OperationalMapIncident[]>([]);
+  const [alerts, setAlerts] = useState<DriverInactivityAlert[]>([]);
   const [metrics, setMetrics] = useState<ZoneMetricsSummary[]>([]);
 
   const mountedRef = useRef(true);
@@ -76,6 +80,7 @@ export function useOperationalMapRealtime(enabled = true): OperationalMapRealtim
       setDrivers(snap.drivers);
       setOrders(snap.orders);
       setIncidents(snap.incidents);
+      if (Array.isArray(snap.alerts)) setAlerts(snap.alerts);
       setMetrics(summary);
       setHasLiveSnapshot(true);
     } catch {
@@ -131,6 +136,7 @@ export function useOperationalMapRealtime(enabled = true): OperationalMapRealtim
         if (Array.isArray(data.drivers)) setDrivers(data.drivers);
         if (Array.isArray(data.orders)) setOrders(data.orders);
         if (Array.isArray(data.incidents)) setIncidents(data.incidents);
+        if (Array.isArray(data.alerts)) setAlerts(data.alerts);
         setHasLiveSnapshot(true);
       },
     );
@@ -170,6 +176,16 @@ export function useOperationalMapRealtime(enabled = true): OperationalMapRealtim
       },
     );
 
+    const unsubDriverAlerts = adminSocketService.on(
+      'admin:map:driver-alerts',
+      (data: { alerts?: DriverInactivityAlert[] }) => {
+        if (!mountedRef.current) return;
+        if (Array.isArray(data?.alerts)) {
+          setAlerts(data.alerts);
+        }
+      },
+    );
+
     return () => {
       socket?.off('connect', onConnect);
       socket?.off('authenticated', subscribe);
@@ -178,6 +194,7 @@ export function useOperationalMapRealtime(enabled = true): OperationalMapRealtim
       unsubDriverLocations();
       unsubDriverOffline();
       unsubOrderUpdated();
+      unsubDriverAlerts();
       adminSocketService.emit('admin:map:unsubscribe');
     };
   }, [enabled, fetchRestSnapshot]);
@@ -202,6 +219,7 @@ export function useOperationalMapRealtime(enabled = true): OperationalMapRealtim
     drivers,
     orders,
     incidents,
+    alerts,
     metrics,
   };
 }

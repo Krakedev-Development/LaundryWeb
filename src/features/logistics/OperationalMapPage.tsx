@@ -1,8 +1,13 @@
 import '../../shared/ui/operations/operations.css';
-import { MapLayersToolbar } from './zones/MapLayersToolbar';
+import {
+  MapLayersToolbar,
+  type DriverMapStatusFilter,
+} from './zones/MapLayersToolbar';
 import { MapLocations } from './zones/MapLocations';
 import { MapPinned, Radio } from 'lucide-react';
 import { DriverMapLegend } from './zones/DriverMapLegend';
+import { DriverInactivityAlerts } from './zones/DriverInactivityAlerts';
+import { DriverRouteHistoryPanel } from './zones/DriverRouteHistoryPanel';
 import { driverStates } from '../../components/maps/mapPointAppearance';
 import { operationalStage } from '../../services/fulfillment';
 import React, { useMemo, useState } from 'react';
@@ -20,6 +25,7 @@ import {
   useServerIncidents,
 } from '../../services/api/incidentsApi';
 import { useOperationalMapRealtime } from '../../hooks/useOperationalMapRealtime';
+import type { DriverLocationHistoryResponse } from '../../services/api/geoApi';
 import type { Driver } from '../../types';
 
 export function OperationalMapPage() {
@@ -43,9 +49,12 @@ export function OperationalMapPage() {
     incident: true,
   });
   const [zone, setZone] = useState('');
+  const [driverStatus, setDriverStatus] = useState<DriverMapStatusFilter>('');
   const [showZones, setShowZones] = useState(true);
   const [selectedDriver, setSelectedDriver] = useState('');
   const [following, setFollowing] = useState(false);
+  const [routeHistory, setRouteHistory] =
+    useState<DriverLocationHistoryResponse | null>(null);
 
   // Fuente de verdad: snapshot en tiempo real del servidor (acotado para SUPERVISOR);
   // fallback a datos locales si el servidor no respondió.
@@ -81,9 +90,26 @@ export function OperationalMapPage() {
       }));
   }, [realtime.hasLiveSnapshot, realtime.drivers, localDrivers]);
 
-  const filteredDrivers = liveDriversAsControl.filter(
-    (driver) => !zone || driver.zoneId === zone,
+  const visibleAlerts = useMemo(
+    () => realtime.alerts.filter((a) => !zone || a.zoneId === zone),
+    [realtime.alerts, zone],
   );
+  const alertDriverIds = useMemo(
+    () => new Set(visibleAlerts.map((a) => a.driverId)),
+    [visibleAlerts],
+  );
+
+  const filteredDrivers = liveDriversAsControl.filter((driver) => {
+    if (zone && driver.zoneId !== zone) return false;
+    if (!driverStatus) return true;
+    if (driverStatus === 'INACTIVE_ALERT') {
+      return (
+        alertDriverIds.has(driver.id) ||
+        isLocationStale(driver.location.lastUpdated)
+      );
+    }
+    return driver.status === driverStatus;
+  });
   const followed =
     following && filteredDrivers.find((driver) => driver.id === selectedDriver);
 
@@ -270,22 +296,47 @@ export function OperationalMapPage() {
         }}
         showZones={showZones}
         onShowZonesChange={setShowZones}
+        driverStatus={driverStatus}
+        onDriverStatusChange={(value) => {
+          setDriverStatus(value);
+          setSelectedDriver('');
+          setFollowing(false);
+        }}
+      />
+      <DriverInactivityAlerts
+        alerts={visibleAlerts}
+        onLocate={(driverId) => {
+          setDriverStatus('');
+          setSelectedDriver(driverId);
+          setFollowing(true);
+        }}
       />
       {error && (
         <p role="alert" className="text-sm text-red-700">
           {error}
         </p>
       )}
-      <DriverMapControls
-        drivers={filteredDrivers}
-        selected={selectedDriver}
-        onSelect={(id) => {
-          setSelectedDriver(id);
-          setFollowing(false);
-        }}
-        following={following}
-        onFollow={() => setFollowing((value) => !value)}
-      />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <DriverMapControls
+          drivers={filteredDrivers}
+          selected={selectedDriver}
+          onSelect={(id) => {
+            setSelectedDriver(id);
+            setFollowing(false);
+          }}
+          following={following}
+          onFollow={() => setFollowing((value) => !value)}
+        />
+        <DriverRouteHistoryPanel
+          drivers={liveDriversAsControl.filter((d) => !zone || d.zoneId === zone)}
+          activeHistory={routeHistory}
+          onLoadHistory={(history) => {
+            setRouteHistory(history);
+            setFollowing(false);
+          }}
+          onClearHistory={() => setRouteHistory(null)}
+        />
+      </div>
       <section className="ops-panel" aria-label="Mapa y estados operativos">
         <div className="ops-panel-header">
           <div className="ops-panel-title">
@@ -316,6 +367,7 @@ export function OperationalMapPage() {
             }
             selectedZoneId={zone || undefined}
             metrics={realtime.metrics}
+            historyRoute={routeHistory?.points}
             center={followed ? followed.location : undefined}
             onSelect={(id, kind) => {
               if (kind === 'driver') {

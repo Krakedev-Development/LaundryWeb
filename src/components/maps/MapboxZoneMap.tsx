@@ -25,6 +25,8 @@ import {
 const ZONES_SOURCE = 'laundry-zones-source';
 const ZONES_FILL_LAYER = 'laundry-zones-fill';
 const ZONES_LINE_LAYER = 'laundry-zones-line';
+const HISTORY_SOURCE = 'laundry-history-route-source';
+const HISTORY_LINE_LAYER = 'laundry-history-route-line';
 
 function escapeHtml(value: string): string {
   return value
@@ -95,6 +97,7 @@ export interface MapboxZoneMapProps {
   zones: Zone[];
   points?: MapPoint[];
   metrics?: ZoneMetricsSummary[];
+  historyRoute?: Array<{ lat: number; lng: number; recordedAt?: string }>;
   center?: Coordinates;
   fitZones?: boolean;
   height?: number;
@@ -107,6 +110,7 @@ export function MapboxZoneMap({
   zones,
   points = [],
   metrics = [],
+  historyRoute = [],
   center,
   fitZones = false,
   height = 460,
@@ -117,6 +121,7 @@ export function MapboxZoneMap({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<Map<string, mapboxgl.Marker>>(new Map());
+  const historyMarkersRef = useRef<mapboxgl.Marker[]>([]);
   const popupRef = useRef<mapboxgl.Popup | null>(null);
   const onPickRef = useRef(onPick);
   const onSelectRef = useRef(onSelect);
@@ -221,6 +226,25 @@ export function MapboxZoneMap({
           },
         });
       }
+      if (!map.getSource(HISTORY_SOURCE)) {
+        map.addSource(HISTORY_SOURCE, {
+          type: 'geojson',
+          data: { type: 'FeatureCollection', features: [] },
+        });
+      }
+      if (!map.getLayer(HISTORY_LINE_LAYER)) {
+        map.addLayer({
+          id: HISTORY_LINE_LAYER,
+          type: 'line',
+          source: HISTORY_SOURCE,
+          layout: { 'line-cap': 'round', 'line-join': 'round' },
+          paint: {
+            'line-color': '#4F46E5',
+            'line-width': 4,
+            'line-opacity': 0.88,
+          },
+        });
+      }
     };
 
     map.on('load', () => {
@@ -262,10 +286,80 @@ export function MapboxZoneMap({
       popupRef.current?.remove();
       for (const m of markersRef.current.values()) m.remove();
       markersRef.current.clear();
+      for (const hm of historyMarkersRef.current) hm.remove();
+      historyMarkersRef.current = [];
       map.remove();
       mapRef.current = null;
     };
   }, []);
+
+  // Sincronizar polilínea de historial de recorrido
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!USE_MAPBOX || !map) return;
+
+    const applyHistory = () => {
+      for (const hm of historyMarkersRef.current) hm.remove();
+      historyMarkersRef.current = [];
+
+      const source = map.getSource(HISTORY_SOURCE) as
+        | mapboxgl.GeoJSONSource
+        | undefined;
+      if (!source) return;
+
+      const coords = historyRoute
+        .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng))
+        .map((p) => [p.lng, p.lat] as [number, number]);
+
+      if (coords.length < 2) {
+        source.setData({ type: 'FeatureCollection', features: [] });
+        return;
+      }
+
+      source.setData({
+        type: 'FeatureCollection',
+        features: [
+          {
+            type: 'Feature',
+            properties: {},
+            geometry: { type: 'LineString', coordinates: coords },
+          },
+        ],
+      });
+
+      const makeEndpoint = (label: string, color: string) => {
+        const el = document.createElement('div');
+        el.style.cssText =
+          `background:${color};color:#fff;font-size:10px;font-weight:700;` +
+          'padding:2px 7px;border-radius:999px;border:2px solid #fff;' +
+          'box-shadow:0 2px 6px rgba(15,23,42,0.28);white-space:nowrap;';
+        el.textContent = label;
+        return el;
+      };
+
+      const startMarker = new mapboxgl.Marker({
+        element: makeEndpoint('Inicio', '#16A34A'),
+      })
+        .setLngLat(coords[0])
+        .addTo(map);
+      const endMarker = new mapboxgl.Marker({
+        element: makeEndpoint('Fin', '#4F46E5'),
+      })
+        .setLngLat(coords[coords.length - 1])
+        .addTo(map);
+      historyMarkersRef.current = [startMarker, endMarker];
+
+      const bounds = new mapboxgl.LngLatBounds();
+      for (const c of coords) bounds.extend(c);
+      map.fitBounds(bounds, { padding: 56, maxZoom: 15, duration: 500 });
+    };
+
+    if (map.isStyleLoaded() && map.getSource(HISTORY_SOURCE)) {
+      applyHistory();
+    } else {
+      map.once('load', applyHistory);
+    }
+  }, [historyRoute]);
 
   // Sincronizar capas GeoJSON de zonas
   useEffect(() => {

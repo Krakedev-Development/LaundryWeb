@@ -21,6 +21,14 @@ const layerItems = {
   incident: { label: 'Incidencias', icon: CircleAlert },
 };
 type Layers = Record<keyof typeof layerItems, boolean>;
+export type DriverMapStatusFilter =
+  | ''
+  | 'AVAILABLE'
+  | 'ON_SERVICE'
+  | 'BREAK'
+  | 'OFFLINE'
+  | 'INACTIVE_ALERT';
+
 export function MapLayersToolbar({
   layers,
   onLayersChange,
@@ -29,6 +37,8 @@ export function MapLayersToolbar({
   onZoneChange,
   showZones,
   onShowZonesChange,
+  driverStatus = '',
+  onDriverStatusChange,
 }: {
   layers: Layers;
   onLayersChange(layers: Layers): void;
@@ -37,6 +47,8 @@ export function MapLayersToolbar({
   onZoneChange(zone: string): void;
   showZones: boolean;
   onShowZonesChange(value: boolean): void;
+  driverStatus?: DriverMapStatusFilter;
+  onDriverStatusChange?(value: DriverMapStatusFilter): void;
 }) {
   const [theme, setTheme] = useMapTheme();
   return (
@@ -102,6 +114,28 @@ export function MapLayersToolbar({
               ))}
             </select>
           </label>
+          {onDriverStatusChange ? (
+            <label className="ops-label w-full sm:w-52">
+              Estado de chofer
+              <select
+                aria-label="Estado de chofer"
+                value={driverStatus}
+                onChange={(event) =>
+                  onDriverStatusChange(
+                    event.target.value as DriverMapStatusFilter,
+                  )
+                }
+                className="ops-field"
+              >
+                <option value="">Todos los estados</option>
+                <option value="AVAILABLE">Disponible</option>
+                <option value="ON_SERVICE">En servicio</option>
+                <option value="BREAK">En descanso</option>
+                <option value="OFFLINE">Desconectado</option>
+                <option value="INACTIVE_ALERT">Con alerta / Sin señal</option>
+              </select>
+            </label>
+          ) : null}
         </div>
       </div>
       <div className="ops-layer-row">

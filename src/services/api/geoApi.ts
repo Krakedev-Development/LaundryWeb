@@ -128,6 +128,47 @@ export interface OperationalMapIncident {
   lng: number;
 }
 
+export interface DriverInactivityAlert {
+  driverId: string;
+  driverName: string;
+  facilityId: string;
+  zoneId: string;
+  status: string;
+  code:
+    | 'NO_SIGNAL_ON_SERVICE'
+    | 'NO_SIGNAL_AVAILABLE'
+    | 'STATIONARY_ON_SERVICE';
+  severity: 'WARNING' | 'CRITICAL';
+  message: string;
+  minutesSinceSignal: number | null;
+  lat: number | null;
+  lng: number | null;
+  detectedAt: string;
+}
+
+export interface DriverLocationHistoryPoint {
+  id: string;
+  orderId: string | null;
+  lat: number;
+  lng: number;
+  heading: number | null;
+  speed: number | null;
+  recordedAt: string;
+}
+
+export interface DriverLocationHistoryResponse {
+  driverId: string;
+  driverName: string;
+  facilityId: string;
+  from: string;
+  to: string;
+  totalPoints: number;
+  distanceMeters: number;
+  firstAt: string | null;
+  lastAt: string | null;
+  points: DriverLocationHistoryPoint[];
+}
+
 export interface OperationalSnapshotResponse {
   scope: 'ADMIN' | 'SUPERVISOR';
   scopedFacilityId: string | null;
@@ -136,6 +177,26 @@ export interface OperationalSnapshotResponse {
   drivers: OperationalMapDriver[];
   orders: OperationalMapOrder[];
   incidents: OperationalMapIncident[];
+  alerts?: DriverInactivityAlert[];
+}
+
+export async function getDriverLocationHistory(
+  driverId: string,
+  params?: { from?: string; to?: string; orderId?: string; limit?: number },
+): Promise<DriverLocationHistoryResponse> {
+  const qs = new URLSearchParams();
+  if (params?.from) qs.set('from', params.from);
+  if (params?.to) qs.set('to', params.to);
+  if (params?.orderId) qs.set('orderId', params.orderId);
+  if (params?.limit) qs.set('limit', String(params.limit));
+  const query = qs.toString();
+  return apiRequest<DriverLocationHistoryResponse>(
+    `/drivers/${driverId}/location-history${query ? `?${query}` : ''}`,
+    {
+      method: 'GET',
+      token: session.getToken(),
+    },
+  );
 }
 
 export async function findZoneByPoint(
