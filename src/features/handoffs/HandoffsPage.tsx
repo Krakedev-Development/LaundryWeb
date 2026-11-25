@@ -16,6 +16,7 @@ import { ApiError } from '../../services/api/apiConfig';
 import { Modal } from '../../shared/ui/Modal';
 import { useQrScanner } from '../custody/useQrScanner';
 import { btnPrimary, btnSecondary, field } from '../../shared/ui/controls';
+import { useOrderStatusRealtime } from '../../hooks/useOrderStatusRealtime';
 
 /*
  * Puerta de entrada del mostrador. La validación de los traspasos (código, prendas, quién retira)
@@ -106,8 +107,9 @@ export function HandoffsPage() {
   const [confirming, setConfirming] = useState<{ row: Row; queue: (typeof QUEUES)[number] } | null>(null);
   const [scanError, setScanError] = useState('');
 
-  const load = useCallback(async () => {
-    setState('loading');
+  // `quiet`: recarga por aviso del servidor, sin vaciar las colas ni mostrar error si falla.
+  const load = useCallback(async (quiet = false) => {
+    if (!quiet) setState('loading');
     try {
       const lists = await Promise.all(
         QUEUES.map((q) => listOrders({ status: q.status, pageSize: 100 })),
@@ -119,6 +121,7 @@ export function HandoffsPage() {
       });
       setState('ready');
     } catch (e) {
+      if (quiet) return;
       setLoadError(
         e instanceof ApiError && e.status === 0
           ? 'Sin conexión con el servidor.'
@@ -129,6 +132,7 @@ export function HandoffsPage() {
       setState('error');
     }
   }, []);
+  useOrderStatusRealtime(() => void load(true));
 
   useEffect(() => {
     void load();

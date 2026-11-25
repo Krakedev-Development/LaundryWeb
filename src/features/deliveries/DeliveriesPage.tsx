@@ -38,6 +38,7 @@ import { useApp } from '../../context/AppContext';
 import { storageService } from '../../services/storage';
 import { btnPrimary, btnSecondarySm, focusRing } from '../../shared/ui/controls';
 import { TONE_STYLE } from '../../shared/ui/statusTone';
+import { useOrderStatusRealtime } from '../../hooks/useOrderStatusRealtime';
 
 // Escala compartida: lista para entrega espera que la sede asigne chofer (ámbar).
 const STATUS_STYLE: Record<DeliveryServerStatus, string> = {
@@ -84,9 +85,12 @@ export const DeliveriesPage: React.FC = () => {
   const requestedId = useRef(searchParams.get('pedido'));
   const [notListed, setNotListed] = useState('');
 
-  const load = useCallback(async () => {
-    setState('loading');
-    setLoadError('');
+  // `quiet`: recarga por aviso del servidor, sin vaciar la pantalla ni mostrar error si falla.
+  const load = useCallback(async (quiet = false) => {
+    if (!quiet) {
+      setState('loading');
+      setLoadError('');
+    }
     try {
       const [deliveryRows, driverRows] = await Promise.all([
         fetchDeliveryRows(),
@@ -103,6 +107,7 @@ export const DeliveriesPage: React.FC = () => {
         return deliveryRows.some((r) => r.id === wanted) ? wanted : (deliveryRows[0]?.id ?? '');
       });
     } catch (e) {
+      if (quiet) return;
       setLoadError(
         e instanceof ApiError && e.status === 0
           ? 'Sin conexión con el servidor.'
@@ -117,6 +122,8 @@ export const DeliveriesPage: React.FC = () => {
   useEffect(() => {
     void load();
   }, [load]);
+  // Entregas canceladas, reprogramadas o que avanzan desde la app del chofer o del cliente.
+  useOrderStatusRealtime(() => void load(true));
 
   const filtered = useMemo(() => {
     return rows.filter((r) => {

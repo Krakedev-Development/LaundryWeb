@@ -32,6 +32,7 @@ import { syncDrivers } from '../../services/api/driversApi';
 import { ApiError } from '../../services/api/apiConfig';
 import { deliveriesHref } from '../../services/operationsLinks';
 import type { Driver, Order } from '../../types';
+import { useOrderStatusRealtime } from '../../hooks/useOrderStatusRealtime';
 
 // Despacho asigna solo el chofer de recogida (estado del servidor: confirmada). La entrega se
 // asigna en Entregas.
@@ -83,6 +84,8 @@ export function DispatchPage() {
   useEffect(() => {
     void syncData();
   }, []);
+  // Una solicitud cancelada, reprogramada o asignada desde otro equipo sale o entra a la cola.
+  useOrderStatusRealtime(() => void syncData());
 
   // Se aplica una sola vez, con la primera cola cargada del servidor. Si la solicitud no espera
   // recogida pero está lista para entrega, su asignación vive en Entregas: se redirige allí.

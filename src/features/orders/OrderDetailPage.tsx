@@ -32,6 +32,7 @@ import { useDismissable } from '../../shared/ui/useDismissable';
 import { focusRing } from '../../shared/ui/controls';
 import { storageService } from '../../services/storage';
 import { MODE_LABELS } from '../../services/BusinessService';
+import { useOrderStatusRealtime } from '../../hooks/useOrderStatusRealtime';
 import { operationalStage } from '../../services/fulfillment';
 
 // Subcomponents for the modular 360° architecture
@@ -109,12 +110,28 @@ export const OrderDetailPage: React.FC = () => {
   const contextOrder = orders.find((o) => o.id === id || o.trackingNumber === id);
   const order = liveOrder;
 
+  // Aviso del servidor sobre esta solicitud (el cliente la canceló o reprogramó, el chofer
+  // avanzó...): se recarga sin vaciar la pantalla.
+  const [liveTick, setLiveTick] = useState(0);
+  const quietReload = useRef(false);
+  useOrderStatusRealtime(
+    () => {
+      quietReload.current = true;
+      setLiveTick((n) => n + 1);
+    },
+    { enabled: !!id, onlyOrderId: serverOrder?.id ?? id },
+  );
+
   useEffect(() => {
     if (!id) return;
     let active = true;
-    setLiveOrder(null);
-    setServerOrder(null);
-    setLoad({ status: 'loading' });
+    const quiet = quietReload.current;
+    quietReload.current = false;
+    if (!quiet) {
+      setLiveOrder(null);
+      setServerOrder(null);
+      setLoad({ status: 'loading' });
+    }
     void (async () => {
       try {
         const raw = await getOrder(id);
@@ -133,7 +150,8 @@ export const OrderDetailPage: React.FC = () => {
         if (!next.some((o) => o.id === mapped.id)) next.push(mapped);
         storageService.saveOrders(next);
       } catch (e) {
-        if (!active) return;
+        // Si falla una recarga por aviso se conserva lo que ya se veía.
+        if (!active || quiet) return;
         if (e instanceof ApiError && e.status === 404) setLoad({ status: 'notFound' });
         else
           setLoad({
@@ -150,7 +168,7 @@ export const OrderDetailPage: React.FC = () => {
     return () => {
       active = false;
     };
-  }, [id, attempt]);
+  }, [id, attempt, liveTick]);
 
   if (load.status === 'loading') {
     return (
