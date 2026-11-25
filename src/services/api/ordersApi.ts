@@ -228,13 +228,18 @@ export async function getOrderDriverCandidates(
   leg?: 'INBOUND' | 'OUTBOUND',
 ): Promise<OrderDriverCandidatesResponse> {
   const qs = leg ? `?leg=${leg}` : '';
-  return apiRequest<OrderDriverCandidatesResponse>(
+  const res = await apiRequest<OrderDriverCandidatesResponse>(
     `/orders/${orderId}/driver-candidates${qs}`,
     {
       method: 'GET',
       token: session.getToken(),
     },
   );
+  // Una respuesta sin las listas (servidor antiguo o error del proxy) se trata como fallo: quien
+  // llama usa su respaldo en vez de romper la pantalla.
+  if (!res || !Array.isArray(res.candidates) || !Array.isArray(res.excluded))
+    throw new Error('La respuesta de choferes candidatos no es válida.');
+  return res;
 }
 
 export async function assignDriver(
