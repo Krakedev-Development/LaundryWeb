@@ -27,11 +27,21 @@ export interface DispatchTarget {
   facilityId: string;
   zoneId: string;
 }
+export type RouteFitKind =
+  | 'ON_ROUTE'
+  | 'NEAR_ROUTE'
+  | 'DIRECT'
+  | 'DETOUR'
+  | 'GPS_PENDING';
+
 export interface DriverCandidate {
   driverId: string;
   eligible: boolean;
   etaSeconds: number | null;
   distanceMeters: number | null;
+  detourMeters?: number | null;
+  routeFit?: RouteFitKind;
+  activeStopsCount?: number;
   score: number;
   reasons: string[];
 }

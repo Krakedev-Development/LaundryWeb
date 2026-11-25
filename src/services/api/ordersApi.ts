@@ -187,6 +187,56 @@ export async function getOrder(id: string): Promise<BackendOrderDetail> {
   });
 }
 
+export interface ServerDriverCandidate {
+  driverId: string;
+  name: string;
+  phone: string | null;
+  vehicle: string | null;
+  plate: string | null;
+  status: string;
+  eligible: true;
+  gpsFresh: boolean;
+  etaSeconds: number | null;
+  distanceMeters: number | null;
+  detourMeters: number | null;
+  routeFit: 'ON_ROUTE' | 'NEAR_ROUTE' | 'DIRECT' | 'DETOUR' | 'GPS_PENDING';
+  activeStopsCount: number;
+  maxOrders: number;
+  score: number;
+  reasons: string[];
+}
+
+export interface ServerExcludedDriver {
+  driverId: string;
+  name: string;
+  status: string;
+  reasons: string[];
+  locationAt: string | null;
+}
+
+export interface OrderDriverCandidatesResponse {
+  orderId: string;
+  leg: 'INBOUND' | 'OUTBOUND';
+  facilityId: string;
+  zoneId: string;
+  candidates: ServerDriverCandidate[];
+  excluded: ServerExcludedDriver[];
+}
+
+export async function getOrderDriverCandidates(
+  orderId: string,
+  leg?: 'INBOUND' | 'OUTBOUND',
+): Promise<OrderDriverCandidatesResponse> {
+  const qs = leg ? `?leg=${leg}` : '';
+  return apiRequest<OrderDriverCandidatesResponse>(
+    `/orders/${orderId}/driver-candidates${qs}`,
+    {
+      method: 'GET',
+      token: session.getToken(),
+    },
+  );
+}
+
 export async function assignDriver(
   orderId: string,
   payload: AssignDriverPayload,

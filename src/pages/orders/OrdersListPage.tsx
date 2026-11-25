@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useOrderList } from '../../features/orders/model/useOrderList';
 import { OrdersListHeader } from '../../widgets/order-list/OrdersListHeader';
 import { OrderExceptionsNotice } from '../../widgets/order-list/OrderExceptionsNotice';
@@ -11,6 +11,7 @@ import { useApp } from '../../context/AppContext';
 import { fetchFullOrders } from '../../services/api/ordersApi';
 import { storageService } from '../../services/storage';
 import { ApiError } from '../../services/api/apiConfig';
+import { useOrderStatusRealtime } from '../../hooks/useOrderStatusRealtime';
 
 export const OrdersListPage = () => {
   const { customers, facilities, drivers, orders } = useApp();
@@ -21,11 +22,20 @@ export const OrdersListPage = () => {
     { status: 'loading' } | { status: 'ready' } | { status: 'error'; message: string }
   >({ status: 'loading' });
   const [attempt, setAttempt] = useState(0);
+  // Aviso del servidor (cancelación, reprogramación, avance): recarga sin vaciar la tabla.
+  const [liveTick, setLiveTick] = useState(0);
+  const quietReload = useRef(false);
+  useOrderStatusRealtime(() => {
+    quietReload.current = true;
+    setLiveTick((n) => n + 1);
+  });
   const model = useOrderList(serverIds);
 
   useEffect(() => {
     let active = true;
-    setSync({ status: 'loading' });
+    const quiet = quietReload.current;
+    quietReload.current = false;
+    if (!quiet) setSync({ status: 'loading' });
     void (async () => {
       try {
         const remoteOrders = await fetchFullOrders(
@@ -42,7 +52,8 @@ export const OrdersListPage = () => {
         setServerIds(new Set(remoteOrders.map((o) => o.id)));
         setSync({ status: 'ready' });
       } catch (e) {
-        if (!active) return;
+        // Si falla una recarga por aviso se conserva la lista que ya se veía.
+        if (!active || quiet) return;
         setServerIds(null);
         setSync({
           status: 'error',
@@ -58,7 +69,7 @@ export const OrdersListPage = () => {
     return () => {
       active = false;
     };
-  }, [attempt]);
+  }, [attempt, liveTick]);
 
   return (
     <div className="space-y-8">

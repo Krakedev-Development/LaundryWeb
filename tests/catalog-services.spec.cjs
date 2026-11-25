@@ -34,7 +34,7 @@ async function mockCatalog(page) {
 
 const openServices = async (page) => {
   await page.goto('/commercial/catalog');
-  await page.getByRole('button', { name: /Servicios & Paquetes/ }).click();
+  await page.getByRole('tab', { name: /Servicios & Paquetes/ }).click();
 };
 
 test('la tabla muestra la descripción y el tiempo del servidor, sin valores inventados', async ({ page }) => {
