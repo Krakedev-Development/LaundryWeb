@@ -44,7 +44,15 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
   const [adjState, setAdjState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [adjError, setAdjError] = useState('');
 
+  const isServerUuid =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(order.id);
+
   const loadAdjustments = useCallback(async () => {
+    if (!isServerUuid) {
+      setAdjustments([]);
+      setAdjState('ready');
+      return;
+    }
     setAdjState('loading');
     setAdjError('');
     try {
@@ -55,7 +63,7 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
       setAdjError(err instanceof Error ? err.message : 'No se pudieron cargar los ajustes.');
       setAdjState('error');
     }
-  }, [order.id]);
+  }, [order.id, isServerUuid]);
 
   useEffect(() => {
     void loadAdjustments();
@@ -99,6 +107,45 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* 0. Atención requerida de pago (al inicio si está pendiente, UX-06) */}
+      {pricing.paymentStatus !== 'PAID' && (
+        <section
+          role="region"
+          aria-label="Atención de pago requerido"
+          className="bg-amber-50/80 rounded-2xl border border-amber-200 p-5 shadow-2xs space-y-3"
+        >
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2 text-amber-900 font-bold text-sm">
+              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>Pago pendiente de validación en tesorería</span>
+            </div>
+            <span className="px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+              {paymentMethodLabel(pricing.paymentMethod)} · Saldo: ${due.toFixed(2)}
+            </span>
+          </div>
+
+          <p className="text-xs text-amber-800">
+            Esta solicitud requiere que tesorería valide el comprobante de transferencia para autorizar la asignación del chofer de recogida.
+          </p>
+
+          <div className="flex items-center justify-end pt-1">
+            <button
+              type="button"
+              onClick={() => void onConfirmPayment()}
+              disabled={confirmingPayment}
+              className="px-5 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
+            >
+              {confirmingPayment ? (
+                <LoaderCircle className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <CheckCircle2 className="w-3.5 h-3.5" />
+              )}
+              <span>{confirmingPayment ? 'Confirmando pago en servidor...' : 'Confirmar pago verificado'}</span>
+            </button>
+          </div>
+        </section>
+      )}
+
       {/* Customer & Facility Information Card */}
       <section className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs">
         <h2 className="text-sm font-bold text-ink mb-4 flex items-center gap-2">
@@ -147,14 +194,6 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
                 {order.zoneName || 'Zona Centro'}
               </span>
             </div>
-
-            {/* Sin dato no se muestra la etiqueta vacía. */}
-            {order.customerId && (
-              <div>
-                <span className="text-slate-500 block text-[11px]">Identificador de cliente</span>
-                <span className="font-mono text-slate-500">{order.customerId}</span>
-              </div>
-            )}
           </div>
         </div>
       </section>
@@ -205,16 +244,16 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
                             </span>
                           )}
                         </td>
-                        <td className="py-2.5 px-3 text-center font-mono tabular-nums">
+                        <td className="py-2.5 px-3 text-center font-medium tabular-nums text-slate-800">
                           {item.quantity}
                         </td>
                         <td className="py-2.5 px-3 text-slate-600">
                           {item.category || 'PRENDAS'}
                         </td>
-                        <td className="py-2.5 px-3 text-right font-mono tabular-nums">
+                        <td className="py-2.5 px-3 text-right font-medium tabular-nums text-slate-700">
                           ${(item.unitPrice || 0).toFixed(2)}
                         </td>
-                        <td className="py-2.5 px-3 text-right font-mono font-semibold tabular-nums">
+                        <td className="py-2.5 px-3 text-right font-semibold tabular-nums text-slate-900">
                           ${((item.quantity || 1) * (item.unitPrice || 0)).toFixed(2)}
                         </td>
                       </tr>
@@ -238,7 +277,7 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
               {order.extras.map((ext) => (
                 <div key={ext.id} className="flex items-center justify-between py-1 border-b border-slate-50">
                   <span className="text-slate-600">• {ext.name}</span>
-                  <span className="font-mono font-semibold tabular-nums text-slate-800">
+                  <span className="font-semibold tabular-nums text-slate-800">
                     +${(ext.price || 0).toFixed(2)}
                   </span>
                 </div>
@@ -252,7 +291,7 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
                 <Tag className="w-3.5 h-3.5 text-emerald-600" />
                 <span>Cupón promocional: <strong>{pricing.promoCodeApplied}</strong></span>
               </span>
-              <span className="font-mono font-bold">-${discount.toFixed(2)}</span>
+              <span className="font-bold tabular-nums">-${discount.toFixed(2)}</span>
             </div>
           )}
         </div>
@@ -267,7 +306,7 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
             <span>Desglose Económico Conciliado</span>
           </h3>
 
-          <div className="p-4 bg-surface-muted rounded-2xl border border-line space-y-2 font-mono text-xs">
+          <div className="p-4 bg-surface-muted rounded-2xl border border-line space-y-2 text-xs">
             <div className="flex justify-between text-slate-600">
               <span>Subtotal prendas:</span>
               <span className="tabular-nums">${subtotal.toFixed(2)}</span>
@@ -413,7 +452,13 @@ export const OrderInfoTab: React.FC<OrderInfoTabProps> = ({
               </div>
             )}
 
-            {adjState === 'ready' && adjustments.length === 0 && (
+            {!isServerUuid && (
+              <p className="text-xs text-slate-500 italic">
+                No aplica en pedidos locales o fuera del servidor.
+              </p>
+            )}
+
+            {isServerUuid && adjState === 'ready' && adjustments.length === 0 && (
               <p className="text-xs text-slate-500 italic">
                 Sin ajustes de precio en esta solicitud.
               </p>

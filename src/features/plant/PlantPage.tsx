@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
-import { ArrowUpRight, ListFilter, RefreshCw, Search } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { ArrowUpRight, Info, ListFilter, RefreshCw, Search } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import type { Order } from '../../types';
 import { fetchPlantOrders } from '../../services/api/plantOrdersApi';
@@ -9,6 +10,8 @@ import { SLABadge } from '../../components/common/PriorityBadge';
 import { isPlantOrder, plantPhase, PlantProgress } from './plantProgress';
 import { PlantOrderModal } from './PlantOrderModal';
 import { getOrderNextAction } from '../orders/model/getOrderNextAction';
+import { orderDetailHref } from '../../services/operationsLinks';
+import { useOrderStatusRealtime } from '../../hooks/useOrderStatusRealtime';
 
 export const PlantPage = () => {
   const { orders: known, customers, facilities, drivers } = useApp();
@@ -16,26 +19,58 @@ export const PlantPage = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [loadError, setLoadError] = useState('');
-  const load = useCallback(async () => {
-    setLoadState('loading');
+  // `quiet`: recarga por aviso en vivo, sin volver a «cargando» ni tapar la lista con un error.
+  const load = useCallback(async (quiet = false) => {
+    if (!quiet) setLoadState('loading');
     try {
       setOrders(await fetchPlantOrders(known, customers, facilities, drivers));
       setLoadState('ready');
     } catch (err) {
+      if (quiet) return;
       setLoadError(err instanceof Error ? err.message : 'No se pudo conectar con el servidor.');
       setLoadState('error');
     }
-    // Se consulta al abrir y al pedirlo; no en cada cambio de los datos locales.
+    // Se consulta al abrir, al pedirlo y cuando el servidor avisa un cambio; no en cada cambio
+    // de los datos locales.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => {
     void load();
   }, [load]);
+  // Entradas desde Recepción, decisiones del cliente sobre ajustes, retenciones...
+  useOrderStatusRealtime(() => void load(true));
   const [selectedFacility, setSelectedFacility] = useState('ALL');
   const [query, setQuery] = useState('');
   const [phase, setPhase] = useState('ALL');
   const [onlyRisk, setOnlyRisk] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  // Soporte de ?pedido= y &seccion= (Fase 3)
+  const [searchParams] = useSearchParams();
+  const requestedId = searchParams.get('pedido');
+  const requestedSeccion = searchParams.get('seccion');
+  const requestHandled = useRef(false);
+  const [notInPlant, setNotInPlant] = useState('');
+
+  useEffect(() => {
+    if (!requestedId || requestHandled.current || loadState !== 'ready') return;
+    requestHandled.current = true;
+    const target = orders.find((o) => o.id === requestedId || o.trackingNumber === requestedId);
+    if (target && isPlantOrder(target)) {
+      setSelectedId(target.id);
+    } else {
+      setNotInPlant(requestedId);
+    }
+  }, [requestedId, loadState, orders]);
+
+  const modalTab =
+    requestedSeccion === 'historial'
+      ? 'history'
+      : requestedSeccion === 'resumen'
+        ? 'summary'
+        : requestedSeccion === 'proceso'
+          ? 'process'
+          : undefined;
   const plantOrders = orders.filter(isPlantOrder);
   const visible = plantOrders
     .filter((order) => {
@@ -72,6 +107,33 @@ export const PlantPage = () => {
         title="Planta de lavado"
         subtitle="Consulta el avance de cada pedido y abre su proceso, historial y bitácora."
       />
+      {notInPlant && (
+        <div
+          role="status"
+          className="flex flex-wrap items-start justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
+        >
+          <div className="flex gap-2">
+            <Info className="mt-0.5 size-4 shrink-0 text-amber-700" aria-hidden="true" />
+            <p>
+              La solicitud <strong>{notInPlant}</strong> no se encuentra actualmente en planta (su
+              etapa operativa no requiere procesamiento en planta o ya fue despachada).{' '}
+              <Link
+                className="font-semibold underline"
+                to={orderDetailHref(notInPlant, 'operation')}
+              >
+                Ver solicitud
+              </Link>
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setNotInPlant('')}
+            className="rounded-lg border border-amber-300 px-3 py-1.5 text-xs font-semibold hover:bg-amber-100 cursor-pointer"
+          >
+            Entendido
+          </button>
+        </div>
+      )}
       <section className="fintech-card overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 px-5 py-4">
           <p className="text-sm text-slate-600">
@@ -318,6 +380,7 @@ export const PlantPage = () => {
         <PlantOrderModal
           key={selected.id}
           order={selected}
+          initialTab={modalTab}
           onClose={() => setSelectedId(null)}
           onChanged={() => void load()}
         />

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { adminSocketService } from '../services/realtime/adminSocketService';
+import { adminSocketService, SOCKET_RESYNC_EVENT } from '../services/realtime/adminSocketService';
 
 export interface OrderStatusChangedEvent {
   orderId: string;
@@ -47,9 +47,21 @@ export function useOrderStatusRealtime(
         }, ORDER_REFRESH_DEBOUNCE_MS);
       },
     );
+    // Tras un corte se pudieron perder avisos: al reconectar se recarga una vez la vista.
+    const unsubscribeResync = adminSocketService.on(SOCKET_RESYNC_EVENT, () => {
+      if (timer) clearTimeout(timer);
+      timer = null;
+      handler.current({
+        orderId: onlyOrderId ?? '',
+        status: '',
+        activeLeg: null,
+        updatedAt: new Date().toISOString(),
+      });
+    });
     return () => {
       if (timer) clearTimeout(timer);
       unsubscribe();
+      unsubscribeResync();
     };
   }, [enabled, onlyOrderId]);
 }

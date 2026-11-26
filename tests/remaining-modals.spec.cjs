@@ -84,7 +84,7 @@ for (const width of [1440, 390]) {
     await page.goto('/customers');
     await page.getByRole('row').nth(1).getByRole('cell').first().click();
     modal = await center();
-    await modal.getByRole('button', { name: /Puntos/ }).click();
+    await modal.getByRole('tab', { name: /Puntos/ }).click();
     await modal.getByRole('button', { name: 'Ajuste Manual' }).click();
     await expect(modal.getByRole('button', { name: 'Guardar Ajuste' })).toBeVisible();
     await page.screenshot({

@@ -63,8 +63,29 @@ async function clickMap(dialog, x, y) {
 }
 
 // Sin teselas reales: la prueba no depende de la red ni de un servicio externo.
+// Con token, el editor de zonas usa Mapbox GL (WebGL y red). Estas pruebas cubren la
+// lógica de guardado, no el proveedor del mapa: se fuerza el editor de respaldo (Leaflet),
+// el mismo que se usa cuando no hay token, solo en esta página de prueba.
 test.beforeEach(async ({ page }) => {
   await page.route('**/tile.openstreetmap.org/**', (route) => route.abort());
+  await page.route(/\/src\/config\/mapbox\.ts(\?.*)?$/, async (route) => {
+    // Tras muchas pruebas seguidas, el servidor de Vite a veces corta una conexión
+    // (ECONNRESET): se reintenta para no dejar la página sin su módulo.
+    let response;
+    for (let attempt = 1; ; attempt += 1) {
+      try {
+        response = await route.fetch();
+        break;
+      } catch (error) {
+        if (attempt >= 3) throw error;
+        await new Promise((resolve) => setTimeout(resolve, 300 * attempt));
+      }
+    }
+    const body = await response.text();
+    const patched = body.replace(/USE_MAPBOX\s*=\s*Boolean\([^)]*\)/, 'USE_MAPBOX = false');
+    if (patched === body) throw new Error('No se pudo desactivar Mapbox en la prueba de zonas.');
+    await route.fulfill({ response, body: patched });
+  });
 });
 
 async function createZone(page, name) {

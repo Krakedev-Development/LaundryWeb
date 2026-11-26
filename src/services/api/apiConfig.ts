@@ -26,7 +26,7 @@ export function setTokenRefresher(fn: Refresher | null) {
   refresher = fn;
 }
 
-function renewToken(): Promise<string | null> {
+export function renewToken(): Promise<string | null> {
   if (!refresher) return Promise.resolve(null);
   refreshing ??= refresher()
     .catch(() => null)
