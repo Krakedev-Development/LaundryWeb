@@ -58,7 +58,7 @@ async function mockWeightApi(page, { failList = false } = {}) {
 
 const openWeightTab = async (page) => {
   await page.goto('/commercial/catalog', { waitUntil: 'domcontentloaded' });
-  await page.getByRole('button', { name: 'Servicio por Peso' }).click();
+  await page.getByRole('tab', { name: 'Servicio por Peso' }).click();
 };
 const tierRows = (page) => page.getByRole('table', { name: 'Bolsas del servicio por peso' }).locator('tbody tr');
 const ruleRows = (page) => page.getByRole('table', { name: 'Restricciones del servicio por peso' }).locator('tbody tr');

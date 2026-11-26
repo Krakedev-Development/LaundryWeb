@@ -69,6 +69,10 @@ test('hover and keyboard preview overlay the content, debounce exit, and Escape 
   await page.mouse.move(30, 180);
   await page.clock.runFor(220);
   await expect(sidebar).toHaveAttribute('data-mode', 'preview');
+  // El ancho se anima con un resorte (motion) que avanza con requestAnimationFrame, y
+  // el reloj está pausado: se deja correr hasta que el resorte termina antes de medir.
+  // El puntero sigue sobre el menú, así que no afecta al retardo de salida.
+  await page.clock.runFor(1000);
   await expect(sidebar).toHaveCSS('width', '260px');
   await expect(page.locator('main')).toHaveCSS('margin-left', '60px');
   await page.mouse.move(800, 300);
