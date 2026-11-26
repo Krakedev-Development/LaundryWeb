@@ -10,12 +10,16 @@ import { orderDisplayStage } from '../../features/orders/model/orderDisplay';
  * avisa un pago pendiente, que sí cambia lo que hay que hacer.
  */
 export function OrderStatusCell({ order }: { order: Order }) {
+  const stage = orderDisplayStage(order);
   const paymentPending =
-    order.pricing.amountKnown !== false && order.pricing.paymentStatus !== 'PAID';
+    stage !== 'PAYMENT_PENDING' &&
+    order.status !== 'PAYMENT_PENDING' &&
+    order.pricing.amountKnown !== false &&
+    order.pricing.paymentStatus !== 'PAID';
   return (
     <td className="py-4 px-5 whitespace-nowrap">
       <div className="flex flex-wrap items-center gap-1.5">
-        <StatusBadge status={orderDisplayStage(order)} size="sm" />
+        <StatusBadge status={stage} size="sm" />
         {paymentPending && (
           <span className="rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[11px] font-semibold text-amber-800">
             Pago pendiente
