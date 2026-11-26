@@ -26,6 +26,96 @@ const PICKUP_DONE: string[] = [
   'QUARANTINE',
 ];
 
+/** Etapas en las que la ropa está en proceso en planta. */
+export const IN_PLANT_STAGES: string[] = [
+  'AT_FACILITY',
+  'WEIGHING',
+  'INSPECTION',
+  'PRICING_PENDING',
+  'CUSTOMER_APPROVAL_PENDING',
+  'IN_PROCESS',
+  'QUALITY_CONTROL',
+];
+
+export const isInPlant = (order: Order): boolean =>
+  IN_PLANT_STAGES.includes(operationalStage(order));
+
+export function isPendingPaymentOrConfirmation(order: Order): boolean {
+  const stage = operationalStage(order);
+  return (
+    stage === 'PAYMENT_PENDING' ||
+    stage === 'CREATED' ||
+    order.status === 'PAYMENT_PENDING' ||
+    order.status === 'CREATED' ||
+    order.pricing?.paymentStatus === 'PENDING'
+  );
+}
+
+export function getMilestoneIndex(stage: string): number {
+  if (['DELIVERED', 'CLOSED', 'COMPLETED'].includes(stage)) return 4;
+  if (
+    [
+      'READY',
+      'READY_FOR_DELIVERY',
+      'DELIVERY_SCHEDULED',
+      'DELIVERY_ASSIGNED',
+      'OUT_FOR_DELIVERY',
+      'ARRIVED_FOR_DELIVERY',
+    ].includes(stage)
+  )
+    return 3;
+  if (
+    [
+      'AT_FACILITY',
+      'WEIGHING',
+      'INSPECTION',
+      'PRICING_PENDING',
+      'CUSTOMER_APPROVAL_PENDING',
+      'IN_PROCESS',
+      'QUALITY_CONTROL',
+    ].includes(stage)
+  )
+    return 2;
+  if (['PICKED_UP', 'HEADING_TO_FACILITY', 'ARRIVED_AT_FACILITY'].includes(stage))
+    return 1;
+  return 0; // CONFIRMED, CREATED, PAYMENT_PENDING, PICKUP_PENDING, PICKUP_ASSIGNED, etc.
+}
+
+const ROLE_TRANSLATIONS: Record<string, string> = {
+  CLIENT: 'Cliente',
+  CUSTOMER: 'Cliente',
+  DRIVER: 'Chofer',
+  OPERATOR: 'Operador de planta',
+  SUPERVISOR: 'Supervisor',
+  ADMIN: 'Administrador',
+  SYSTEM: 'Sistema',
+};
+
+export function formatActor(
+  userName?: string,
+  userRole?: string
+): { name: string; roleLabel?: string } {
+  const roleUpper = (userRole || '').toUpperCase();
+  const roleTranslated = ROLE_TRANSLATIONS[roleUpper] || userRole || '';
+  const rawName = (userName || '').trim();
+
+  if (!rawName || rawName.toUpperCase() === roleUpper) {
+    return { name: roleTranslated || 'Sistema' };
+  }
+
+  if (ROLE_TRANSLATIONS[rawName.toUpperCase()]) {
+    return { name: ROLE_TRANSLATIONS[rawName.toUpperCase()] };
+  }
+
+  return {
+    name: rawName,
+    roleLabel:
+      roleTranslated && roleTranslated.toLowerCase() !== rawName.toLowerCase()
+        ? roleTranslated
+        : undefined,
+  };
+}
+
 /** Etapas en las que la recogida todavía espera que la sede asigne chofer. */
 const PICKUP_NEEDS_DRIVER: string[] = ['CREATED', 'CONFIRMED', 'PICKUP_PENDING', 'PAYMENT_PENDING'];
 
@@ -41,6 +131,39 @@ export const isDeliveryCompleted = (order: Order) =>
 
 /** La ropa vuelve al cliente en la sede (retiro), no por chofer. */
 export const isStorePickup = (order: Order) => order.fulfillment?.outbound.method === 'CUSTOMER';
+
+/**
+ * Condición canónica para asignar chofer de recogida en Despacho.
+ * Requiere: etapa de recogida, método chofer, sin reprogramación pendiente, pago validado y sin chofer asignado aún.
+ */
+export function canAssignPickup(order: Order): boolean {
+  const stage = operationalStage(order);
+  const isPickupStage = stage === 'CONFIRMED' || stage === 'PICKUP_PENDING';
+  const isDriverMethod = order.fulfillment?.inbound.method === 'DRIVER';
+  const notRescheduling = !order.pickupNeedsScheduling;
+  const isPaid =
+    order.pricing?.paymentStatus !== 'PENDING' &&
+    order.status !== 'PAYMENT_PENDING' &&
+    stage !== 'PAYMENT_PENDING';
+  const notAssigned = !order.pickup.driverId && !order.pickup.driverName;
+  const notCompleted = !order.pickup.completedAt && !isPickupCompleted(order);
+
+  return isPickupStage && isDriverMethod && notRescheduling && isPaid && notAssigned && notCompleted;
+}
+
+/**
+ * Condición canónica para asignar chofer de entrega en Entregas.
+ * Requiere: prendas listas para entrega a domicilio, sin chofer asignado aún y no completada.
+ */
+export function canAssignDelivery(order: Order): boolean {
+  const stage = operationalStage(order);
+  const isDeliveryStage = stage === 'READY_FOR_DELIVERY' || stage === 'DELIVERY_SCHEDULED';
+  const isDriverMethod = order.fulfillment?.outbound.method === 'DRIVER';
+  const notAssigned = !order.delivery.driverId && !order.delivery.driverName;
+  const notCompleted = !order.delivery.completedAt && !isDeliveryCompleted(order);
+
+  return isDeliveryStage && isDriverMethod && notAssigned && notCompleted;
+}
 
 /**
  * Etapa para mostrar en el badge. Una solicitud lista para retiro en sede se muestra como
@@ -71,6 +194,7 @@ export function deliveryNote(order: Order): LegNote {
   if (isStorePickup(order)) return { text: 'Retiro en sede', tone: 'muted' };
   if (DELIVERY_NEEDS_DRIVER.includes(operationalStage(order)))
     return { text: 'Sin chofer', tone: 'action' };
+  if (isInPlant(order)) return { text: 'En planta', tone: 'muted' };
   return { text: 'Por programar', tone: 'muted' };
 }
 

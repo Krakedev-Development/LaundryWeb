@@ -23,6 +23,7 @@ import type { Order } from '../../../types';
 import { operationalStage } from '../../../services/fulfillment';
 import { paymentMethodLabel, type BackendOrderDetail } from '../../../services/api/ordersApi';
 import { PlantProgress, plantPhase, AFTER_PLANT, BEFORE_PLANT } from '../../plant/plantProgress';
+import { canAssignPickup } from '../model/orderDisplay';
 import { FacilityReceptionPanel } from '../FacilityReceptionPanel';
 import type { HandoffType } from '../../../services/api/handoffsApi';
 import { DispatchCustodyPanel } from '../DispatchCustodyPanel';
@@ -73,8 +74,8 @@ export const OperationTab: React.FC<OperationTabProps> = ({
   const latestEvent = order.timeline[order.timeline.length - 1];
 
   // Determine stage title, description, and primary CTA
-  let stageTitle = 'Proceso operacional en planta';
-  let stageDescription = 'Gestión del ciclo de vida y estado actual de la solicitud.';
+  let stageTitle = 'Estado de la solicitud';
+  let stageDescription = 'Gestión del ciclo de vida y estado actual de la orden.';
   let primaryCTA: React.ReactNode = null;
 
   // Aquí solo quedan las acciones que el personal hace contra el servidor sin evidencia extra
@@ -82,13 +83,34 @@ export const OperationTab: React.FC<OperationTabProps> = ({
   // proceso en planta y el cierre tienen su panel propio debajo. Nada se avanza en local.
   const byDriver = 'Lo registra el chofer desde su app; aquí se actualiza solo.';
   switch (stage) {
+    case 'PAYMENT_PENDING':
+    case 'CREATED':
+      stageTitle = 'Solicitud en validación inicial';
+      stageDescription =
+        order.pricing?.paymentStatus !== 'PAID'
+          ? 'Pendiente de confirmación de pago para programar la recogida.'
+          : 'Solicitud creada, en proceso de confirmación.';
+      if (order.pricing?.paymentStatus !== 'PAID') {
+        primaryCTA = (
+          <button
+            type="button"
+            onClick={() => onSwitchTab('order')}
+            className="px-5 py-2.5 text-xs font-bold text-white bg-primary hover:bg-primary-hover rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
+          >
+            <span>Ver y confirmar pago en Pedido</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        );
+      }
+      break;
+
     case 'CONFIRMED':
     case 'PICKUP_PENDING':
       stageTitle = 'Recogida pendiente de asignación';
       stageDescription =
         'La solicitud está confirmada y requiere asignar un conductor para el retiro a domicilio.';
       // La recogida se asigna solo en Despacho; aquí solo se navega hasta allí.
-      if (order.fulfillment?.inbound.method === 'DRIVER' && !order.pickupNeedsScheduling)
+      if (canAssignPickup(order))
         primaryCTA = (
         <Link
           to={dispatchHref(order.id)}

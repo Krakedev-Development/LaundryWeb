@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'motion/react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   AlertTriangle,
   ArrowRight,
@@ -20,6 +20,8 @@ import { AnimatedPillTabs } from '../../components/ui/AnimatedPillTabs';
 import { StaggerContainer, StaggerItem } from '../../components/ui/StaggerList';
 import { btnSecondarySm } from '../../shared/ui/controls';
 import { STATUS_LABELS_HUMAN } from '../orders/components/ActivityTab';
+import { orderDetailHref } from '../../services/operationsLinks';
+import { useOrderStatusRealtime } from '../../hooks/useOrderStatusRealtime';
 import {
   fetchIncidentOrderRef,
   INCIDENT_SEVERITY_LABEL,
@@ -150,10 +152,29 @@ export const IncidentsPage: React.FC = () => {
   const [isResolving, setIsResolving] = useState(false);
   const [busy, setBusy] = useState(false);
 
+  // Soporte de ?pedido= (Fase 3)
+  const [searchParams] = useSearchParams();
+  const requestedOrderId = searchParams.get('pedido');
+  const [notFoundOrderIncident, setNotFoundOrderIncident] = useState('');
+  const handledRequestedOrder = useRef(false);
+
+  useEffect(() => {
+    if (!requestedOrderId || handledRequestedOrder.current || state !== 'ready') return;
+    handledRequestedOrder.current = true;
+    const matching = incidents.find((i) => i.orderId === requestedOrderId);
+    if (matching) {
+      setSelectedId(matching.id);
+    } else {
+      setNotFoundOrderIncident(requestedOrderId);
+    }
+  }, [requestedOrderId, state, incidents]);
+
   // Al abrir la pantalla siempre se consulta el servidor (la caché compartida puede ser vieja).
   useEffect(() => {
     void refresh();
   }, [refresh]);
+  // Una retención nueva o su liberación cambia el estado del pedido: se relee la lista.
+  useOrderStatusRealtime(() => void refresh());
 
   useEffect(() => {
     if (routeId) setSelectedId(routeId);
@@ -229,6 +250,34 @@ export const IncidentsPage: React.FC = () => {
         title="Incidencias operacionales"
         subtitle="Casos reportados por choferes y personal de sede. Resolver una incidencia que retuvo la solicitud la devuelve a la etapa en que estaba."
       />
+
+      {notFoundOrderIncident && (
+        <div
+          role="status"
+          className="flex flex-wrap items-start justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
+        >
+          <div className="flex gap-2">
+            <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600" aria-hidden="true" />
+            <p>
+              No se encontraron incidencias activas registradas para la solicitud{' '}
+              <strong>{notFoundOrderIncident}</strong>.{' '}
+              <Link
+                className="font-semibold underline"
+                to={orderDetailHref(notFoundOrderIncident, 'activity')}
+              >
+                Volver a la solicitud
+              </Link>
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setNotFoundOrderIncident('')}
+            className="rounded-lg border border-amber-300 px-3 py-1.5 text-xs font-semibold hover:bg-amber-100 cursor-pointer"
+          >
+            Entendido
+          </button>
+        </div>
+      )}
 
       <div className="flex items-center gap-3 rounded-2xl border border-rose-200/90 bg-rose-50/70 p-4 sm:p-5">
         <ShieldAlert className="h-5 w-5 shrink-0 text-rose-600" />

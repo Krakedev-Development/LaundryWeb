@@ -7,6 +7,9 @@ import {
   incidentTypeLabel,
   type ServerIncident,
 } from '../../../services/api/incidentsApi';
+import { formatActor } from '../model/orderDisplay';
+
+export { formatActor };
 
 export const STATUS_LABELS_HUMAN: Record<string, string> = {
   CREATED: 'Solicitud creada en el sistema',
@@ -56,13 +59,16 @@ export const ActivityTab: React.FC<ActivityTabProps> = ({
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left: Operational Lifecycle Timeline */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Left: Operational Lifecycle Timeline (7 cols) */}
         <section className="lg:col-span-7 bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
             <h2 className="text-sm font-bold text-ink flex items-center gap-2">
               <Clock className="w-4 h-4 text-primary" />
-              <span>Línea de Vida Operacional ({order.timeline.length} eventos)</span>
+              <span>
+                Línea de Vida Operacional ({order.timeline.length} evento
+                {order.timeline.length === 1 ? '' : 's'})
+              </span>
             </h2>
 
             <button
@@ -75,11 +81,13 @@ export const ActivityTab: React.FC<ActivityTabProps> = ({
             </button>
           </div>
 
+          {/* Grouped / chronological event timeline */}
           <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
             {order.timeline.map((event, idx) => {
               const isLatest = idx === order.timeline.length - 1;
               const humanLabel =
                 STATUS_LABELS_HUMAN[event.status] || event.label || event.status;
+              const actor = formatActor(event.userName, event.userRole);
 
               return (
                 <div key={event.id || idx} className="relative group">
@@ -104,8 +112,8 @@ export const ActivityTab: React.FC<ActivityTabProps> = ({
                   </div>
 
                   <p className="text-[11px] text-slate-500 mt-0.5">
-                    Responsable:{' '}
-                    <strong className="text-slate-700">{event.userName}</strong> ({event.userRole})
+                    Responsable: <strong className="text-slate-700">{actor.name}</strong>
+                    {actor.roleLabel && ` (${actor.roleLabel})`}
                   </p>
 
                   {event.notes && (
@@ -125,7 +133,7 @@ export const ActivityTab: React.FC<ActivityTabProps> = ({
           </div>
         </section>
 
-        {/* Right: Incidents only (T-03: sin formularios simulados) */}
+        {/* Right: Incidents (5 cols) */}
         <div className="lg:col-span-5 space-y-6">
           <section className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">

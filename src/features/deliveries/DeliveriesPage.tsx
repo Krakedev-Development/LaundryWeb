@@ -134,7 +134,7 @@ export const DeliveriesPage: React.FC = () => {
   }, [rows, statusFilter, driverFilter]);
 
   const pagination = usePagination(filtered, `${statusFilter}|${driverFilter}`);
-  const selected = rows.find((r) => r.id === selectedOrderId) ?? filtered[0];
+  const selected = notListed ? undefined : (rows.find((r) => r.id === selectedOrderId) ?? filtered[0]);
 
   useEffect(() => {
     setAssignDriverId(selected?.driverId ?? '');

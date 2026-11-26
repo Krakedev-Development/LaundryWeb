@@ -33,16 +33,18 @@ const HOLDABLE = [
 
 export function PlantOrderModal({
   order,
+  initialTab,
   onClose,
   onChanged,
 }: {
   order: Order;
+  initialTab?: PlantTab;
   onClose(): void;
   /** La solicitud cambió en el servidor: la lista de planta se vuelve a consultar. */
   onChanged?(): void;
 }) {
   const { incidents, refresh: refreshIncidents } = useServerIncidents();
-  const [tab, setTab] = useState<PlantTab>("summary");
+  const [tab, setTab] = useState<PlantTab>(initialTab ?? "summary");
   const [holding, setHolding] = useState(false);
   const stage = operationalStage(order);
   const orderIncidents = incidents.filter((i) => i.orderId === order.id);

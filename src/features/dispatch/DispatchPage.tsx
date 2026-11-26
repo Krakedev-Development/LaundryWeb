@@ -107,7 +107,7 @@ export function DispatchPage() {
   }, [requestedId, syncState, serverOrders]);
 
   const queue = serverOrders.filter(waitsForPickup);
-  const order = queue.find((o) => o.id === orderId) ?? queue[0];
+  const order = queue.find((o) => o.id === orderId) ?? (notWaiting ? undefined : queue[0]);
   const { candidates, loading, error } = useDriverCandidates(order, 'pickup');
   const [route, setRoute] = useState<RouteSummary | null>(null),
     [routeError, setRouteError] = useState('');

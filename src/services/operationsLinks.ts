@@ -13,6 +13,16 @@ export const deliveriesHref = (orderId: string) =>
 export const plantHref = (orderId: string, seccion: 'proceso' | 'historial' | 'resumen' = 'proceso') =>
   `/operations/plant?pedido=${encodeURIComponent(orderId)}&seccion=${seccion}`;
 
+/** Incidencias: registro y gestión de incidencias de una solicitud preseleccionada. */
+export const incidentsHref = (orderId: string) =>
+  `/operations/incidents?pedido=${encodeURIComponent(orderId)}`;
+
+/** Detalle de solicitud con pestaña contextual. */
+export const orderDetailHref = (
+  orderId: string,
+  tab?: 'operation' | 'order' | 'logistics' | 'activity',
+) => `/operations/orders/${encodeURIComponent(orderId)}${tab ? `?tab=${tab}` : ''}`;
+
 /**
  * Etapas en las que la solicitud está en planta. En ellas el proceso y la retención se gestionan
  * solo en Planta; el detalle muestra la fase y enlaza hasta allí.
