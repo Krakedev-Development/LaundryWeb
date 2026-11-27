@@ -19,14 +19,16 @@ export const MILESTONES: MilestoneStep[] = [
 
 import {
   getMilestoneIndex,
+  isOrderClosed,
   isPendingPaymentOrConfirmation,
 } from '../model/orderDisplay';
 
-export { getMilestoneIndex, isPendingPaymentOrConfirmation };
+export { getMilestoneIndex, isPendingPaymentOrConfirmation, isOrderClosed };
 
 export const GlobalProgressStepper: React.FC<{ order: Order }> = ({ order }) => {
   const stage = operationalStage(order);
   const currentIndex = getMilestoneIndex(stage);
+  const isClosed = isOrderClosed(order);
   const isHeld =
     stage === 'QUARANTINE' ||
     stage === 'INCIDENT' ||
@@ -41,7 +43,7 @@ export const GlobalProgressStepper: React.FC<{ order: Order }> = ({ order }) => 
         <h2 className="text-sm font-bold text-ink">
           Progreso Global de la Solicitud
         </h2>
-        {isHeld && (
+        {isHeld && !isClosed && (
           <span className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200">
             <AlertTriangle className="w-3.5 h-3.5" />
             <span>Atención requerida</span>
@@ -54,8 +56,13 @@ export const GlobalProgressStepper: React.FC<{ order: Order }> = ({ order }) => 
           {MILESTONES.map((step, index) => {
             const isStep0Waiting = index === 0 && pendingConfirmation;
             const isCompleted =
-              index === 0 ? !pendingConfirmation && currentIndex >= 0 : index < currentIndex;
+              isClosed
+                ? true
+                : index === 0
+                  ? !pendingConfirmation && currentIndex >= 0
+                  : index < currentIndex;
             const isCurrent =
+              !isClosed &&
               !isStep0Waiting &&
               (index === 0
                 ? false
@@ -80,7 +87,7 @@ export const GlobalProgressStepper: React.FC<{ order: Order }> = ({ order }) => 
                 {index < MILESTONES.length - 1 && (
                   <div
                     className={`absolute top-4 left-1/2 w-full h-0.5 -z-0 transition-colors ${
-                      (index === 0 && !pendingConfirmation) || index < currentIndex
+                      isClosed || (index === 0 && !pendingConfirmation) || index < currentIndex
                         ? 'bg-emerald-500'
                         : 'bg-slate-200'
                     }`}

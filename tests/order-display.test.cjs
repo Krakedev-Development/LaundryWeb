@@ -15,6 +15,7 @@ const {
   canAssignPickup,
   canAssignDelivery,
   getMilestoneIndex,
+  isOrderClosed,
   formatActor,
 } = require('../src/features/orders/model/orderDisplay.ts');
 const { plantPhase, BEFORE_PLANT, AFTER_PLANT } = require('../src/features/plant/plantPhase.ts');
@@ -103,6 +104,14 @@ test('getMilestoneIndex mapea etapas correctamente para el stepper global', () =
   assert.equal(getMilestoneIndex('OUT_FOR_DELIVERY'), 3);
   assert.equal(getMilestoneIndex('DELIVERED'), 4);
   assert.equal(getMilestoneIndex('CLOSED'), 4);
+});
+
+test('isOrderClosed detecta órdenes finalizadas por estado o etapa operativa', () => {
+  assert.equal(isOrderClosed(order('CONFIRMED')), false);
+  assert.equal(isOrderClosed(order('IN_PROCESS')), false);
+  assert.equal(isOrderClosed(order('READY_FOR_DELIVERY')), false);
+  assert.equal(isOrderClosed(order('CLOSED')), true);
+  assert.equal(isOrderClosed(order('COMPLETED')), true);
 });
 
 test('formatActor traduce roles y no duplica nombre cuando coincide con el rol', () => {

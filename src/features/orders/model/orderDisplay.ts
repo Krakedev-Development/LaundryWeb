@@ -129,6 +129,11 @@ export const isDeliveryCompleted = (order: Order) =>
   Boolean(order.delivery.completedAt) ||
   ['DELIVERED', 'CLOSED'].includes(operationalStage(order));
 
+export const isOrderClosed = (order: Order): boolean =>
+  order.status === 'CLOSED' ||
+  order.status === 'COMPLETED' ||
+  ['CLOSED', 'COMPLETED'].includes(operationalStage(order));
+
 /** La ropa vuelve al cliente en la sede (retiro), no por chofer. */
 export const isStorePickup = (order: Order) => order.fulfillment?.outbound.method === 'CUSTOMER';
 
