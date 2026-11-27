@@ -38,7 +38,7 @@ export const GlobalProgressStepper: React.FC<{ order: Order }> = ({ order }) => 
   return (
     <div className="w-full bg-white rounded-2xl border border-slate-200/90 p-4 sm:p-5 shadow-2xs">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+        <h2 className="text-sm font-bold text-ink">
           Progreso Global de la Solicitud
         </h2>
         {isHeld && (
@@ -135,7 +135,8 @@ export const GlobalProgressStepper: React.FC<{ order: Order }> = ({ order }) => 
                     {step.label}
                   </span>
                   <span
-                    className={`hidden md:block text-[10px] truncate mt-0.5 ${
+                    title={stepDescription}
+                    className={`hidden md:block text-xs truncate mt-0.5 ${
                       isStep0Waiting ? 'text-amber-700 font-medium' : 'text-slate-500'
                     }`}
                   >

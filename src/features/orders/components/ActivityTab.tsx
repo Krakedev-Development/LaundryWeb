@@ -106,12 +106,12 @@ export const ActivityTab: React.FC<ActivityTabProps> = ({
                     >
                       {humanLabel}
                     </span>
-                    <span className="text-[11px] text-slate-500 font-mono tabular-nums whitespace-nowrap ml-2">
+                    <span className="text-xs text-slate-500 font-mono tabular-nums whitespace-nowrap ml-2">
                       {event.timestamp}
                     </span>
                   </div>
 
-                  <p className="text-[11px] text-slate-500 mt-0.5">
+                  <p className="text-xs text-slate-500 mt-0.5">
                     Responsable: <strong className="text-slate-700">{actor.name}</strong>
                     {actor.roleLabel && ` (${actor.roleLabel})`}
                   </p>
@@ -123,7 +123,7 @@ export const ActivityTab: React.FC<ActivityTabProps> = ({
                   )}
 
                   {showTechnicalDetails && (
-                    <div className="mt-1 p-1.5 bg-slate-100 rounded text-[10px] font-mono text-slate-600">
+                    <div className="mt-1 p-1.5 bg-slate-100 rounded text-xs font-mono text-slate-600">
                       ID: {event.id} · Estado técnico: {event.status}
                     </div>
                   )}
@@ -162,19 +162,19 @@ export const ActivityTab: React.FC<ActivityTabProps> = ({
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-bold text-slate-800">{incidentTypeLabel(inc.type)}</span>
-                      <span className="text-[10px] font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded-full">
+                      <span className="text-xs font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded-full">
                         {INCIDENT_SEVERITY_LABEL[inc.severity] ?? inc.severity}
                       </span>
                     </div>
-                    <p className="text-[11px] font-semibold text-slate-700">
+                    <p className="text-xs font-semibold text-slate-700">
                       {INCIDENT_STATUS_LABEL[inc.status] ?? inc.status}
                       {inc.previousStatus && (inc.status === 'OPEN' || inc.status === 'IN_REVIEW')
                         ? ' · Solicitud retenida'
                         : ''}
                     </p>
-                    <p className="whitespace-pre-line text-slate-600 text-[11px]">{inc.description}</p>
+                    <p className="whitespace-pre-line text-slate-600 text-xs">{inc.description}</p>
                     {inc.resolution && (
-                      <p className="text-[11px] text-emerald-800">Resolución: {inc.resolution}</p>
+                      <p className="text-xs text-emerald-800">Resolución: {inc.resolution}</p>
                     )}
                   </div>
                 ))}

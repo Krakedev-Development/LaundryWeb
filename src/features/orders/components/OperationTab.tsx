@@ -78,6 +78,11 @@ export const OperationTab: React.FC<OperationTabProps> = ({
   let stageDescription = 'Gestión del ciclo de vida y estado actual de la orden.';
   let primaryCTA: React.ReactNode = null;
 
+  // Transferencia pendiente según el servidor. El pago se confirma solo en la pestaña Pedido
+  // (decisión P-3): aquí solo se avisa y se lleva hasta allí.
+  const isTransferPending =
+    order.pricing?.paymentMethod === 'TRANSFERENCIA' && order.pricing?.paymentStatus !== 'PAID';
+
   // Aquí solo quedan las acciones que el personal hace contra el servidor sin evidencia extra
   // (asignar chofer, retener). Lo que confirma el chofer ocurre en su app; la custodia, el
   // proceso en planta y el cierre tienen su panel propio debajo. Nada se avanza en local.
@@ -90,7 +95,8 @@ export const OperationTab: React.FC<OperationTabProps> = ({
         order.pricing?.paymentStatus !== 'PAID'
           ? 'Pendiente de confirmación de pago para programar la recogida.'
           : 'Solicitud creada, en proceso de confirmación.';
-      if (order.pricing?.paymentStatus !== 'PAID') {
+      // Con transferencia pendiente ya lo avisa el banner de arriba: no se repite como acción.
+      if (order.pricing?.paymentStatus !== 'PAID' && !isTransferPending) {
         primaryCTA = (
           <button
             type="button"
@@ -233,11 +239,6 @@ export const OperationTab: React.FC<OperationTabProps> = ({
       break;
   }
 
-  // Transferencia pendiente según el servidor. El pago se confirma solo en la pestaña Pedido
-  // (decisión P-3): aquí solo se avisa y se lleva hasta allí.
-  const isTransferPending =
-    order.pricing?.paymentMethod === 'TRANSFERENCIA' && order.pricing?.paymentStatus !== 'PAID';
-
   return (
     <div className="space-y-6">
       {isTransferPending && (
@@ -311,11 +312,11 @@ export const OperationTab: React.FC<OperationTabProps> = ({
                 llegar y después de salir, el progreso general ya lo muestra. */}
             {showPlantPhases && (
             <div className="space-y-1.5 pt-1">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block">
+              <span className="text-sm font-semibold text-slate-700 block">
                 Fases del proceso en planta
               </span>
               <PlantProgress order={order} />
-              <p className="text-[11px] text-slate-500 mt-1">
+              <p className="text-xs text-slate-500 mt-1">
                 {isPerWeight
                   ? 'Servicio por peso: pesaje obligatorio previo a la inspección.'
                   : 'Servicio por prenda: no requiere pesaje inicial, ingresa directo a inspección.'}
@@ -395,10 +396,10 @@ export const OperationTab: React.FC<OperationTabProps> = ({
         <div className="space-y-6">
           {/* Compact Summary Card */}
           <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs space-y-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
+            <h2 className="text-sm font-bold text-ink flex items-center gap-2">
               <PackageCheck className="w-4 h-4 text-primary" />
               <span>Resumen de la solicitud</span>
-            </h3>
+            </h2>
 
             <div className="space-y-3 text-xs divide-y divide-slate-100">
               <div className="flex justify-between items-center pt-2 first:pt-0">
@@ -416,14 +417,14 @@ export const OperationTab: React.FC<OperationTabProps> = ({
               <div className="flex justify-between items-center pt-2">
                 <span className="text-slate-500">Estado de pago:</span>
                 <span
-                  className={`font-bold px-2 py-0.5 rounded text-[10px] ${
+                  className={`font-bold px-2 py-0.5 rounded text-xs ${
                     order.pricing?.paymentStatus === 'PAID'
                       ? 'bg-emerald-100 text-emerald-800'
                       : 'bg-amber-100 text-amber-800'
                   }`}
                 >
                   {paymentMethodLabel(order.pricing?.paymentMethod)} ·{' '}
-                  {order.pricing?.paymentStatus === 'PAID' ? 'PAGADO' : 'PENDIENTE'}
+                  {order.pricing?.paymentStatus === 'PAID' ? 'Pagado' : 'Pendiente'}
                 </span>
               </div>
 
@@ -431,7 +432,7 @@ export const OperationTab: React.FC<OperationTabProps> = ({
                 <span className="text-slate-500">Entrega programada:</span>
                 <span className="font-semibold text-slate-800 text-right">
                   {order.delivery.targetDate}
-                  <span className="block text-[10px] text-slate-500">
+                  <span className="block text-xs text-slate-500">
                     {order.delivery.timeSlot}
                   </span>
                 </span>
@@ -456,18 +457,18 @@ export const OperationTab: React.FC<OperationTabProps> = ({
           {latestEvent && (
             <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                <h2 className="text-sm font-bold text-ink flex items-center gap-1.5">
                   <Clock className="w-3.5 h-3.5 text-primary" />
                   <span>Último evento registrado</span>
-                </h3>
-                <span className="text-[10px] font-mono text-slate-500">
+                </h2>
+                <span className="text-xs font-mono text-slate-500">
                   {latestEvent.timestamp}
                 </span>
               </div>
 
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs">
                 <p className="font-bold text-slate-900">{latestEvent.label}</p>
-                <p className="text-[11px] text-slate-500 mt-0.5">
+                <p className="text-xs text-slate-500 mt-0.5">
                   {latestEvent.userName === 'Sistema' ? (
                     'Registrado automáticamente'
                   ) : (

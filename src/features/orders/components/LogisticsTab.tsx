@@ -114,7 +114,7 @@ export const LogisticsTab: React.FC<LogisticsTabProps> = ({ order }) => {
               <MapPin className="w-3.5 h-3.5 text-teal-600" />
               <span>1. Recogida</span>
               <span
-                className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
+                className={`text-xs px-1.5 py-0.5 rounded-full font-semibold ${
                   isPickupCompleted
                     ? 'bg-emerald-100 text-emerald-800'
                     : 'bg-slate-200 text-slate-700'
@@ -136,7 +136,7 @@ export const LogisticsTab: React.FC<LogisticsTabProps> = ({ order }) => {
               <Truck className="w-3.5 h-3.5 text-orange-600" />
               <span>2. Entrega</span>
               <span
-                className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
+                className={`text-xs px-1.5 py-0.5 rounded-full font-semibold ${
                   isDeliveryDelivered
                     ? 'bg-emerald-100 text-emerald-800'
                     : isDeliveryReady || isDeliveryInRoute
@@ -153,12 +153,12 @@ export const LogisticsTab: React.FC<LogisticsTabProps> = ({ order }) => {
           {selectedLeg === 'pickup' ? (
             <section className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <h2 className="font-bold text-xs text-primary uppercase tracking-wider flex items-center gap-2">
+                <h2 className="text-sm font-bold text-ink flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-teal-600" aria-hidden />
                   <span>Logística de Recogida</span>
                 </h2>
                 <span
-                  className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
+                  className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
                     isPickupCompleted
                       ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                       : isPickupInRoute
@@ -170,9 +170,9 @@ export const LogisticsTab: React.FC<LogisticsTabProps> = ({ order }) => {
                 </span>
               </div>
 
-              <div className="space-y-3.5 text-xs">
+              <div className="space-y-3.5 text-sm">
                 <div>
-                  <span className="text-slate-500 block text-[11px]">Fecha y franja horaria</span>
+                  <span className="text-slate-500 block text-xs">Fecha y franja horaria</span>
                   <span className="font-bold text-slate-800 text-sm flex items-center gap-1.5 mt-0.5">
                     <Clock className="w-3.5 h-3.5 text-slate-500" />
                     {order.pickup.date} · {order.pickup.timeSlot}
@@ -180,20 +180,20 @@ export const LogisticsTab: React.FC<LogisticsTabProps> = ({ order }) => {
                 </div>
 
                 <div>
-                  <span className="text-slate-500 block text-[11px]">Dirección de recogida</span>
+                  <span className="text-slate-500 block text-xs">Dirección de recogida</span>
                   <span className="font-medium text-slate-700 block mt-0.5">
                     {order.customerAddress.street} #{order.customerAddress.number},{' '}
                     {order.customerAddress.neighborhood}
                   </span>
                   {order.customerAddress.reference && (
-                    <span className="text-[11px] text-slate-500 italic block mt-0.5">
+                    <span className="text-xs text-slate-500 italic block mt-0.5">
                       Ref: {order.customerAddress.reference}
                     </span>
                   )}
                 </div>
 
                 <div>
-                  <span className="text-slate-500 block text-[11px]">Conductor asignado</span>
+                  <span className="text-slate-500 block text-xs">Conductor asignado</span>
                   <span className="font-semibold text-slate-900 block mt-0.5">
                     {order.pickup.driverName
                       ? `${order.pickup.driverName} (${order.pickup.vehiclePlate || 'Vehículo asignado'})`
@@ -201,7 +201,7 @@ export const LogisticsTab: React.FC<LogisticsTabProps> = ({ order }) => {
                   </span>
                 </div>
 
-                <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-100 flex items-center gap-2 text-[11px] text-slate-600">
+                <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-100 flex items-center gap-2 text-xs text-slate-600">
                   <ShieldCheck className="w-4 h-4 text-teal-600 shrink-0" />
                   <span>
                     {isPickupCompleted
@@ -211,7 +211,7 @@ export const LogisticsTab: React.FC<LogisticsTabProps> = ({ order }) => {
                 </div>
 
                 {showPickupNote && (
-                  <p className="text-[11px] text-slate-500 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                  <p className="text-xs text-slate-500 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
                     Instrucción especial: {order.pickup.notes}
                   </p>
                 )}
@@ -230,12 +230,12 @@ export const LogisticsTab: React.FC<LogisticsTabProps> = ({ order }) => {
           ) : (
             <section className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <h2 className="font-bold text-xs text-primary uppercase tracking-wider flex items-center gap-2">
+                <h2 className="text-sm font-bold text-ink flex items-center gap-2">
                   <Truck className="w-4 h-4 text-orange-600" aria-hidden />
                   <span>Logística de Entrega</span>
                 </h2>
                 <span
-                  className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
+                  className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
                     isDeliveryDelivered
                       ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                       : isDeliveryInRoute
@@ -249,9 +249,9 @@ export const LogisticsTab: React.FC<LogisticsTabProps> = ({ order }) => {
                 </span>
               </div>
 
-              <div className="space-y-3.5 text-xs">
+              <div className="space-y-3.5 text-sm">
                 <div>
-                  <span className="text-slate-500 block text-[11px]">
+                  <span className="text-slate-500 block text-xs">
                     Fecha objetivo y franja horaria
                   </span>
                   <span className="font-bold text-slate-800 text-sm flex items-center gap-1.5 mt-0.5">
@@ -261,7 +261,7 @@ export const LogisticsTab: React.FC<LogisticsTabProps> = ({ order }) => {
                 </div>
 
                 <div>
-                  <span className="text-slate-500 block text-[11px]">Destinatario de entrega</span>
+                  <span className="text-slate-500 block text-xs">Destinatario de entrega</span>
                   <span className="font-medium text-slate-700 block mt-0.5">
                     {order.delivery.recipientName || order.customerName} (
                     {order.delivery.recipientPhone || order.customerPhone})
@@ -269,20 +269,20 @@ export const LogisticsTab: React.FC<LogisticsTabProps> = ({ order }) => {
                 </div>
 
                 <div>
-                  <span className="text-slate-500 block text-[11px]">Dirección de entrega</span>
+                  <span className="text-slate-500 block text-xs">Dirección de entrega</span>
                   <span className="font-medium text-slate-700 block mt-0.5">
                     {order.deliveryAddress.street} #{order.deliveryAddress.number},{' '}
                     {order.deliveryAddress.neighborhood}
                   </span>
                   {order.deliveryAddress.reference && (
-                    <span className="text-[11px] text-slate-500 italic block mt-0.5">
+                    <span className="text-xs text-slate-500 italic block mt-0.5">
                       Ref: {order.deliveryAddress.reference}
                     </span>
                   )}
                 </div>
 
                 <div>
-                  <span className="text-slate-500 block text-[11px]">Conductor de entrega</span>
+                  <span className="text-slate-500 block text-xs">Conductor de entrega</span>
                   <span className="font-semibold text-slate-900 block mt-0.5">
                     {order.delivery.driverName
                       ? `${order.delivery.driverName} (${order.delivery.vehiclePlate || 'Vehículo asignado'})`
@@ -291,7 +291,7 @@ export const LogisticsTab: React.FC<LogisticsTabProps> = ({ order }) => {
                 </div>
 
                 {showDeliveryNote && (
-                  <p className="text-[11px] text-slate-500 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                  <p className="text-xs text-slate-500 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
                     Instrucción especial: {order.delivery.notes}
                   </p>
                 )}
