@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { MotionConfig } from 'motion/react';
 import { AppProvider } from './context/AppContext';
 import { MainLayout } from './components/layout/MainLayout';
 
@@ -52,7 +53,9 @@ export default function App() {
     void session.restore();
   }, []);
   return (
-    <>
+    // Respeta "reducir movimiento" del sistema en todas las animaciones de `motion`
+    // (menús, pestañas, modales): se quitan desplazamientos y escalas, quedan los fundidos.
+    <MotionConfig reducedMotion="user">
       <BrowserRouter>
         <Routes>
           {/* Public login */}
@@ -105,6 +108,6 @@ export default function App() {
           </Route>
         </Routes>
       </BrowserRouter>
-    </>
+    </MotionConfig>
   );
 }

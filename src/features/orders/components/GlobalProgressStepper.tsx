@@ -38,9 +38,9 @@ export const GlobalProgressStepper: React.FC<{ order: Order }> = ({ order }) => 
   return (
     <div className="w-full bg-white rounded-2xl border border-slate-200/90 p-4 sm:p-5 shadow-2xs">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+        <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500">
           Progreso Global de la Solicitud
-        </h3>
+        </h2>
         {isHeld && (
           <span className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200">
             <AlertTriangle className="w-3.5 h-3.5" />

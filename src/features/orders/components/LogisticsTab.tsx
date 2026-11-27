@@ -114,7 +114,7 @@ export const LogisticsTab: React.FC<LogisticsTabProps> = ({ order }) => {
               <MapPin className="w-3.5 h-3.5 text-teal-600" />
               <span>1. Recogida</span>
               <span
-                className={`text-[10px] px-1.5 py-0.2 rounded-full font-semibold ${
+                className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
                   isPickupCompleted
                     ? 'bg-emerald-100 text-emerald-800'
                     : 'bg-slate-200 text-slate-700'
@@ -136,7 +136,7 @@ export const LogisticsTab: React.FC<LogisticsTabProps> = ({ order }) => {
               <Truck className="w-3.5 h-3.5 text-orange-600" />
               <span>2. Entrega</span>
               <span
-                className={`text-[10px] px-1.5 py-0.2 rounded-full font-semibold ${
+                className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
                   isDeliveryDelivered
                     ? 'bg-emerald-100 text-emerald-800'
                     : isDeliveryReady || isDeliveryInRoute
@@ -153,10 +153,10 @@ export const LogisticsTab: React.FC<LogisticsTabProps> = ({ order }) => {
           {selectedLeg === 'pickup' ? (
             <section className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <span className="font-bold text-xs text-primary uppercase tracking-wider flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-teal-600" />
+                <h2 className="font-bold text-xs text-primary uppercase tracking-wider flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-teal-600" aria-hidden />
                   <span>Logística de Recogida</span>
-                </span>
+                </h2>
                 <span
                   className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
                     isPickupCompleted
@@ -230,10 +230,10 @@ export const LogisticsTab: React.FC<LogisticsTabProps> = ({ order }) => {
           ) : (
             <section className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <span className="font-bold text-xs text-primary uppercase tracking-wider flex items-center gap-2">
-                  <Truck className="w-4 h-4 text-orange-600" />
+                <h2 className="font-bold text-xs text-primary uppercase tracking-wider flex items-center gap-2">
+                  <Truck className="w-4 h-4 text-orange-600" aria-hidden />
                   <span>Logística de Entrega</span>
-                </span>
+                </h2>
                 <span
                   className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
                     isDeliveryDelivered

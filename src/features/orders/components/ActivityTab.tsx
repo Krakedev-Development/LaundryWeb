@@ -123,7 +123,7 @@ export const ActivityTab: React.FC<ActivityTabProps> = ({
                   )}
 
                   {showTechnicalDetails && (
-                    <div className="mt-1 p-1.5 bg-slate-100 rounded text-[10px] font-mono text-slate-500">
+                    <div className="mt-1 p-1.5 bg-slate-100 rounded text-[10px] font-mono text-slate-600">
                       ID: {event.id} · Estado técnico: {event.status}
                     </div>
                   )}

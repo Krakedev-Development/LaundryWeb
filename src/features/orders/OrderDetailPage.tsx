@@ -425,7 +425,13 @@ export const OrderDetailPage: React.FC = () => {
       <GlobalProgressStepper order={order} />
 
       {/* 3. Secciones de la solicitud (pestañas accesibles y fijas al desplazar) */}
-      <div className="sticky top-0 bg-white/95 backdrop-blur-xs z-20 pt-2 pb-0 -mx-4 px-4 sm:-mx-6 sm:px-6 border-b border-slate-200/90">
+      {/* Se fija bajo la barra superior (h-24, también fija): con top-0 quedaban encima de ella.
+          `data-sticky-tabs` amplía el margen de desplazamiento en index.css para que el foco del
+          teclado no quede tapado por la barra y las pestañas. */}
+      <div
+        data-sticky-tabs
+        className="sticky top-24 bg-white/95 backdrop-blur-xs z-10 pt-2 pb-0 -mx-4 px-4 sm:-mx-6 sm:px-6 border-b border-slate-200/90"
+      >
         <Tabs<typeof activeTab>
           label="Secciones de la solicitud"
           idPrefix="detail"
