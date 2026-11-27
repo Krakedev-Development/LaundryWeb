@@ -220,7 +220,7 @@ export const DriversPage: React.FC = () => {
           showToast({
             type: 'success',
             title: 'Chofer registrado',
-            message: `El conductor ${name} fue registrado en el sistema exitosamente.`,
+            message: `El chofer ${name} fue registrado en el sistema exitosamente.`,
           });
           await refreshDrivers();
         } catch (apiErr) {
@@ -249,7 +249,7 @@ export const DriversPage: React.FC = () => {
             showToast({
               type: 'info',
               title: 'Registro sin conexión',
-              message: 'El conductor fue guardado localmente (modo offline).',
+              message: 'El chofer fue guardado localmente (modo offline).',
             });
           } else {
             throw apiErr;
@@ -275,7 +275,7 @@ export const DriversPage: React.FC = () => {
         title="Gestión de Choferes y Flota"
         subtitle={
           isAdmin
-            ? 'Administración de conductores, unidades de transporte, asignación de sedes y estados.'
+            ? 'Administración de choferes, unidades de transporte, asignación de sedes y estados.'
             : 'Consulta de flota operativa, zonas de cobertura y carga activa (Modo Supervisor).'
         }
         actions={

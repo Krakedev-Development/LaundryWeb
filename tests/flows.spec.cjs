@@ -24,7 +24,7 @@ test('no existen acciones para simular al cliente o al chofer en el detalle de u
 }) => {
   await mockServerOrder(page, serverOrder('SOL-HOME-001', 'HEADING_TO_PICKUP'));
   await page.goto('/operations/orders/SOL-HOME-001', { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('heading', { name: 'Conductor en camino a recoger' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Chofer en camino a recoger' })).toBeVisible();
   await expect(page.getByText(/MVP:|simular/i)).toHaveCount(0);
   await expect(page.getByRole('button', { name: /Marcar llegada/ })).toHaveCount(0);
 });

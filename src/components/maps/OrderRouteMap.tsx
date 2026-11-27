@@ -150,7 +150,7 @@ export function OrderRouteMap({ order }: { order: Order }) {
       )}
       {!hasTelemetry && (
         <p className="text-xs text-slate-500">
-          Ubicaciones de la etapa actual. El trazado de ruta en vivo se activa cuando el conductor inicia el traslado.
+          Ubicaciones de la etapa actual. El trazado de ruta en vivo se activa cuando el chofer inicia el traslado.
         </p>
       )}
     </section>

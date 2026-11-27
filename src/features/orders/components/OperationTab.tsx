@@ -114,7 +114,7 @@ export const OperationTab: React.FC<OperationTabProps> = ({
     case 'PICKUP_PENDING':
       stageTitle = 'Recogida pendiente de asignación';
       stageDescription =
-        'La solicitud está confirmada y requiere asignar un conductor para el retiro a domicilio.';
+        'La solicitud está confirmada y requiere asignar un chofer para el retiro a domicilio.';
       // La recogida se asigna solo en Despacho; aquí solo se navega hasta allí.
       if (canAssignPickup(order))
         primaryCTA = (
@@ -138,13 +138,13 @@ export const OperationTab: React.FC<OperationTabProps> = ({
       break;
 
     case 'HEADING_TO_PICKUP':
-      stageTitle = 'Conductor en camino a recoger';
-      stageDescription = `El conductor va hacia la dirección del cliente. ${byDriver}`;
+      stageTitle = 'Chofer en camino a recoger';
+      stageDescription = `El chofer va hacia la dirección del cliente. ${byDriver}`;
       break;
 
     case 'ARRIVED_FOR_PICKUP':
-      stageTitle = 'Conductor en domicilio';
-      stageDescription = `El conductor recibe las prendas validando el código del cliente. ${byDriver}`;
+      stageTitle = 'Chofer en domicilio';
+      stageDescription = `El chofer recibe las prendas validando el código del cliente. ${byDriver}`;
       break;
 
     case 'PICKED_UP':
@@ -210,12 +210,12 @@ export const OperationTab: React.FC<OperationTabProps> = ({
 
     case 'OUT_FOR_DELIVERY':
       stageTitle = 'En reparto a domicilio';
-      stageDescription = `El conductor va hacia la dirección de entrega. ${byDriver}`;
+      stageDescription = `El chofer va hacia la dirección de entrega. ${byDriver}`;
       break;
 
     case 'ARRIVED_FOR_DELIVERY':
-      stageTitle = 'Conductor en dirección de entrega';
-      stageDescription = `El conductor entrega validando el código del cliente. ${byDriver}`;
+      stageTitle = 'Chofer en dirección de entrega';
+      stageDescription = `El chofer entrega validando el código del cliente. ${byDriver}`;
       break;
 
     case 'DELIVERED':

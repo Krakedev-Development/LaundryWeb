@@ -56,7 +56,7 @@ export const LogisticsTab: React.FC<LogisticsTabProps> = ({ order }) => {
         ? 'Chofer asignado'
         : isDeliveryReady
           ? isStorePickup(order)
-            ? 'Listo para retiro'
+            ? 'Lista para retiro'
             : 'Lista para entrega'
           : isInPlant(order)
             ? 'En planta'
@@ -193,7 +193,7 @@ export const LogisticsTab: React.FC<LogisticsTabProps> = ({ order }) => {
                 </div>
 
                 <div>
-                  <span className="text-slate-500 block text-xs">Conductor asignado</span>
+                  <span className="text-slate-500 block text-xs">Chofer de recogida</span>
                   <span className="font-semibold text-slate-900 block mt-0.5">
                     {order.pickup.driverName
                       ? `${order.pickup.driverName} (${order.pickup.vehiclePlate || 'Vehículo asignado'})`
@@ -282,7 +282,7 @@ export const LogisticsTab: React.FC<LogisticsTabProps> = ({ order }) => {
                 </div>
 
                 <div>
-                  <span className="text-slate-500 block text-xs">Conductor de entrega</span>
+                  <span className="text-slate-500 block text-xs">Chofer de entrega</span>
                   <span className="font-semibold text-slate-900 block mt-0.5">
                     {order.delivery.driverName
                       ? `${order.delivery.driverName} (${order.delivery.vehiclePlate || 'Vehículo asignado'})`

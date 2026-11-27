@@ -33,7 +33,7 @@ async function mockOrder(page, status, extra = {}) {
 test('en etapas del chofer el detalle solo informa y no hay cambio de estado local', async ({ page }) => {
   await mockOrder(page, 'HEADING_TO_PICKUP');
   await page.goto(`/operations/orders/${ORDER}`);
-  await expect(page.getByRole('heading', { name: 'Conductor en camino a recoger' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Chofer en camino a recoger' })).toBeVisible();
   await expect(page.getByText(/Lo registra el chofer desde su app/)).toBeVisible();
   for (const local of [
     'Marcar llegada al domicilio',
