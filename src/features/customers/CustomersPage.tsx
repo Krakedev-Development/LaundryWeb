@@ -2,7 +2,15 @@ import { Modal } from '../../shared/ui/Modal';
 import { operationalStage } from '../../services/fulfillment';
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { listCustomers } from '../../services/api/customersApi';
+import {
+  assignCustomerMembership,
+  listCustomers,
+} from '../../services/api/customersApi';
+import {
+  getMemberships,
+  mapMembershipResponseToPlan,
+} from '../../services/api/catalogApi';
+import type { MembershipPlan } from '../commercial/membershipPlans';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { PageHeader } from '../../components/common/PageHeader';
@@ -30,12 +38,21 @@ import {
 } from 'lucide-react';
 
 export const CustomersPage: React.FC = () => {
-  const { orders, pointsLedger, adjustCustomerPoints, currentUser } = useApp();
+  const { orders, pointsLedger, adjustCustomerPoints, currentUser, showToast } = useApp();
   const navigate = useNavigate();
 
   // Los clientes vienen del servidor: así aparecen apenas se registran y se aprueban.
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [membershipPlans, setMembershipPlans] = useState<MembershipPlan[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const refreshCustomers = () =>
+    listCustomers()
+      .then((rows) => setCustomers(rows))
+      .catch((e: unknown) =>
+        setLoadError(
+          e instanceof Error ? e.message : 'No se pudo cargar el directorio.',
+        ),
+      );
   useEffect(() => {
     let active = true;
     listCustomers()
@@ -46,6 +63,18 @@ export const CustomersPage: React.FC = () => {
           e instanceof Error ? e.message : 'No se pudo cargar el directorio.',
         ),
       );
+    getMemberships()
+      .then((plans) => {
+        if (!active) return;
+        setMembershipPlans(
+          plans
+            .map(mapMembershipResponseToPlan)
+            .filter((p) => p.status === 'ACTIVE'),
+        );
+      })
+      .catch(() => {
+        // Opcional en el directorio si falla la consulta de planes.
+      });
     return () => {
       active = false;
     };
@@ -69,7 +98,44 @@ export const CustomersPage: React.FC = () => {
     'Bonificación por fidelidad o cortesía comercial',
   );
 
+  const [selectedPlanId, setSelectedPlanId] = useState<string>('');
+  const [membershipReason, setMembershipReason] = useState('');
+  const [savingMembership, setSavingMembership] = useState(false);
+
   const selectedCustomer = customers.find((c) => c.id === selectedCustomerId);
+  useEffect(() => {
+    setSelectedPlanId(selectedCustomer?.membershipPlanId ?? '');
+    setMembershipReason('');
+  }, [selectedCustomer?.id, selectedCustomer?.membershipPlanId]);
+
+  const handleAssignMembership = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedCustomer) return;
+    setSavingMembership(true);
+    try {
+      await assignCustomerMembership(
+        selectedCustomer.id,
+        selectedPlanId || null,
+        membershipReason,
+      );
+      await refreshCustomers();
+      showToast({
+        type: 'success',
+        title: selectedPlanId ? 'Membresía asignada' : 'Membresía cancelada',
+        message: selectedCustomer.fullName,
+      });
+      setMembershipReason('');
+    } catch (cause) {
+      showToast({
+        type: 'error',
+        title: 'No se pudo actualizar la membresía',
+        message:
+          cause instanceof Error ? cause.message : 'Error de servidor.',
+      });
+    } finally {
+      setSavingMembership(false);
+    }
+  };
 
   // KPIs
   const totalCustomers = customers.length;
@@ -365,16 +431,17 @@ export const CustomersPage: React.FC = () => {
 
           {/* Drawer Tabs */}
           <div className="px-5 py-3 border-b border-slate-200/80 bg-slate-50/50 overflow-x-auto">
-            <AnimatedPillTabs<'PROFILE' | 'ORDERS' | 'POINTS'>
+            <AnimatedPillTabs<'PROFILE' | 'ORDERS' | 'POINTS' | 'MEMBERSHIP'>
               layoutId="customer-360-tabs"
               ariaLabel="Secciones del perfil de cliente"
               size="sm"
-              value={drawerTab === 'MEMBERSHIP' ? 'PROFILE' : drawerTab}
+              value={drawerTab}
               onChange={setDrawerTab}
               items={[
                 { id: 'PROFILE', label: 'Perfil & Direcciones' },
                 { id: 'ORDERS', label: 'Solicitudes', count: customerOrders.length },
                 { id: 'POINTS', label: 'Ledger de Puntos' },
+                { id: 'MEMBERSHIP', label: 'Membresía' },
               ]}
             />
           </div>
@@ -579,6 +646,81 @@ export const CustomersPage: React.FC = () => {
                     ))
                   )}
                 </div>
+              </div>
+            )}
+
+            {drawerTab === 'MEMBERSHIP' && (
+              <div className="space-y-4">
+                <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 space-y-1.5">
+                  <span className="font-bold text-slate-900 block">
+                    Suscripción Actual
+                  </span>
+                  <p className="text-slate-700">
+                    Plan:{' '}
+                    <span className="font-semibold text-[#0F4C81]">
+                      {selectedCustomer.membership ?? 'Sin membresía'}
+                    </span>
+                  </p>
+                  <p className="text-[11px] text-slate-500">
+                    Estado: {selectedCustomer.membershipStatus ?? 'Sin suscripción'}
+                    {selectedCustomer.membershipStartedAt
+                      ? ` · Inicio: ${selectedCustomer.membershipStartedAt.slice(0, 10)}`
+                      : ''}
+                    {selectedCustomer.membershipExpiresAt
+                      ? ` · Vence: ${selectedCustomer.membershipExpiresAt.slice(0, 10)}`
+                      : ''}
+                  </p>
+                </div>
+
+                {currentUser.role === 'ADMIN' && (
+                  <form
+                    onSubmit={handleAssignMembership}
+                    className="p-3.5 rounded-xl border border-slate-200 bg-white space-y-3"
+                  >
+                    <span className="font-bold text-slate-900 block">
+                      Gestión Administrativa de Membresía
+                    </span>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                        Plan asignado
+                      </label>
+                      <select
+                        value={selectedPlanId}
+                        onChange={(e) => setSelectedPlanId(e.target.value)}
+                        className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs"
+                      >
+                        <option value="">Sin membresía (cancelar actual)</option>
+                        {membershipPlans.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name} (${p.price.toFixed(2)} · {p.discountPercent}% dto.)
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                        Motivo / Nota (opcional)
+                      </label>
+                      <input
+                        type="text"
+                        maxLength={300}
+                        value={membershipReason}
+                        onChange={(e) => setMembershipReason(e.target.value)}
+                        placeholder="Ej.: Cortesía comercial o cambio de plan"
+                        className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs"
+                      />
+                    </div>
+                    <div className="flex justify-end">
+                      <button
+                        type="submit"
+                        disabled={savingMembership}
+                        className="px-4 py-2 bg-[#0F4C81] hover:bg-[#0A3660] disabled:opacity-50 text-white font-semibold rounded-lg text-xs cursor-pointer"
+                      >
+                        {savingMembership ? 'Guardando...' : 'Guardar membresía'}
+                      </button>
+                    </div>
+                  </form>
+                )}
               </div>
             )}
           </div>

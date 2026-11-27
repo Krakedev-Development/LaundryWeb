@@ -228,6 +228,10 @@ export interface Customer {
   addresses: Address[];
   // Plan elegido por el cliente; null si todavía no eligió ninguno.
   membership: string | null;
+  membershipPlanId?: string | null;
+  membershipStatus?: 'ACTIVE' | 'CANCELLED' | 'EXPIRED' | null;
+  membershipStartedAt?: string | null;
+  membershipExpiresAt?: string | null;
   walletBalance: number;
   points: number;
   activePromotionsCount: number;

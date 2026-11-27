@@ -1,14 +1,14 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { CreditCard, Pencil, Plus, Search } from 'lucide-react';
+import { CreditCard, Pencil, Plus, Search, Users } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { storageService } from '../../services/storage';
 import {
   getMemberships,
   createMembership,
   updateMembership,
+  getMembershipSubscribers,
   mapMembershipResponseToPlan,
+  type MembershipSubscriber,
 } from '../../services/api/catalogApi';
-import { ApiError } from '../../services/api/apiConfig';
 import { PageHeader } from '../../components/common/PageHeader';
 import { Modal } from '../../shared/ui/Modal';
 import { TablePagination, usePagination } from '../../shared/ui/TablePagination';
@@ -17,8 +17,6 @@ import {
   validateMembershipPlan,
   type MembershipPlan,
 } from './membershipPlans';
-
-const MEMBERSHIPS_STORAGE_KEY = 'lw_membership_plans_v1';
 
 const field =
   'mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm focus:outline-2 focus:outline-sky-700';
@@ -37,43 +35,49 @@ const newPlan = (): MembershipPlan => ({
   priorityService: false,
   benefits: [],
   status: 'ACTIVE',
+  activeSubscribersCount: 0,
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
 });
 
 export function MembershipsPage() {
   const { currentUser, settings, showToast } = useApp();
-  const [plans, setPlans] = useState(() => storageService.getMembershipPlans());
+  const [plans, setPlans] = useState<MembershipPlan[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [draft, setDraft] = useState<MembershipPlan | null>(null);
   const [benefits, setBenefits] = useState('');
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('ALL');
   const [error, setError] = useState('');
+  const [subscribersPlan, setSubscribersPlan] = useState<MembershipPlan | null>(null);
+  const [subscribers, setSubscribers] = useState<MembershipSubscriber[]>([]);
+  const [loadingSubscribers, setLoadingSubscribers] = useState(false);
+  const [subscribersError, setSubscribersError] = useState('');
 
   useEffect(() => {
-    const unsubscribe = storageService.subscribe(() =>
-      setPlans(storageService.getMembershipPlans()),
-    );
-
     let cancelled = false;
+    setLoading(true);
+    setLoadError('');
     getMemberships()
       .then((apiPlans) => {
         if (cancelled) return;
-        const current = storageService.getMembershipPlans();
-        const byId = new Map(current.map((p) => [p.id, p]));
-        const mapped = apiPlans.map((raw) =>
-          mapMembershipResponseToPlan(raw, byId.get(raw.id)),
-        );
-        localStorage.setItem(MEMBERSHIPS_STORAGE_KEY, JSON.stringify(mapped));
-        setPlans(mapped);
+        setPlans(apiPlans.map(mapMembershipResponseToPlan));
       })
-      .catch(() => {
-        // Keep local snapshot if offline during isolated tests
+      .catch((cause: unknown) => {
+        if (cancelled) return;
+        setLoadError(
+          cause instanceof Error
+            ? cause.message
+            : 'No se pudieron cargar las membresías desde el servidor.',
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
       });
 
     return () => {
       cancelled = true;
-      unsubscribe();
     };
   }, []);
 
@@ -107,6 +111,25 @@ export function MembershipsPage() {
     value: MembershipPlan[K],
   ) => setDraft((plan) => (plan ? { ...plan, [key]: value } : plan));
 
+  const openSubscribers = async (plan: MembershipPlan) => {
+    setSubscribersPlan(plan);
+    setSubscribers([]);
+    setSubscribersError('');
+    setLoadingSubscribers(true);
+    try {
+      const rows = await getMembershipSubscribers(plan.id);
+      setSubscribers(rows);
+    } catch (cause) {
+      setSubscribersError(
+        cause instanceof Error
+          ? cause.message
+          : 'No se pudieron cargar los suscriptores.',
+      );
+    } finally {
+      setLoadingSubscribers(false);
+    }
+  };
+
   const save = async (event: FormEvent) => {
     event.preventDefault();
     if (!draft) return;
@@ -129,25 +152,35 @@ export function MembershipsPage() {
       if (isExisting) {
         const res = await updateMembership(normalizedPlan.id, {
           name: normalizedPlan.name,
+          description: normalizedPlan.description || null,
           priceMonthly: normalizedPlan.price,
+          interval: normalizedPlan.interval,
+          includedWeight: normalizedPlan.includedWeight,
+          weightUnit: normalizedPlan.weightUnit,
           weeklyPickups: normalizedPlan.includedPickups,
           garmentDiscountPercent: normalizedPlan.discountPercent,
+          priorityService: normalizedPlan.priorityService,
           benefits: normalizedPlan.benefits,
           active: normalizedPlan.status === 'ACTIVE',
         });
-        syncedPlan = mapMembershipResponseToPlan(res, normalizedPlan);
+        syncedPlan = mapMembershipResponseToPlan(res);
       } else {
         let res = await createMembership({
           name: normalizedPlan.name,
+          description: normalizedPlan.description || null,
           priceMonthly: normalizedPlan.price,
+          interval: normalizedPlan.interval,
+          includedWeight: normalizedPlan.includedWeight,
+          weightUnit: normalizedPlan.weightUnit,
           weeklyPickups: normalizedPlan.includedPickups,
           garmentDiscountPercent: normalizedPlan.discountPercent,
+          priorityService: normalizedPlan.priorityService,
           benefits: normalizedPlan.benefits,
         });
         if (normalizedPlan.status === 'INACTIVE') {
           res = await updateMembership(res.id, { active: false });
         }
-        syncedPlan = mapMembershipResponseToPlan(res, normalizedPlan);
+        syncedPlan = mapMembershipResponseToPlan(res);
       }
 
       const nextPlans = isExisting
@@ -156,7 +189,6 @@ export function MembershipsPage() {
           )
         : [...plans, syncedPlan];
 
-      localStorage.setItem(MEMBERSHIPS_STORAGE_KEY, JSON.stringify(nextPlans));
       setPlans(nextPlans);
       setDraft(null);
       showToast({
@@ -165,29 +197,10 @@ export function MembershipsPage() {
         message: syncedPlan.name,
       });
     } catch (cause) {
-      if (cause instanceof ApiError && cause.status === 0) {
-        try {
-          storageService.saveMembershipPlan(normalizedPlan);
-          setDraft(null);
-          showToast({
-            type: 'success',
-            title: 'Membresía guardada',
-            message: normalizedPlan.name,
-          });
-          return;
-        } catch (localErr) {
-          setError(
-            localErr instanceof Error
-              ? localErr.message
-              : 'No se pudo guardar. Intenta de nuevo.',
-          );
-          return;
-        }
-      }
       setError(
         cause instanceof Error
           ? cause.message
-          : 'No se pudo guardar. Intenta de nuevo.',
+          : 'No se pudo guardar en el servidor. Intenta de nuevo.',
       );
     }
   };
@@ -204,6 +217,14 @@ export function MembershipsPage() {
           </button>
         }
       />
+      {loadError && (
+        <p
+          role="alert"
+          className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800"
+        >
+          {loadError}
+        </p>
+      )}
       <section className="fintech-card overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 p-4">
           <div className="relative min-w-0 flex-1 sm:max-w-sm">
@@ -233,7 +254,11 @@ export function MembershipsPage() {
             {visible.length} planes
           </span>
         </div>
-        {visible.length ? (
+        {loading ? (
+          <div className="px-6 py-12 text-center text-sm text-slate-500">
+            Cargando planes desde el servidor...
+          </div>
+        ) : visible.length ? (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="bg-slate-50 text-xs text-slate-600">
@@ -241,6 +266,7 @@ export function MembershipsPage() {
                   <th className="px-5 py-3">Plan</th>
                   <th className="px-5 py-3">Precio por período</th>
                   <th className="px-5 py-3">Incluye por período</th>
+                  <th className="px-5 py-3">Suscriptores</th>
                   <th className="px-5 py-3">Estado</th>
                   <th className="px-5 py-3">
                     <span className="sr-only">Acciones</span>
@@ -274,11 +300,23 @@ export function MembershipsPage() {
                     <td className="px-5 py-4">
                       <p>
                         {plan.includedWeight} {plan.weightUnit} ·{' '}
-                        {plan.includedPickups} recogidas
+                        {plan.includedPickups === null
+                          ? 'Recogidas ilimitadas'
+                          : `${plan.includedPickups} recogidas`}
                       </p>
                       <p className="text-xs text-slate-600">
                         {plan.discountPercent}% de descuento adicional
                       </p>
+                    </td>
+                    <td className="whitespace-nowrap px-5 py-4">
+                      <button
+                        type="button"
+                        onClick={() => void openSubscribers(plan)}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:border-sky-300 hover:bg-sky-50 hover:text-[#0F4C81]"
+                      >
+                        <Users size={14} />
+                        {plan.activeSubscribersCount ?? 0} activos
+                      </button>
                     </td>
                     <td className="px-5 py-4">
                       <span
@@ -339,8 +377,8 @@ export function MembershipsPage() {
         )}
       </section>
       <p className="text-xs leading-relaxed text-slate-600">
-        La contratación por clientes, el consumo de cupos y los cobros recurrentes
-        se incorporarán a su flujo de suscripción.
+        Las suscripciones de clientes se activan con cargo a su billetera, tienen
+        vigencia por período y sus cupos se controlan desde el servidor.
       </p>
       {draft && (
         <Modal
@@ -453,24 +491,44 @@ export function MembershipsPage() {
                     <option value="LB">Libras (LB)</option>
                   </select>
                 </label>
-                <label className="text-sm font-medium">
-                  Recogidas incluidas
-                  <input
-                    required
-                    min="0"
-                    step="1"
-                    type="number"
-                    className={field}
-                    value={
-                      Number.isFinite(draft.includedPickups)
-                        ? draft.includedPickups
-                        : ''
-                    }
-                    onChange={(event) =>
-                      change('includedPickups', event.target.valueAsNumber)
-                    }
-                  />
-                </label>
+                <div>
+                  <label className="text-sm font-medium">
+                    Recogidas incluidas
+                    <input
+                      required={draft.includedPickups !== null}
+                      disabled={draft.includedPickups === null}
+                      min="0"
+                      step="1"
+                      type="number"
+                      placeholder={
+                        draft.includedPickups === null ? 'Ilimitadas' : undefined
+                      }
+                      className={`${field} disabled:bg-slate-100 disabled:text-slate-500`}
+                      value={
+                        draft.includedPickups !== null &&
+                        Number.isFinite(draft.includedPickups)
+                          ? draft.includedPickups
+                          : ''
+                      }
+                      onChange={(event) =>
+                        change('includedPickups', event.target.valueAsNumber)
+                      }
+                    />
+                  </label>
+                  <label className="mt-2 flex items-center gap-2 text-xs text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={draft.includedPickups === null}
+                      onChange={(event) =>
+                        change(
+                          'includedPickups',
+                          event.target.checked ? null : 0,
+                        )
+                      }
+                    />
+                    Envíos ilimitados
+                  </label>
+                </div>
                 <label className="text-sm font-medium">
                   Descuento adicional (%)
                   <input
@@ -492,8 +550,8 @@ export function MembershipsPage() {
                 </label>
               </div>
               <p className="text-xs text-slate-600">
-                Un cupo de cero no incluye ese beneficio. Los cupos son totales
-                por período.
+                Un cupo de cero no incluye ese beneficio. Los envíos gratis se
+                controlan por semana operativa.
               </p>
               <label className="flex items-center gap-2 text-sm">
                 <input
@@ -553,6 +611,61 @@ export function MembershipsPage() {
               </button>
             </footer>
           </form>
+        </Modal>
+      )}
+      {subscribersPlan && (
+        <Modal
+          wide
+          title={`Suscriptores · ${subscribersPlan.name}`}
+          description="Clientes con suscripción activa vigente en este plan."
+          onClose={() => setSubscribersPlan(null)}
+        >
+          <div className="p-5 space-y-3 text-xs">
+            {loadingSubscribers ? (
+              <p className="py-8 text-center text-slate-500">
+                Cargando suscriptores...
+              </p>
+            ) : subscribersError ? (
+              <p role="alert" className="rounded-lg bg-rose-50 p-3 text-rose-800">
+                {subscribersError}
+              </p>
+            ) : subscribers.length === 0 ? (
+              <p className="py-8 text-center text-slate-500">
+                No hay clientes activos suscritos a este plan.
+              </p>
+            ) : (
+              <div className="divide-y divide-slate-100 rounded-xl border border-slate-200">
+                {subscribers.map((sub) => (
+                  <div
+                    key={sub.customerId}
+                    className="flex flex-wrap items-center justify-between gap-2 p-3"
+                  >
+                    <div>
+                      <p className="font-semibold text-slate-900">{sub.name}</p>
+                      <p className="text-[11px] text-slate-500">
+                        {sub.email}
+                        {sub.phone ? ` · ${sub.phone}` : ''}
+                      </p>
+                    </div>
+                    <div className="text-right font-mono text-[11px] text-slate-600">
+                      <p>
+                        Envíos semana: {sub.weeklyPickupsUsed} /{' '}
+                        {sub.weeklyPickupsLimit === null
+                          ? '∞'
+                          : sub.weeklyPickupsLimit}
+                      </p>
+                      <p>
+                        Vence:{' '}
+                        {sub.expiresAt
+                          ? sub.expiresAt.slice(0, 10)
+                          : 'Sin vencimiento'}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </Modal>
       )}
     </div>

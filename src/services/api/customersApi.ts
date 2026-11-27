@@ -9,6 +9,10 @@ interface DirectoryEntry {
   phone: string | null;
   kycStatus: 'NOT_SUBMITTED' | 'PENDING' | 'APPROVED' | 'REJECTED';
   membershipPlan: { id: string; name: string } | null;
+  membershipStatus?: 'ACTIVE' | 'CANCELLED' | 'EXPIRED' | null;
+  membershipStartedAt?: string | null;
+  membershipExpiresAt?: string | null;
+  walletBalance?: number | string;
   kycDocumentType: string | null;
   kycDocumentNumber: string | null;
   kycRejectionReason: string | null;
@@ -18,8 +22,7 @@ interface DirectoryEntry {
   createdAt: string;
 }
 
-// Directorio real de clientes aprobados. La billetera y los puntos aún no vienen del
-// servidor, por eso se muestran en cero hasta conectar esos módulos.
+// Directorio real de clientes aprobados.
 export async function listCustomers(): Promise<Customer[]> {
   const rows = await apiRequest<DirectoryEntry[]>('/customers', {
     token: session.getToken(),
@@ -43,11 +46,33 @@ export async function listCustomers(): Promise<Customer[]> {
       reference: a.reference ?? undefined,
     })) as Customer['addresses'],
     membership: c.membershipPlan?.name ?? null,
-    walletBalance: 0,
+    membershipPlanId: c.membershipPlan?.id ?? null,
+    membershipStatus: c.membershipStatus ?? null,
+    membershipStartedAt: c.membershipStartedAt ?? null,
+    membershipExpiresAt: c.membershipExpiresAt ?? null,
+    walletBalance: Number(c.walletBalance ?? 0) || 0,
     points: 0,
     activePromotionsCount: 0,
     totalOrders: c.totalOrders,
     completedOrders: 0,
     createdAt: c.createdAt.slice(0, 10),
   }));
+}
+
+export async function assignCustomerMembership(
+  customerId: string,
+  planId: string | null,
+  reason?: string,
+) {
+  return apiRequest<{
+    customerId: string;
+    membershipPlan: { id: string; name: string } | null;
+    membershipStatus: 'ACTIVE' | 'CANCELLED' | 'EXPIRED' | null;
+    membershipStartedAt: string | null;
+    membershipExpiresAt: string | null;
+  }>(`/customers/${customerId}/membership`, {
+    method: 'PUT',
+    token: session.getToken(),
+    body: JSON.stringify({ planId, ...(reason?.trim() ? { reason: reason.trim() } : {}) }),
+  });
 }

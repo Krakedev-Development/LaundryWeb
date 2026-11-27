@@ -6,11 +6,12 @@ export interface MembershipPlan {
   interval: 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
   includedWeight: number;
   weightUnit: 'KG' | 'LB';
-  includedPickups: number;
+  includedPickups: number | null;
   discountPercent: number;
   priorityService: boolean;
   benefits: string[];
   status: 'ACTIVE' | 'INACTIVE';
+  activeSubscribersCount?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -39,7 +40,10 @@ export function validateMembershipPlan(
     throw Error('El precio debe ser un importe mayor o igual a cero.');
   if (!Number.isFinite(plan.includedWeight) || plan.includedWeight < 0)
     throw Error('El peso incluido debe ser mayor o igual a cero.');
-  if (!Number.isInteger(plan.includedPickups) || plan.includedPickups < 0)
+  if (
+    plan.includedPickups !== null &&
+    (!Number.isInteger(plan.includedPickups) || plan.includedPickups < 0)
+  )
     throw Error(
       'Las recogidas deben ser un número entero mayor o igual a cero.',
     );

@@ -18,12 +18,18 @@ function unwrapList<T>(
 export interface CreateGarmentDto {
   name: string;
   basePrice: number;
+  description?: string | null;
+  category?: string | null;
+  estimatedHours?: number | null;
   icon?: string;
 }
 
 export interface UpdateGarmentDto {
   name?: string;
   basePrice?: number;
+  description?: string | null;
+  category?: string | null;
+  estimatedHours?: number | null;
   icon?: string;
   active?: boolean;
 }
@@ -31,6 +37,9 @@ export interface UpdateGarmentDto {
 export interface GarmentResponse {
   id: string;
   name: string;
+  description?: string | null;
+  category?: string | null;
+  estimatedHours?: number | null;
   basePrice: number | string;
   icon?: string | null;
   active: boolean;
@@ -131,13 +140,13 @@ export async function updateService(
 
 export interface CreateExtraDto {
   name: string;
-  description?: string;
+  description?: string | null;
   price: number;
 }
 
 export interface UpdateExtraDto {
   name?: string;
-  description?: string;
+  description?: string | null;
   price?: number;
   active?: boolean;
 }
@@ -183,17 +192,27 @@ export async function updateExtra(
 
 export interface CreateMembershipPlanDto {
   name: string;
+  description?: string | null;
   priceMonthly: number;
-  weeklyPickups?: number;
+  interval?: 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
+  includedWeight?: number | null;
+  weightUnit?: 'KG' | 'LB';
+  weeklyPickups?: number | null;
   garmentDiscountPercent: number;
+  priorityService?: boolean;
   benefits: string[];
 }
 
 export interface UpdateMembershipPlanDto {
   name?: string;
+  description?: string | null;
   priceMonthly?: number;
-  weeklyPickups?: number;
+  interval?: 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
+  includedWeight?: number | null;
+  weightUnit?: 'KG' | 'LB';
+  weeklyPickups?: number | null;
   garmentDiscountPercent?: number;
+  priorityService?: boolean;
   benefits?: string[];
   active?: boolean;
 }
@@ -203,12 +222,29 @@ export interface MembershipPlanResponse {
   name: string;
   description?: string | null;
   priceMonthly: number | string;
+  interval?: 'MONTHLY' | 'QUARTERLY' | 'YEARLY' | null;
+  includedWeight?: number | string | null;
+  weightUnit?: 'KG' | 'LB' | null;
   weeklyPickups?: number | null;
   garmentDiscountPercent: number | string;
+  priorityService?: boolean;
   benefits?: string[] | null;
   active?: boolean;
+  activeSubscribersCount?: number;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface MembershipSubscriber {
+  customerId: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  startedAt: string | null;
+  expiresAt: string | null;
+  status: 'ACTIVE' | 'CANCELLED' | 'EXPIRED';
+  weeklyPickupsUsed: number;
+  weeklyPickupsLimit: number | null;
 }
 
 export async function getMemberships(): Promise<MembershipPlanResponse[]> {
@@ -241,6 +277,18 @@ export async function updateMembership(
     token: session.getToken(),
     body: JSON.stringify(data),
   });
+}
+
+export async function getMembershipSubscribers(
+  planId: string,
+): Promise<MembershipSubscriber[]> {
+  return apiRequest<MembershipSubscriber[]>(
+    `/catalog/memberships/${planId}/subscribers`,
+    {
+      method: 'GET',
+      token: session.getToken(),
+    },
+  );
 }
 
 // --- 5. PROMOTIONS (/catalog/promotions) ---
@@ -375,28 +423,25 @@ export async function updateReward(
 
 export function mapGarmentToCatalogItem(
   garment: GarmentResponse,
-  existing?: CatalogItem,
 ): CatalogItem {
   const price = Number(garment.basePrice) || 0;
   return {
     id: garment.id,
     name: garment.name,
     category: 'PRENDAS',
-    type: existing?.type || garment.icon || 'Prenda Individual',
-    description: existing?.description || 'Prenda registrada en catálogo',
+    type: garment.category ?? garment.icon ?? 'Prenda Individual',
+    description: garment.description ?? '',
     price,
-    pricingModel: existing?.pricingModel ?? 'FIXED',
-    weightUnit: existing?.weightUnit ?? 'LB',
-    pricePerWeightUnit:
-      existing?.pricingModel === 'PER_WEIGHT' ? price : existing?.pricePerWeightUnit,
-    compatibleWithWeight: existing?.compatibleWithWeight ?? true,
-    customerSelectable: existing?.customerSelectable ?? true,
-    restrictions: existing?.restrictions ?? [],
-    estimatedHours: existing?.estimatedHours ?? 24,
-    minHours: existing?.minHours ?? 12,
-    maxHours: existing?.maxHours ?? 48,
+    pricingModel: 'FIXED',
+    weightUnit: 'LB',
+    compatibleWithWeight: true,
+    customerSelectable: true,
+    restrictions: [],
+    estimatedHours: garment.estimatedHours ?? 0,
+    minHours: 0,
+    maxHours: 0,
     status: garment.active === false ? 'INACTIVE' : 'ACTIVE',
-    icon: garment.icon ?? existing?.icon,
+    icon: garment.icon ?? undefined,
   };
 }
 
@@ -468,7 +513,7 @@ export async function fetchAllCatalogItems(
     getExtras(),
   ]);
   return [
-    ...garments.map((g) => mapGarmentToCatalogItem(g, byId.get(g.id))),
+    ...garments.map((g) => mapGarmentToCatalogItem(g)),
     ...services.map((s) => mapServiceToCatalogItem(s, byId.get(s.id))),
     ...extras.map((e) => mapExtraToCatalogItem(e, byId.get(e.id))),
   ];
@@ -476,26 +521,23 @@ export async function fetchAllCatalogItems(
 
 export function mapMembershipResponseToPlan(
   raw: MembershipPlanResponse,
-  existing?: MembershipPlan,
 ): MembershipPlan {
   const benefits = Array.isArray(raw.benefits) ? raw.benefits : [];
   return {
     id: raw.id,
     name: raw.name,
-    description:
-      raw.description ??
-      existing?.description ??
-      (benefits.length ? benefits[0] : 'Plan de suscripción comercial'),
+    description: raw.description ?? '',
     price: Number(raw.priceMonthly) || 0,
-    interval: existing?.interval ?? 'MONTHLY',
-    includedWeight: existing?.includedWeight ?? 0,
-    weightUnit: existing?.weightUnit ?? 'KG',
-    includedPickups: Number(raw.weeklyPickups ?? existing?.includedPickups ?? 0),
+    interval: raw.interval ?? 'MONTHLY',
+    includedWeight: raw.includedWeight != null ? Number(raw.includedWeight) || 0 : 0,
+    weightUnit: raw.weightUnit === 'LB' ? 'LB' : 'KG',
+    includedPickups: raw.weeklyPickups === null ? null : Number(raw.weeklyPickups ?? 0),
     discountPercent: Number(raw.garmentDiscountPercent) || 0,
-    priorityService: existing?.priorityService ?? false,
+    priorityService: Boolean(raw.priorityService),
     benefits,
     status: raw.active === false ? 'INACTIVE' : 'ACTIVE',
-    createdAt: raw.createdAt ?? existing?.createdAt ?? new Date().toISOString(),
+    activeSubscribersCount: raw.activeSubscribersCount ?? 0,
+    createdAt: raw.createdAt ?? new Date().toISOString(),
     updatedAt: raw.updatedAt ?? new Date().toISOString(),
   };
 }

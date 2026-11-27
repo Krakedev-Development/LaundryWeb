@@ -50,6 +50,8 @@ export interface BackendOrderItem {
   quantity: number;
   unitPrice: number | string;
   notes?: string | null;
+  garment?: { id: string; name: string; icon?: string | null } | null;
+  service?: { id: string; name: string } | null;
 }
 
 export interface BackendOrderExtra {
@@ -57,6 +59,7 @@ export interface BackendOrderExtra {
   orderId: string;
   extraId: string;
   price: number | string;
+  extra?: { id: string; name: string } | null;
 }
 
 export interface BackendOrderLeg {
@@ -464,14 +467,17 @@ export function mapBackendOrderToOrder(
     : existing?.delivery?.timeSlot || 'Pendiente';
 
   const items: OrderItem[] = detail?.items?.length
-    ? detail.items.map((it) => ({
-        id: it.id,
-        name: it.notes || 'Prenda de servicio',
-        quantity: it.quantity,
-        unitPrice: Number(it.unitPrice),
-        category: 'PRENDAS',
-        notes: it.notes ?? undefined,
-      }))
+    ? detail.items.map((it) => {
+        const label = [it.garment?.name, it.service?.name].filter(Boolean).join(' · ');
+        return {
+          id: it.id,
+          name: label || it.notes || 'Prenda de servicio',
+          quantity: it.quantity,
+          unitPrice: Number(it.unitPrice),
+          category: 'PRENDAS',
+          notes: it.notes ?? undefined,
+        };
+      })
     : existing?.items ?? [
         {
           id: `ITEM-${raw.id.slice(0, 4)}`,
@@ -485,7 +491,7 @@ export function mapBackendOrderToOrder(
   const extras = detail?.extras?.length
     ? detail.extras.map((ex) => ({
         id: ex.id,
-        name: 'Servicio extra',
+        name: ex.extra?.name || 'Servicio extra',
         price: Number(ex.price),
       }))
     : existing?.extras ?? [];
