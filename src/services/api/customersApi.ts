@@ -13,6 +13,7 @@ interface DirectoryEntry {
   membershipStartedAt?: string | null;
   membershipExpiresAt?: string | null;
   walletBalance?: number | string;
+  pointsBalance?: number | string;
   kycDocumentType: string | null;
   kycDocumentNumber: string | null;
   kycRejectionReason: string | null;
@@ -51,7 +52,7 @@ export async function listCustomers(): Promise<Customer[]> {
     membershipStartedAt: c.membershipStartedAt ?? null,
     membershipExpiresAt: c.membershipExpiresAt ?? null,
     walletBalance: Number(c.walletBalance ?? 0) || 0,
-    points: 0,
+    points: Number(c.pointsBalance ?? 0) || 0,
     activePromotionsCount: 0,
     totalOrders: c.totalOrders,
     completedOrders: 0,

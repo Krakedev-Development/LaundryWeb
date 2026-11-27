@@ -7,10 +7,16 @@ import {
   listCustomers,
 } from '../../services/api/customersApi';
 import {
+  adjustCustomerPointsApi,
+  getCustomerPoints,
+  mapServerLedgerEntry,
+} from '../../services/api/pointsApi';
+import {
   getMemberships,
   mapMembershipResponseToPlan,
 } from '../../services/api/catalogApi';
 import type { MembershipPlan } from '../commercial/membershipPlans';
+import type { Customer, PointsLedgerEntry } from '../../types';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { PageHeader } from '../../components/common/PageHeader';
@@ -20,7 +26,6 @@ import { AnimatedPillTabs } from '../../components/ui/AnimatedPillTabs';
 import { StaggerContainer, StaggerItem } from '../../components/ui/StaggerList';
 import { AnimatedMetricValue } from '../../components/ui/AnimatedMetricValue';
 import { btnPrimary } from '../../shared/ui/controls';
-import { Customer } from '../../types';
 import {
   Users,
   Award,
@@ -38,7 +43,7 @@ import {
 } from 'lucide-react';
 
 export const CustomersPage: React.FC = () => {
-  const { orders, pointsLedger, adjustCustomerPoints, currentUser, showToast } = useApp();
+  const { orders, currentUser, showToast } = useApp();
   const navigate = useNavigate();
 
   // Los clientes vienen del servidor: así aparecen apenas se registran y se aprueban.
@@ -91,12 +96,16 @@ export const CustomersPage: React.FC = () => {
     'PROFILE' | 'ORDERS' | 'POINTS' | 'MEMBERSHIP'
   >('PROFILE');
 
-  // Points adjustment state (Ledger rule #39)
+  // Points adjustment & server ledger state
+  const [serverLedger, setServerLedger] = useState<PointsLedgerEntry[]>([]);
+  const [ledgerLoading, setLedgerLoading] = useState(false);
+  const [ledgerError, setLedgerError] = useState('');
   const [isAdjustingPoints, setIsAdjustingPoints] = useState(false);
   const [pointsDelta, setPointsDelta] = useState(0);
   const [pointsReason, setPointsReason] = useState(
     'Bonificación por fidelidad o cortesía comercial',
   );
+  const [adjustSaving, setAdjustSaving] = useState(false);
 
   const [selectedPlanId, setSelectedPlanId] = useState<string>('');
   const [membershipReason, setMembershipReason] = useState('');
@@ -186,17 +195,73 @@ export const CustomersPage: React.FC = () => {
     return orders.filter((o) => o.customerId === selectedCustomer.id);
   }, [orders, selectedCustomer]);
 
-  // Customer ledger entries
-  const customerLedger = useMemo(() => {
-    if (!selectedCustomer) return [];
-    return pointsLedger.filter((l) => l.customerId === selectedCustomer.id);
-  }, [pointsLedger, selectedCustomer]);
+  const loadCustomerLedger = (customerId: string) => {
+    setLedgerLoading(true);
+    setLedgerError('');
+    getCustomerPoints(customerId)
+      .then((res) => {
+        setServerLedger(res.entries.map(mapServerLedgerEntry));
+        setCustomers((prev) =>
+          prev.map((c) =>
+            c.id === customerId ? { ...c, points: res.balance } : c,
+          ),
+        );
+      })
+      .catch((cause: unknown) => {
+        setLedgerError(
+          cause instanceof Error
+            ? cause.message
+            : 'No se pudo cargar el historial de puntos.',
+        );
+      })
+      .finally(() => setLedgerLoading(false));
+  };
 
-  const handleAdjustPointsSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (!selectedCustomerId) {
+      setServerLedger([]);
+      return;
+    }
+    loadCustomerLedger(selectedCustomerId);
+  }, [selectedCustomerId]);
+
+  const handleAdjustPointsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCustomer || !pointsReason.trim()) return;
-    adjustCustomerPoints(selectedCustomer.id, pointsDelta, pointsReason);
-    setIsAdjustingPoints(false);
+    if (!Number.isInteger(pointsDelta) || pointsDelta === 0) {
+      showToast({
+        type: 'error',
+        title: 'Cantidad inválida',
+        message: 'Ingresa una cantidad entera distinta de cero.',
+      });
+      return;
+    }
+    setAdjustSaving(true);
+    try {
+      await adjustCustomerPointsApi({
+        customerId: selectedCustomer.id,
+        points: pointsDelta,
+        reason: pointsReason.trim(),
+      });
+      loadCustomerLedger(selectedCustomer.id);
+      void refreshCustomers();
+      setIsAdjustingPoints(false);
+      setPointsDelta(0);
+      showToast({
+        type: 'success',
+        title: 'Puntos ajustados',
+        message: `${pointsDelta > 0 ? `+${pointsDelta}` : pointsDelta} pts a ${selectedCustomer.fullName}`,
+      });
+    } catch (cause) {
+      showToast({
+        type: 'error',
+        title: 'No se pudo ajustar los puntos',
+        message:
+          cause instanceof Error ? cause.message : 'Error del servidor.',
+      });
+    } finally {
+      setAdjustSaving(false);
+    }
   };
 
   return (
@@ -605,21 +670,32 @@ export const CustomersPage: React.FC = () => {
                       </button>
                       <button
                         type="submit"
-                        className="px-3 py-1.5 bg-[#0F4C81] hover:bg-[#0A3660] text-white font-bold rounded-lg text-xs cursor-pointer"
+                        disabled={adjustSaving}
+                        className="px-3 py-1.5 bg-[#0F4C81] hover:bg-[#0A3660] disabled:opacity-50 text-white font-bold rounded-lg text-xs cursor-pointer"
                       >
-                        Guardar Ajuste
+                        {adjustSaving ? 'Guardando...' : 'Guardar Ajuste'}
                       </button>
                     </div>
                   </form>
                 )}
 
+                {ledgerError && (
+                  <p role="alert" className="rounded-lg bg-rose-50 p-3 text-xs text-rose-800">
+                    {ledgerError}
+                  </p>
+                )}
+
                 <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden bg-white">
-                  {customerLedger.length === 0 ? (
+                  {ledgerLoading ? (
+                    <p className="text-slate-400 italic p-4 text-center">
+                      Cargando movimientos de puntos...
+                    </p>
+                  ) : serverLedger.length === 0 ? (
                     <p className="text-slate-400 italic p-4 text-center">
                       Sin movimientos de puntos registrados.
                     </p>
                   ) : (
-                    customerLedger.map((led) => (
+                    serverLedger.map((led) => (
                       <div
                         key={led.id}
                         className="p-2.5 flex items-center justify-between text-xs"

@@ -2,14 +2,12 @@ import { Modal } from '../../shared/ui/Modal';
 import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { useApp } from '../../context/AppContext';
-import { storageService } from '../../services/storage';
 import {
   getPromotions,
   createPromotion as createPromotionApi,
   updatePromotion as updatePromotionApi,
   mapPromotionResponseToPromotion,
 } from '../../services/api/catalogApi';
-import { ApiError } from '../../services/api/apiConfig';
 import { PageHeader } from '../../components/common/PageHeader';
 import { TablePagination, usePagination } from '../../shared/ui/TablePagination';
 import { MetricCard } from '../../components/common/MetricCard';
@@ -27,42 +25,48 @@ import {
 } from 'lucide-react';
 
 export const PromotionsPage: React.FC = () => {
-  const { promotions, createPromotion, currentUser, showToast } = useApp();
+  const { currentUser, showToast } = useApp();
 
+  const [promotions, setPromotions] = useState<Promotion[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingPromo, setEditingPromo] = useState<Promotion | null>(null);
 
   // Form State
   const [name, setName] = useState('');
-  const [imageUrl, setImageUrl] = useState<string>();
   const [code, setCode] = useState('');
   const [description, setDescription] = useState('');
   const [discountType, setDiscountType] = useState<DiscountType>('PERCENTAGE');
   const [discountValue, setDiscountValue] = useState<number>(15);
   const [minOrderAmount, setMinOrderAmount] = useState<number>(25);
-  const [usageLimit, setUsageLimit] = useState<number>(200);
-  const [startDate, setStartDate] = useState('2026-10-01');
-  const [endDate, setEndDate] = useState('2026-12-31');
-  const [selectedServices, setSelectedServices] = useState<string[]>([
-    'Todos los servicios',
-  ]);
+  const [usageLimit, setUsageLimit] = useState<number>(0);
+  const [maxUsesPerCustomer, setMaxUsesPerCustomer] = useState<number>(0);
+  const [firstOrderOnly, setFirstOrderOnly] = useState(false);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [status, setStatus] = useState<Promotion['status']>('ACTIVE');
   const [formError, setFormError] = useState('');
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
+    setLoadError('');
     getPromotions()
       .then((apiPromos) => {
         if (cancelled) return;
-        const current = storageService.getPromotions();
-        const byId = new Map(current.map((p) => [p.id, p]));
-        const mapped = apiPromos.map((raw) =>
-          mapPromotionResponseToPromotion(raw, byId.get(raw.id)),
-        );
-        storageService.savePromotions(mapped);
+        setPromotions(apiPromos.map(mapPromotionResponseToPromotion));
       })
-      .catch(() => {
-        // Keep local snapshot if offline during isolated tests
+      .catch((cause: unknown) => {
+        if (cancelled) return;
+        setLoadError(
+          cause instanceof Error
+            ? cause.message
+            : 'No se pudieron cargar las promociones del servidor.',
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
       });
     return () => {
       cancelled = true;
@@ -81,16 +85,16 @@ export const PromotionsPage: React.FC = () => {
   const handleOpenCreate = () => {
     setEditingPromo(null);
     setName('');
-    setImageUrl(undefined);
     setCode('');
     setDescription('');
     setDiscountType('PERCENTAGE');
     setDiscountValue(15);
     setMinOrderAmount(20);
-    setUsageLimit(300);
+    setUsageLimit(0);
+    setMaxUsesPerCustomer(0);
+    setFirstOrderOnly(false);
     setStartDate(new Date().toISOString().split('T')[0]);
     setEndDate('2026-12-31');
-    setSelectedServices(['Todos los servicios']);
     setStatus('ACTIVE');
     setFormError('');
     setIsDrawerOpen(true);
@@ -99,20 +103,16 @@ export const PromotionsPage: React.FC = () => {
   const handleOpenEdit = (promo: Promotion) => {
     setEditingPromo(promo);
     setName(promo.name);
-    setImageUrl(promo.imageUrl);
     setCode(promo.code);
     setDescription(promo.description);
     setDiscountType(promo.discountType);
     setDiscountValue(promo.discountValue);
     setMinOrderAmount(promo.minOrderAmount);
     setUsageLimit(promo.usageLimit);
+    setMaxUsesPerCustomer(promo.maxUsesPerCustomer ?? 0);
+    setFirstOrderOnly(Boolean(promo.firstOrderOnly));
     setStartDate(promo.startDate);
     setEndDate(promo.endDate);
-    setSelectedServices(
-      promo.applicableServices?.length
-        ? promo.applicableServices
-        : ['Todos los servicios'],
-    );
     setStatus(promo.status);
     setFormError('');
     setIsDrawerOpen(true);
@@ -122,8 +122,7 @@ export const PromotionsPage: React.FC = () => {
     e.preventDefault();
     setFormError('');
 
-    // Business Rules per spec #37:
-    if (new Date(endDate) < new Date(startDate)) {
+    if (startDate && endDate && new Date(endDate) < new Date(startDate)) {
       setFormError(
         'La fecha de vencimiento no puede ser anterior a la fecha de inicio.',
       );
@@ -137,46 +136,27 @@ export const PromotionsPage: React.FC = () => {
       setFormError('El valor del descuento debe ser mayor que 0.');
       return;
     }
-    if (selectedServices.length === 0) {
-      setFormError(
-        'Debe seleccionar al menos un servicio o categoría aplicable.',
-      );
-      return;
-    }
 
     const normalizedCode = code.toUpperCase().trim();
-    const localPromoDraft: Promotion = {
-      id: editingPromo?.id ?? 'TEMP',
-      imageUrl,
-      name: name.trim(),
-      code: normalizedCode,
-      description: description.trim() || name.trim(),
-      discountType,
-      discountValue,
-      minOrderAmount,
-      usageLimit,
-      usageCount: editingPromo?.usageCount ?? 0,
-      applicableServices: selectedServices,
-      startDate,
-      endDate,
-      status,
-    };
+    const normalizedDescription = description.trim() || name.trim();
 
     try {
       if (editingPromo) {
         const res = await updatePromotionApi(editingPromo.id, {
-          description: localPromoDraft.description,
+          name: name.trim() || null,
+          description: normalizedDescription,
           discountValue,
           minOrderAmount,
-          validFrom: startDate,
-          validUntil: endDate,
-          maxUses: usageLimit,
+          validFrom: startDate || undefined,
+          validUntil: endDate || undefined,
+          maxUses: usageLimit > 0 ? usageLimit : undefined,
+          maxUsesPerCustomer: maxUsesPerCustomer > 0 ? maxUsesPerCustomer : null,
+          firstOrderOnly,
           active: status !== 'PAUSED' && status !== 'EXPIRED',
         });
-        const synced = mapPromotionResponseToPromotion(res, localPromoDraft);
-        const current = storageService.getPromotions();
-        storageService.savePromotions(
-          current.map((p) => (p.id === editingPromo.id ? synced : p)),
+        const synced = mapPromotionResponseToPromotion(res);
+        setPromotions((prev) =>
+          prev.map((p) => (p.id === editingPromo.id ? synced : p)),
         );
         showToast({
           type: 'info',
@@ -186,17 +166,19 @@ export const PromotionsPage: React.FC = () => {
       } else {
         const res = await createPromotionApi({
           code: normalizedCode,
-          description: localPromoDraft.description,
+          name: name.trim() || null,
+          description: normalizedDescription,
           discountType,
           discountValue,
           minOrderAmount,
-          validFrom: startDate,
-          validUntil: endDate,
-          maxUses: usageLimit,
+          validFrom: startDate || undefined,
+          validUntil: endDate || undefined,
+          maxUses: usageLimit > 0 ? usageLimit : undefined,
+          maxUsesPerCustomer: maxUsesPerCustomer > 0 ? maxUsesPerCustomer : null,
+          firstOrderOnly,
         });
-        const synced = mapPromotionResponseToPromotion(res, localPromoDraft);
-        const current = storageService.getPromotions();
-        storageService.savePromotions([...current, synced]);
+        const synced = mapPromotionResponseToPromotion(res);
+        setPromotions((prev) => [synced, ...prev]);
         showToast({
           type: 'success',
           title: 'Promoción creada exitosamente',
@@ -205,22 +187,6 @@ export const PromotionsPage: React.FC = () => {
       }
       setIsDrawerOpen(false);
     } catch (err) {
-      if (err instanceof ApiError && err.status === 0) {
-        if (editingPromo) {
-          const current = storageService.getPromotions();
-          storageService.savePromotions(
-            current.map((p) =>
-              p.id === editingPromo.id ? localPromoDraft : p,
-            ),
-          );
-          setIsDrawerOpen(false);
-          return;
-        }
-        const { id: _id, usageCount: _uc, ...rest } = localPromoDraft;
-        const success = createPromotion(rest);
-        if (success) setIsDrawerOpen(false);
-        return;
-      }
       setFormError(
         err instanceof Error
           ? err.message
@@ -250,7 +216,7 @@ export const PromotionsPage: React.FC = () => {
     <div className="space-y-8">
       <PageHeader
         title="Promociones y Cupones"
-        subtitle="Gestión de códigos de descuento, campañas estacionales y reglas de canje comercial."
+        subtitle="Gestión de códigos de descuento, campañas y reglas de uso contra el servidor."
         actions={
           <motion.button
             type="button"
@@ -263,6 +229,15 @@ export const PromotionsPage: React.FC = () => {
           </motion.button>
         }
       />
+
+      {loadError && (
+        <p
+          role="alert"
+          className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-800"
+        >
+          {loadError}
+        </p>
+      )}
 
       {/* KPIs */}
       <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -304,99 +279,113 @@ export const PromotionsPage: React.FC = () => {
 
       {/* Table */}
       <div className="fintech-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs text-left">
-            <thead className="bg-slate-50/80 text-slate-600 font-semibold border-b border-slate-200/80">
-              <tr>
-                <th className="py-3.5 px-4">Campaña / Promoción</th>
-                <th className="py-3.5 px-4">Código Cupón</th>
-                <th className="py-3.5 px-4">Descuento</th>
-                <th className="py-3.5 px-4">Servicios Aplicables</th>
-                <th className="py-3.5 px-4">Vigencia</th>
-                <th className="py-3.5 px-4 text-center">Usos / Límite</th>
-                <th className="py-3.5 px-4 text-right">Estado</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {pagination.rows.map((promo) => (
-                <tr
-                  key={promo.id}
-                  className="hover:bg-slate-50/70 transition-colors"
-                >
-                  <td className="py-3.5 px-4">
-                    <span className="font-bold text-slate-900 block">
-                      {promo.name}
-                    </span>
-                    <span className="text-[11px] text-slate-500 line-clamp-1">
-                      {promo.description}
-                    </span>
-                    {promo.imageUrl && (
-                      <img
-                        src={promo.imageUrl}
-                        alt={`Arte de ${promo.name}`}
-                        className="mt-2 max-h-20 rounded-lg object-contain"
-                      />
-                    )}
-                  </td>
-                  <td className="py-3.5 px-4 whitespace-nowrap">
-                    <span className="inline-flex items-center gap-1.5 font-mono font-bold text-xs bg-sky-50 text-sky-800 px-2.5 py-1 rounded-lg border border-sky-200 border-dashed shadow-2xs">
-                      <Tag className="w-3 h-3 text-sky-600" />
-                      {promo.code}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-4 font-mono font-bold text-emerald-700 whitespace-nowrap tabular-nums">
-                    {promo.discountType === 'PERCENTAGE'
-                      ? `${promo.discountValue}%`
-                      : `$${promo.discountValue.toFixed(2)}`}
-                    <span className="block text-[10px] text-slate-400 font-normal">
-                      Mín. ${promo.minOrderAmount}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-4 text-slate-600 truncate max-w-[180px]">
-                    {promo.applicableServices.join(', ')}
-                  </td>
-                  <td className="py-3.5 px-4 font-mono text-[11px] text-slate-600 whitespace-nowrap">
-                    {promo.startDate} al {promo.endDate}
-                  </td>
-                  <td className="py-3.5 px-4 text-center font-mono whitespace-nowrap tabular-nums">
-                    <span className="font-bold text-slate-800">
-                      {promo.usageCount}
-                    </span>
-                    <span className="text-slate-400">
-                      {' '}
-                      / {promo.usageLimit}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                    <div className="inline-flex items-center justify-end gap-2">
-                      <span
-                        className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${
-                          promo.status === 'ACTIVE'
-                            ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                            : promo.status === 'SCHEDULED'
-                              ? 'bg-sky-50 text-sky-800 border-sky-200'
-                              : 'bg-slate-100 text-slate-600 border-slate-200'
-                        }`}
-                      >
-                        {promo.status}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleOpenEdit(promo)}
-                        className="p-1.5 text-slate-500 hover:text-sky-800 hover:bg-sky-50 rounded-lg transition-colors cursor-pointer"
-                        title={`Editar promoción ${promo.code}`}
-                        aria-label={`Editar promoción ${promo.code}`}
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <TablePagination pagination={pagination} label="promociones" />
+        {loading ? (
+          <div className="p-10 text-center text-xs text-slate-500">
+            Cargando promociones desde el servidor...
+          </div>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs text-left">
+                <thead className="bg-slate-50/80 text-slate-600 font-semibold border-b border-slate-200/80">
+                  <tr>
+                    <th className="py-3.5 px-4">Campaña / Promoción</th>
+                    <th className="py-3.5 px-4">Código Cupón</th>
+                    <th className="py-3.5 px-4">Descuento</th>
+                    <th className="py-3.5 px-4">Reglas</th>
+                    <th className="py-3.5 px-4">Vigencia</th>
+                    <th className="py-3.5 px-4 text-center">Usos / Límite</th>
+                    <th className="py-3.5 px-4 text-right">Estado</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {pagination.rows.map((promo) => (
+                    <tr
+                      key={promo.id}
+                      className="hover:bg-slate-50/70 transition-colors"
+                    >
+                      <td className="py-3.5 px-4">
+                        <span className="font-bold text-slate-900 block">
+                          {promo.name}
+                        </span>
+                        <span className="text-[11px] text-slate-500 line-clamp-1">
+                          {promo.description}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1.5 font-mono font-bold text-xs bg-sky-50 text-sky-800 px-2.5 py-1 rounded-lg border border-sky-200 border-dashed shadow-2xs">
+                          <Tag className="w-3 h-3 text-sky-600" />
+                          {promo.code}
+                        </span>
+                        {promo.isPersonal && (
+                          <span className="ml-2 inline-block text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded-full">
+                            Cupón de canje
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4 font-mono font-bold text-emerald-700 whitespace-nowrap tabular-nums">
+                        {promo.discountType === 'PERCENTAGE'
+                          ? `${promo.discountValue}%`
+                          : `$${promo.discountValue.toFixed(2)}`}
+                        <span className="block text-[10px] text-slate-400 font-normal">
+                          Mín. ${promo.minOrderAmount}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 text-slate-600 whitespace-nowrap text-[11px]">
+                        <p>
+                          {promo.firstOrderOnly ? 'Solo 1ra orden' : 'Todo cliente'}
+                        </p>
+                        <p className="text-slate-400">
+                          {promo.maxUsesPerCustomer
+                            ? `Máx. ${promo.maxUsesPerCustomer}/cliente`
+                            : 'Sin límite por cliente'}
+                        </p>
+                      </td>
+                      <td className="py-3.5 px-4 font-mono text-[11px] text-slate-600 whitespace-nowrap">
+                        {promo.startDate || 'Sin inicio'} al{' '}
+                        {promo.endDate || 'Sin fin'}
+                      </td>
+                      <td className="py-3.5 px-4 text-center font-mono whitespace-nowrap tabular-nums">
+                        <span className="font-bold text-slate-800">
+                          {promo.usageCount}
+                        </span>
+                        <span className="text-slate-400">
+                          {' '}
+                          / {promo.usageLimit > 0 ? promo.usageLimit : '∞'}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                        <div className="inline-flex items-center justify-end gap-2">
+                          <span
+                            className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${
+                              promo.status === 'ACTIVE'
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                : promo.status === 'SCHEDULED'
+                                  ? 'bg-sky-50 text-sky-800 border-sky-200'
+                                  : 'bg-slate-100 text-slate-600 border-slate-200'
+                            }`}
+                          >
+                            {promo.status}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEdit(promo)}
+                            className="p-1.5 text-slate-500 hover:text-sky-800 hover:bg-sky-50 rounded-lg transition-colors cursor-pointer"
+                            title={`Editar promoción ${promo.code}`}
+                            aria-label={`Editar promoción ${promo.code}`}
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <TablePagination pagination={pagination} label="promociones" />
+          </>
+        )}
       </div>
 
       {/* Drawer Crear / Editar Promoción per spec #37 */}
@@ -414,41 +403,6 @@ export const PromotionsPage: React.FC = () => {
             onSubmit={handleSubmit}
             className="p-5 space-y-4 overflow-y-auto flex-1 text-xs"
           >
-            <label className="block font-semibold">
-              Arte de promoción (opcional)
-              <input
-                className="block mt-2"
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  if (file.size > 700000) {
-                    setFormError('La imagen local debe pesar menos de 700 KB.');
-                    return;
-                  }
-                  const reader = new FileReader();
-                  reader.onload = () => setImageUrl(String(reader.result));
-                  reader.readAsDataURL(file);
-                }}
-              />
-            </label>
-            {imageUrl && (
-              <div>
-                <img
-                  src={imageUrl}
-                  alt="Vista previa del arte adjuntado"
-                  className="max-h-40 rounded-xl object-contain"
-                />
-                <button
-                  type="button"
-                  className="text-rose-700 mt-2"
-                  onClick={() => setImageUrl(undefined)}
-                >
-                  Quitar imagen
-                </button>
-              </div>
-            )}
             {formError && (
               <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 font-semibold flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
@@ -532,13 +486,15 @@ export const PromotionsPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">
-                  Monto Mínimo de Orden ($)
+                  Monto Mínimo ($)
                 </label>
                 <input
                   type="number"
+                  min={0}
+                  step="0.01"
                   value={minOrderAmount}
                   onChange={(e) =>
                     setMinOrderAmount(parseFloat(e.target.value) || 0)
@@ -548,25 +504,48 @@ export const PromotionsPage: React.FC = () => {
               </div>
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">
-                  Límite Total de Usos
+                  Límite Global (0 = ∞)
                 </label>
                 <input
                   type="number"
+                  min={0}
                   value={usageLimit}
-                  onChange={(e) => setUsageLimit(parseInt(e.target.value) || 1)}
+                  onChange={(e) => setUsageLimit(parseInt(e.target.value) || 0)}
+                  className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs font-mono"
+                />
+              </div>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Límite / Cliente (0 = ∞)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  value={maxUsesPerCustomer}
+                  onChange={(e) =>
+                    setMaxUsesPerCustomer(parseInt(e.target.value) || 0)
+                  }
                   className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs font-mono"
                 />
               </div>
             </div>
 
+            <label className="flex items-center gap-2 text-xs text-slate-700">
+              <input
+                type="checkbox"
+                checked={firstOrderOnly}
+                onChange={(e) => setFirstOrderOnly(e.target.checked)}
+              />
+              Solo para primera orden del cliente
+            </label>
+
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">
-                  Fecha de Inicio *
+                  Fecha de Inicio
                 </label>
                 <input
                   type="date"
-                  required
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
                   className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs font-mono"
@@ -574,17 +553,32 @@ export const PromotionsPage: React.FC = () => {
               </div>
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">
-                  Fecha de Fin *
+                  Fecha de Fin
                 </label>
                 <input
                   type="date"
-                  required
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
                   className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs font-mono"
                 />
               </div>
             </div>
+
+            {editingPromo && (
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Estado
+                </label>
+                <select
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value as Promotion['status'])}
+                  className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs"
+                >
+                  <option value="ACTIVE">Activa</option>
+                  <option value="PAUSED">Pausada</option>
+                </select>
+              </div>
+            )}
 
             <div className="pt-4 border-t border-slate-100 flex justify-end gap-2">
               <button

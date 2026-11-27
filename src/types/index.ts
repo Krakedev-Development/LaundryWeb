@@ -374,6 +374,9 @@ export interface Promotion {
   minOrderAmount: number;
   usageLimit: number;
   usageCount: number;
+  maxUsesPerCustomer?: number | null;
+  firstOrderOnly?: boolean;
+  isPersonal?: boolean;
   applicableServices: string[];
   startDate: string;
   endDate: string;
@@ -384,7 +387,14 @@ export interface Reward {
   id: string;
   name: string;
   description: string;
+  category?: string;
   pointsCost: number;
+  fulfillmentType?: 'NONE' | 'WALLET_CREDIT' | 'PROMO_COUPON';
+  walletCreditAmount?: number | null;
+  couponDiscountType?: DiscountType | null;
+  couponDiscountValue?: number | null;
+  couponMinOrderAmount?: number | null;
+  couponValidityDays?: number | null;
   minPurchases: number;
   minSpend: number;
   validityDays: number;
@@ -407,6 +417,8 @@ export interface RewardRedemption {
   reviewedAt?: string;
   pointsReserved?: boolean; // New requests reserve points; legacy requests were already debited.
   notes?: string;
+  generatedPromoCode?: string | null;
+  walletCreditAmount?: number | null;
 }
 
 export interface PointsLedgerEntry {

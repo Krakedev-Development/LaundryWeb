@@ -295,6 +295,7 @@ export async function getMembershipSubscribers(
 
 export interface CreatePromotionDto {
   code: string;
+  name?: string | null;
   description?: string;
   discountType: 'PERCENTAGE' | 'FIXED';
   discountValue: number;
@@ -302,15 +303,20 @@ export interface CreatePromotionDto {
   validFrom?: string;
   validUntil?: string;
   maxUses?: number;
+  maxUsesPerCustomer?: number | null;
+  firstOrderOnly?: boolean;
 }
 
 export interface UpdatePromotionDto {
+  name?: string | null;
   description?: string;
   discountValue?: number;
   minOrderAmount?: number;
   validFrom?: string;
   validUntil?: string;
   maxUses?: number;
+  maxUsesPerCustomer?: number | null;
+  firstOrderOnly?: boolean;
   active?: boolean;
 }
 
@@ -325,6 +331,9 @@ export interface PromotionResponse {
   validFrom?: string | null;
   validUntil?: string | null;
   maxUses?: number | null;
+  maxUsesPerCustomer?: number | null;
+  firstOrderOnly?: boolean;
+  isPersonal?: boolean;
   usedCount?: number | null;
   usageCount?: number | null;
   active?: boolean;
@@ -364,11 +373,19 @@ export async function updatePromotion(
 
 // --- 6. REWARDS (/catalog/rewards) ---
 
+export type RewardFulfillmentType = 'NONE' | 'WALLET_CREDIT' | 'PROMO_COUPON';
+
 export interface CreateRewardDto {
   title: string;
   description?: string;
   category?: string;
   pointsCost: number;
+  fulfillmentType?: RewardFulfillmentType;
+  walletCreditAmount?: number | null;
+  couponDiscountType?: 'PERCENTAGE' | 'FIXED' | null;
+  couponDiscountValue?: number | null;
+  couponMinOrderAmount?: number | null;
+  couponValidityDays?: number | null;
 }
 
 export interface UpdateRewardDto {
@@ -376,6 +393,12 @@ export interface UpdateRewardDto {
   description?: string;
   category?: string;
   pointsCost?: number;
+  fulfillmentType?: RewardFulfillmentType;
+  walletCreditAmount?: number | null;
+  couponDiscountType?: 'PERCENTAGE' | 'FIXED' | null;
+  couponDiscountValue?: number | null;
+  couponMinOrderAmount?: number | null;
+  couponValidityDays?: number | null;
   active?: boolean;
 }
 
@@ -385,6 +408,12 @@ export interface RewardResponse {
   description?: string | null;
   category?: string | null;
   pointsCost: number | string;
+  fulfillmentType?: RewardFulfillmentType | null;
+  walletCreditAmount?: number | string | null;
+  couponDiscountType?: 'PERCENTAGE' | 'FIXED' | null;
+  couponDiscountValue?: number | string | null;
+  couponMinOrderAmount?: number | string | null;
+  couponValidityDays?: number | null;
   active?: boolean;
 }
 
@@ -544,59 +573,60 @@ export function mapMembershipResponseToPlan(
 
 export function mapPromotionResponseToPromotion(
   raw: PromotionResponse,
-  existing?: Promotion,
 ): Promotion {
-  const startDate = raw.validFrom
-    ? raw.validFrom.slice(0, 10)
-    : (existing?.startDate ?? new Date().toISOString().slice(0, 10));
-  const endDate = raw.validUntil
-    ? raw.validUntil.slice(0, 10)
-    : (existing?.endDate ?? '2026-12-31');
+  const startDate = raw.validFrom ? raw.validFrom.slice(0, 10) : '';
+  const endDate = raw.validUntil ? raw.validUntil.slice(0, 10) : '';
   const nowIso = new Date().toISOString().slice(0, 10);
   let status: Promotion['status'] = 'ACTIVE';
   if (raw.active === false) {
     status = 'PAUSED';
-  } else if (endDate < nowIso) {
+  } else if (endDate && endDate < nowIso) {
     status = 'EXPIRED';
-  } else if (startDate > nowIso) {
+  } else if (startDate && startDate > nowIso) {
     status = 'SCHEDULED';
   }
 
   return {
     id: raw.id,
     code: raw.code,
-    name: raw.name || existing?.name || raw.description || `Campaña ${raw.code}`,
-    description: raw.description ?? existing?.description ?? '',
+    name: raw.name || raw.description || `Campaña ${raw.code}`,
+    description: raw.description ?? '',
     discountType: raw.discountType ?? 'PERCENTAGE',
     discountValue: Number(raw.discountValue) || 0,
-    minOrderAmount: Number(raw.minOrderAmount ?? existing?.minOrderAmount ?? 0),
-    usageLimit: Number(raw.maxUses ?? existing?.usageLimit ?? 100),
-    usageCount: Number(raw.usedCount ?? raw.usageCount ?? existing?.usageCount ?? 0),
-    applicableServices: existing?.applicableServices?.length
-      ? existing.applicableServices
-      : ['Todos los servicios'],
+    minOrderAmount: Number(raw.minOrderAmount ?? 0) || 0,
+    usageLimit: raw.maxUses != null ? Number(raw.maxUses) : 0,
+    usageCount: Number(raw.usedCount ?? raw.usageCount ?? 0) || 0,
+    maxUsesPerCustomer: raw.maxUsesPerCustomer ?? null,
+    firstOrderOnly: Boolean(raw.firstOrderOnly),
+    isPersonal: Boolean(raw.isPersonal),
+    applicableServices: ['Todos los servicios'],
     startDate,
     endDate,
     status,
-    imageUrl: existing?.imageUrl,
   };
 }
 
 export function mapRewardResponseToReward(
   raw: RewardResponse,
-  existing?: Reward,
 ): Reward {
   return {
     id: raw.id,
     name: raw.title,
-    description:
-      raw.description ??
-      existing?.description ??
-      (raw.category ? `Categoría: ${raw.category}` : ''),
+    description: raw.description ?? '',
+    category: raw.category ?? 'GENERAL',
     pointsCost: Number(raw.pointsCost) || 0,
-    minPurchases: existing?.minPurchases ?? 1,
-    minSpend: existing?.minSpend ?? 0,
-    validityDays: existing?.validityDays ?? 30,
+    fulfillmentType: raw.fulfillmentType ?? 'NONE',
+    walletCreditAmount:
+      raw.walletCreditAmount != null ? Number(raw.walletCreditAmount) : null,
+    couponDiscountType: raw.couponDiscountType ?? null,
+    couponDiscountValue:
+      raw.couponDiscountValue != null ? Number(raw.couponDiscountValue) : null,
+    couponMinOrderAmount:
+      raw.couponMinOrderAmount != null ? Number(raw.couponMinOrderAmount) : null,
+    couponValidityDays: raw.couponValidityDays ?? null,
+    minPurchases: 0,
+    minSpend: 0,
+    validityDays: raw.couponValidityDays ?? 30,
     status: raw.active === false ? 'INACTIVE' : 'ACTIVE',
   };
 }

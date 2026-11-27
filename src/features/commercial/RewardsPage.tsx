@@ -1,14 +1,15 @@
 import { Modal } from '../../shared/ui/Modal';
 import React, { useCallback, useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { storageService } from '../../services/storage';
+import { Link } from 'react-router-dom';
 import {
   getRewards,
   createReward as createRewardApi,
   updateReward as updateRewardApi,
   mapRewardResponseToReward,
+  type RewardFulfillmentType,
 } from '../../services/api/catalogApi';
-import { ApiError } from '../../services/api/apiConfig';
+import { getActivePolicy, type Policy } from '../../services/api/policyApi';
 import {
   listRedemptions,
   mapServerRedemption,
@@ -21,7 +22,7 @@ import { MetricCard } from '../../components/common/MetricCard';
 import { AnimatedPillTabs } from '../../components/ui/AnimatedPillTabs';
 import { StaggerContainer, StaggerItem } from '../../components/ui/StaggerList';
 import { btnPrimary } from '../../shared/ui/controls';
-import { Reward, RewardRedemption } from '../../types';
+import { DiscountType, Reward, RewardRedemption } from '../../types';
 import {
   Gift,
   Coins,
@@ -34,12 +35,11 @@ import {
 } from 'lucide-react';
 
 export const RewardsPage: React.FC = () => {
-  const {
-    rewards,
-    createReward,
-    currentUser,
-    showToast,
-  } = useApp();
+  const { currentUser, showToast } = useApp();
+
+  const [rewards, setRewards] = useState<Reward[]>([]);
+  const [rewardsLoading, setRewardsLoading] = useState(true);
+  const [rewardsError, setRewardsError] = useState('');
 
   const [activeTab, setActiveTab] = useState<
     'REWARDS' | 'RULES' | 'REDEMPTIONS'
@@ -50,32 +50,48 @@ export const RewardsPage: React.FC = () => {
   // Form State for reward
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [category, setCategory] = useState('GENERAL');
   const [pointsCost, setPointsCost] = useState(0);
-  const [minPurchases, setMinPurchases] = useState(0);
-  const [minSpend, setMinSpend] = useState(0);
-  const [validityDays, setValidityDays] = useState(0);
+  const [fulfillmentType, setFulfillmentType] =
+    useState<RewardFulfillmentType>('NONE');
+  const [walletCreditAmount, setWalletCreditAmount] = useState(5);
+  const [couponDiscountType, setCouponDiscountType] =
+    useState<DiscountType>('FIXED');
+  const [couponDiscountValue, setCouponDiscountValue] = useState(5);
+  const [couponMinOrderAmount, setCouponMinOrderAmount] = useState(0);
+  const [couponValidityDays, setCouponValidityDays] = useState(30);
   const [status, setStatus] = useState<Reward['status']>('ACTIVE');
 
   const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
   const [serverRedemptions, setServerRedemptions] = useState<RewardRedemption[]>([]);
-  const [redemptionState, setRedemptionState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
+  const [redemptionState, setRedemptionState] = useState<
+    'idle' | 'loading' | 'ready' | 'error'
+  >('idle');
   const [redemptionError, setRedemptionError] = useState('');
   const [reviewBusyId, setReviewBusyId] = useState<string | null>(null);
 
+  const [policy, setPolicy] = useState<Policy | null>(null);
+  const [policyLoaded, setPolicyLoaded] = useState(false);
+
   useEffect(() => {
     let cancelled = false;
+    setRewardsLoading(true);
+    setRewardsError('');
     getRewards()
       .then((apiRewards) => {
         if (cancelled) return;
-        const current = storageService.getRewards();
-        const byId = new Map(current.map((r) => [r.id, r]));
-        const mapped = apiRewards.map((raw) =>
-          mapRewardResponseToReward(raw, byId.get(raw.id)),
-        );
-        storageService.saveRewards(mapped);
+        setRewards(apiRewards.map(mapRewardResponseToReward));
       })
-      .catch(() => {
-        // Keep local snapshot if offline during isolated tests
+      .catch((cause: unknown) => {
+        if (cancelled) return;
+        setRewardsError(
+          cause instanceof Error
+            ? cause.message
+            : 'No se pudieron cargar las recompensas.',
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setRewardsLoading(false);
       });
     return () => {
       cancelled = true;
@@ -101,7 +117,13 @@ export const RewardsPage: React.FC = () => {
     if (activeTab === 'REDEMPTIONS' && redemptionState === 'idle') {
       void loadRedemptions();
     }
-  }, [activeTab, redemptionState, loadRedemptions]);
+    if (activeTab === 'RULES' && !policyLoaded) {
+      getActivePolicy()
+        .then((p) => setPolicy(p))
+        .catch(() => setPolicy(null))
+        .finally(() => setPolicyLoaded(true));
+    }
+  }, [activeTab, redemptionState, loadRedemptions, policyLoaded]);
 
   const redemptionPages = usePagination(serverRedemptions);
 
@@ -123,7 +145,7 @@ export const RewardsPage: React.FC = () => {
     );
   }
 
-  // KPIs (canjes desde servidor cuando ya se cargaron)
+  // KPIs
   const totalRewards = rewards.length;
   const pendingRedemptions = serverRedemptions.filter(
     (r) => r.status === 'PENDING',
@@ -156,7 +178,11 @@ export const RewardsPage: React.FC = () => {
         type: approve ? 'success' : 'info',
         title: approve ? 'Canje aprobado' : 'Canje rechazado',
         message: approve
-          ? 'La solicitud quedó aprobada en el servidor.'
+          ? updated.generatedPromoCode
+            ? `Aprobado · Cupón generado: ${updated.generatedPromoCode}`
+            : updated.walletCreditAmount
+              ? `Aprobado · Crédito abonado: $${Number(updated.walletCreditAmount).toFixed(2)}`
+              : 'La solicitud quedó aprobada en el servidor.'
           : 'Se rechazó el canje y el servidor devolvió los puntos.',
       });
     } catch (err) {
@@ -174,10 +200,14 @@ export const RewardsPage: React.FC = () => {
     setEditingReward(rew);
     setName(rew.name);
     setDescription(rew.description);
+    setCategory(rew.category ?? 'GENERAL');
     setPointsCost(rew.pointsCost);
-    setMinPurchases(rew.minPurchases);
-    setMinSpend(rew.minSpend);
-    setValidityDays(rew.validityDays);
+    setFulfillmentType(rew.fulfillmentType ?? 'NONE');
+    setWalletCreditAmount(rew.walletCreditAmount ?? 5);
+    setCouponDiscountType(rew.couponDiscountType ?? 'FIXED');
+    setCouponDiscountValue(rew.couponDiscountValue ?? 5);
+    setCouponMinOrderAmount(rew.couponMinOrderAmount ?? 0);
+    setCouponValidityDays(rew.couponValidityDays ?? 30);
     setStatus(rew.status);
     setIsDrawerOpen(true);
   };
@@ -186,30 +216,33 @@ export const RewardsPage: React.FC = () => {
     e.preventDefault();
     if (!name.trim()) return;
 
-    const draftLocal: Reward = {
-      id: editingReward?.id ?? 'TEMP',
-      name: name.trim(),
-      description: description.trim(),
+    const payload = {
+      title: name.trim(),
+      description: description.trim() || undefined,
+      category: category.trim() || 'GENERAL',
       pointsCost,
-      minPurchases,
-      minSpend,
-      validityDays,
-      status,
+      fulfillmentType,
+      walletCreditAmount:
+        fulfillmentType === 'WALLET_CREDIT' ? walletCreditAmount : null,
+      couponDiscountType:
+        fulfillmentType === 'PROMO_COUPON' ? couponDiscountType : null,
+      couponDiscountValue:
+        fulfillmentType === 'PROMO_COUPON' ? couponDiscountValue : null,
+      couponMinOrderAmount:
+        fulfillmentType === 'PROMO_COUPON' ? couponMinOrderAmount : null,
+      couponValidityDays:
+        fulfillmentType === 'PROMO_COUPON' ? couponValidityDays : null,
     };
 
     try {
       if (editingReward) {
         const res = await updateRewardApi(editingReward.id, {
-          title: draftLocal.name,
-          description: draftLocal.description || undefined,
-          category: 'GENERAL',
-          pointsCost: draftLocal.pointsCost,
-          active: draftLocal.status === 'ACTIVE',
+          ...payload,
+          active: status === 'ACTIVE',
         });
-        const synced = mapRewardResponseToReward(res, draftLocal);
-        const current = storageService.getRewards();
-        storageService.saveRewards(
-          current.map((r) => (r.id === editingReward.id ? synced : r)),
+        const synced = mapRewardResponseToReward(res);
+        setRewards((prev) =>
+          prev.map((r) => (r.id === editingReward.id ? synced : r)),
         );
         showToast({
           type: 'info',
@@ -217,15 +250,9 @@ export const RewardsPage: React.FC = () => {
           message: synced.name,
         });
       } else {
-        const res = await createRewardApi({
-          title: draftLocal.name,
-          description: draftLocal.description || undefined,
-          category: 'GENERAL',
-          pointsCost: draftLocal.pointsCost,
-        });
-        const synced = mapRewardResponseToReward(res, draftLocal);
-        const current = storageService.getRewards();
-        storageService.saveRewards([...current, synced]);
+        const res = await createRewardApi(payload);
+        const synced = mapRewardResponseToReward(res);
+        setRewards((prev) => [...prev, synced]);
         showToast({
           type: 'success',
           title: 'Recompensa creada en el catálogo de fidelización',
@@ -234,19 +261,6 @@ export const RewardsPage: React.FC = () => {
       }
       setIsDrawerOpen(false);
     } catch (err) {
-      if (err instanceof ApiError && err.status === 0) {
-        if (editingReward) {
-          const current = storageService.getRewards();
-          storageService.saveRewards(
-            current.map((r) => (r.id === editingReward.id ? draftLocal : r)),
-          );
-        } else {
-          const { id: _id, ...rest } = draftLocal;
-          createReward(rest);
-        }
-        setIsDrawerOpen(false);
-        return;
-      }
       showToast({
         type: 'error',
         title: 'Error al guardar recompensa',
@@ -256,6 +270,20 @@ export const RewardsPage: React.FC = () => {
             : 'No se pudo sincronizar con el servidor.',
       });
     }
+  };
+
+  const fulfillmentLabel = (rew: Reward) => {
+    if (rew.fulfillmentType === 'WALLET_CREDIT' && rew.walletCreditAmount) {
+      return `Abona $${rew.walletCreditAmount.toFixed(2)} a billetera`;
+    }
+    if (rew.fulfillmentType === 'PROMO_COUPON' && rew.couponDiscountValue) {
+      const val =
+        rew.couponDiscountType === 'PERCENTAGE'
+          ? `${rew.couponDiscountValue}%`
+          : `$${rew.couponDiscountValue.toFixed(2)}`;
+      return `Cupón personal ${val} (${rew.couponValidityDays ?? 30} días)`;
+    }
+    return 'Entrega operativa / física';
   };
 
   return (
@@ -271,10 +299,14 @@ export const RewardsPage: React.FC = () => {
               setEditingReward(null);
               setName('');
               setDescription('');
-              setPointsCost(0);
-              setMinPurchases(0);
-              setMinSpend(0);
-              setValidityDays(0);
+              setCategory('GENERAL');
+              setPointsCost(100);
+              setFulfillmentType('NONE');
+              setWalletCreditAmount(5);
+              setCouponDiscountType('FIXED');
+              setCouponDiscountValue(5);
+              setCouponMinOrderAmount(0);
+              setCouponValidityDays(30);
               setStatus('ACTIVE');
               setIsDrawerOpen(true);
             }}
@@ -286,11 +318,20 @@ export const RewardsPage: React.FC = () => {
         }
       />
 
+      {rewardsError && (
+        <p
+          role="alert"
+          className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-800"
+        >
+          {rewardsError}
+        </p>
+      )}
+
       {/* KPIs */}
       <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         <StaggerItem>
           <MetricCard
-            title="Recompensas Activas"
+            title="Recompensas"
             value={totalRewards}
             subtitle="Catálogo de canje"
             icon={<Gift className="w-5 h-5 text-sky-600" />}
@@ -309,7 +350,7 @@ export const RewardsPage: React.FC = () => {
           <MetricCard
             title="Canjes Aprobados"
             value={approvedRedemptions}
-            subtitle="Entregados al cliente"
+            subtitle="Autorizados en servidor"
             variant="success"
             icon={<CheckCircle2 className="w-4 h-4" />}
           />
@@ -351,70 +392,68 @@ export const RewardsPage: React.FC = () => {
 
       {/* Tab 1: Recompensas */}
       {activeTab === 'REWARDS' && (
-        <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {rewards.map((rew) => (
-            <StaggerItem key={rew.id}>
-            <div
-              className="fintech-card fintech-card-interactive h-full p-6 flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <span className="font-mono text-xs font-bold text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200/80 tabular-nums">
-                    {rew.pointsCost} puntos
-                  </span>
-                  <div className="flex items-center gap-1.5">
-                    <span
-                      className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${
-                        rew.status === 'ACTIVE'
-                          ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                          : 'bg-slate-100 text-slate-600 border-slate-200'
-                      }`}
-                    >
-                      {rew.status}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => handleOpenEditReward(rew)}
-                      className="p-1 text-slate-500 hover:text-sky-800 hover:bg-sky-50 rounded-lg transition-colors cursor-pointer"
-                      title={`Editar recompensa ${rew.name}`}
-                      aria-label={`Editar recompensa ${rew.name}`}
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </button>
+        rewardsLoading ? (
+          <p className="py-10 text-center text-xs text-slate-500">
+            Cargando recompensas desde el servidor...
+          </p>
+        ) : (
+          <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {rewards.map((rew) => (
+              <StaggerItem key={rew.id}>
+                <div className="fintech-card fintech-card-interactive h-full p-6 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="font-mono text-xs font-bold text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200/80 tabular-nums">
+                        {rew.pointsCost} puntos
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${
+                            rew.status === 'ACTIVE'
+                              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                              : 'bg-slate-100 text-slate-600 border-slate-200'
+                          }`}
+                        >
+                          {rew.status}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditReward(rew)}
+                          className="p-1 text-slate-500 hover:text-sky-800 hover:bg-sky-50 rounded-lg transition-colors cursor-pointer"
+                          title={`Editar recompensa ${rew.name}`}
+                          aria-label={`Editar recompensa ${rew.name}`}
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                    <h3 className="font-bold text-base text-slate-900">
+                      {rew.name}
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                      {rew.description || 'Sin descripción'}
+                    </p>
+                  </div>
+
+                  <div className="mt-5 pt-3 border-t border-slate-100 text-xs text-slate-600 space-y-1.5">
+                    <div className="flex justify-between">
+                      <span>Categoría:</span>
+                      <strong className="text-slate-800">
+                        {rew.category || 'GENERAL'}
+                      </strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Entrega al aprobar:</span>
+                      <strong className="text-slate-800 text-right">
+                        {fulfillmentLabel(rew)}
+                      </strong>
+                    </div>
                   </div>
                 </div>
-                <h3 className="font-bold text-base text-slate-900">
-                  {rew.name}
-                </h3>
-                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                  {rew.description}
-                </p>
-              </div>
-
-              <div className="mt-5 pt-3 border-t border-slate-100 text-xs text-slate-600 space-y-1.5">
-                <div className="flex justify-between">
-                  <span>Compras mínimas requeridas:</span>
-                  <strong className="text-slate-800">
-                    {rew.minPurchases} órdenes
-                  </strong>
-                </div>
-                <div className="flex justify-between">
-                  <span>Gasto acumulado previo:</span>
-                  <strong className="text-slate-800 font-mono">
-                    ${rew.minSpend}
-                  </strong>
-                </div>
-                <div className="flex justify-between">
-                  <span>Vigencia para canje:</span>
-                  <strong className="text-slate-800">
-                    {rew.validityDays} días
-                  </strong>
-                </div>
-              </div>
-            </div>
-            </StaggerItem>
-          ))}
-        </StaggerContainer>
+              </StaggerItem>
+            ))}
+          </StaggerContainer>
+        )
       )}
 
       {/* Tab 2: Reglas de acumulación */}
@@ -424,14 +463,37 @@ export const RewardsPage: React.FC = () => {
             Reglas de Acumulación y Equivalencias de Puntos Clean & Fresh
           </h3>
           <p className="text-xs text-slate-600 max-w-2xl leading-relaxed">
-            Los puntos se acreditan automáticamente en el Ledger tras la
-            finalización conforme de cada orden.
+            Los puntos se acreditan automáticamente en el Ledger tras completar
+            conforme cada orden usando la versión de política vigente al crear el
+            pedido.
           </p>
 
-          <p className="rounded-2xl border border-slate-200/80 bg-slate-50 p-5 text-xs text-slate-600">
-            La tasa de puntos por unidad monetaria se define en la política de
-            negocio. Aún no hay una política publicada.
-          </p>
+          {!policyLoaded ? (
+            <p className="text-xs text-slate-500">Consultando política activa...</p>
+          ) : policy?.pointsPerCurrencyUnit ? (
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-5 text-xs text-emerald-950 space-y-1">
+              <p className="font-bold text-sm">
+                Tasa activa: {policy.pointsPerCurrencyUnit} puntos por cada $1
+              </p>
+              <p className="text-emerald-800">
+                Política versión v{policy.version} · Zona horaria {policy.timezone}
+              </p>
+            </div>
+          ) : (
+            <p className="rounded-2xl border border-slate-200/80 bg-slate-50 p-5 text-xs text-slate-600">
+              La tasa de puntos por unidad monetaria aún no está configurada en la
+              política activa (con valor nulo no se acumulan puntos).
+            </p>
+          )}
+
+          <div>
+            <Link
+              to="/settings"
+              className="inline-flex items-center gap-2 rounded-xl bg-[#0F4C81] px-4 py-2 text-xs font-semibold text-white hover:bg-[#0A3660]"
+            >
+              Configurar tasa en Política de Negocio
+            </Link>
+          </div>
         </div>
       )}
 
@@ -442,8 +504,8 @@ export const RewardsPage: React.FC = () => {
             <div>
               <h3 className="text-sm font-bold text-slate-900">Canjes del servidor</h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Aprobar o rechazar llama a `/redemptions/:id/review`. No hay estado
-                &quot;entregado&quot; en el backend.
+                Aprobar o rechazar llama a `/redemptions/:id/review` y emite
+                automáticamente el crédito o cupón configurado.
               </p>
             </div>
             <button
@@ -507,7 +569,17 @@ export const RewardsPage: React.FC = () => {
                           {red.customerName}
                         </td>
                         <td className="py-3.5 px-4 text-slate-800 font-medium">
-                          {red.rewardName}
+                          <p>{red.rewardName}</p>
+                          {red.generatedPromoCode && (
+                            <p className="mt-0.5 font-mono text-[11px] text-sky-700">
+                              Cupón: {red.generatedPromoCode}
+                            </p>
+                          )}
+                          {red.walletCreditAmount != null && red.walletCreditAmount > 0 && (
+                            <p className="mt-0.5 font-mono text-[11px] text-emerald-700">
+                              Crédito: ${red.walletCreditAmount.toFixed(2)}
+                            </p>
+                          )}
                         </td>
                         <td className="py-3.5 px-4 text-center font-mono font-bold text-amber-700 tabular-nums">
                           {red.pointsSpent} pts
@@ -632,6 +704,7 @@ export const RewardsPage: React.FC = () => {
                 <input
                   type="number"
                   required
+                  min={1}
                   aria-label="Costo en puntos"
                   value={pointsCost}
                   onChange={(e) => setPointsCost(parseInt(e.target.value) || 0)}
@@ -640,48 +713,120 @@ export const RewardsPage: React.FC = () => {
               </div>
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">
-                  Compras previas mínimas
+                  Categoría
                 </label>
                 <input
-                  type="number"
-                  aria-label="Compras previas mínimas"
-                  value={minPurchases}
-                  onChange={(e) =>
-                    setMinPurchases(parseInt(e.target.value) || 0)
-                  }
-                  className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs font-mono"
+                  type="text"
+                  maxLength={60}
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  placeholder="Ej: Descuentos, Billetera, Productos"
+                  className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs"
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">
+                Beneficio automático al aprobar
+              </label>
+              <select
+                value={fulfillmentType}
+                onChange={(e) =>
+                  setFulfillmentType(e.target.value as RewardFulfillmentType)
+                }
+                className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs"
+              >
+                <option value="NONE">Entrega operativa / física manual</option>
+                <option value="WALLET_CREDIT">Crédito automático en billetera</option>
+                <option value="PROMO_COUPON">Generar cupón personal</option>
+              </select>
+            </div>
+
+            {fulfillmentType === 'WALLET_CREDIT' && (
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">
-                  Gasto previo acumulado ($)
+                  Monto a acreditar en billetera ($) *
                 </label>
                 <input
                   type="number"
-                  aria-label="Gasto previo acumulado"
-                  value={minSpend}
-                  onChange={(e) => setMinSpend(parseFloat(e.target.value) || 0)}
-                  className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs font-mono"
-                />
-              </div>
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">
-                  Vigencia (Días)
-                </label>
-                <input
-                  type="number"
-                  aria-label="Vigencia en días"
-                  value={validityDays}
+                  required
+                  min="0.01"
+                  step="0.01"
+                  value={walletCreditAmount}
                   onChange={(e) =>
-                    setValidityDays(parseInt(e.target.value) || 0)
+                    setWalletCreditAmount(parseFloat(e.target.value) || 0)
                   }
                   className="w-full p-2 bg-[#F7F9FC] border border-slate-300 rounded-lg text-xs font-mono"
                 />
               </div>
-            </div>
+            )}
+
+            {fulfillmentType === 'PROMO_COUPON' && (
+              <div className="grid grid-cols-2 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Tipo de cupón
+                  </label>
+                  <select
+                    value={couponDiscountType}
+                    onChange={(e) =>
+                      setCouponDiscountType(e.target.value as DiscountType)
+                    }
+                    className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs"
+                  >
+                    <option value="FIXED">Monto Fijo ($)</option>
+                    <option value="PERCENTAGE">Porcentaje (%)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Valor {couponDiscountType === 'PERCENTAGE' ? '(%)' : '($)'} *
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min="0.01"
+                    step="0.01"
+                    value={couponDiscountValue}
+                    onChange={(e) =>
+                      setCouponDiscountValue(parseFloat(e.target.value) || 0)
+                    }
+                    className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Monto mínimo orden ($)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={couponMinOrderAmount}
+                    onChange={(e) =>
+                      setCouponMinOrderAmount(parseFloat(e.target.value) || 0)
+                    }
+                    className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Vigencia del cupón (días)
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={365}
+                    value={couponValidityDays}
+                    onChange={(e) =>
+                      setCouponValidityDays(parseInt(e.target.value) || 30)
+                    }
+                    className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs font-mono"
+                  />
+                </div>
+              </div>
+            )}
 
             {editingReward && (
               <div>
