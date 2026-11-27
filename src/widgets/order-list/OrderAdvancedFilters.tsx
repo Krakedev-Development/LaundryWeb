@@ -46,6 +46,7 @@ export function OrderAdvancedFilters({
             <option value="OUT_FOR_DELIVERY">En entrega</option>
             <option value="QUARANTINE">Incidencia</option>
             <option value="CLOSED">Finalizada</option>
+            <option value="CANCELLED">Cancelada</option>
           </FilterSelect>
 
           <FilterSelect

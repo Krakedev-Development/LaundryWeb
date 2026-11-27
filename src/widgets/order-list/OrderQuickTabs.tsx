@@ -30,6 +30,7 @@ export function OrderQuickTabs({
           { id: 'IN_PLANT', label: 'En planta', count: tabCounts.IN_PLANT },
           { id: 'DELIVERY', label: 'En entrega', count: tabCounts.DELIVERY },
           { id: 'CLOSED', label: 'Finalizadas', count: tabCounts.CLOSED },
+          { id: 'CANCELLED', label: 'Canceladas', count: tabCounts.CANCELLED },
         ]}
       />
     </div>

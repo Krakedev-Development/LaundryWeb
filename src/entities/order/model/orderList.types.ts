@@ -1,5 +1,11 @@
 export type QuickTab =
-  'ALL' | 'UNASSIGNED' | 'PICKUP_TODAY' | 'IN_PLANT' | 'DELIVERY' | 'CLOSED';
+  | 'ALL'
+  | 'UNASSIGNED'
+  | 'PICKUP_TODAY'
+  | 'IN_PLANT'
+  | 'DELIVERY'
+  | 'CLOSED'
+  | 'CANCELLED';
 export interface OrderListFilters {
   searchQuery: string;
   mode: string;

@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Truck } from 'lucide-react';
 import { useOrderList } from '../../features/orders/model/useOrderList';
 import { OrdersListHeader } from '../../widgets/order-list/OrdersListHeader';
 import { OrderExceptionsNotice } from '../../widgets/order-list/OrderExceptionsNotice';
@@ -14,6 +16,7 @@ import { ApiError } from '../../services/api/apiConfig';
 import { useOrderStatusRealtime } from '../../hooks/useOrderStatusRealtime';
 
 export const OrdersListPage = () => {
+  const navigate = useNavigate();
   const { customers, facilities, drivers, orders } = useApp();
   // Solo se listan las solicitudes que devolvió el servidor (contrato 4). Sin respuesta se muestra
   // el error con "Reintentar", no lo que quedó guardado en este equipo.
@@ -81,11 +84,22 @@ export const OrdersListPage = () => {
       />
       <FulfillmentModeFilter mode={model.mode} setMode={model.setMode} />
       <div className="fintech-card p-5 sm:p-6 space-y-5">
-        <OrderQuickTabs
-          tabCounts={model.tabCounts}
-          quickTab={model.quickTab}
-          setQuickTab={model.setQuickTab}
-        />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <OrderQuickTabs
+              tabCounts={model.tabCounts}
+              quickTab={model.quickTab}
+              setQuickTab={model.setQuickTab}
+            />
+          </div>
+          <button
+            onClick={() => navigate('/operations/dispatch')}
+            className="self-start sm:self-center shrink-0 px-4 py-2.5 text-xs font-bold text-white bg-primary hover:bg-primary-hover rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
+          >
+            <Truck className="w-3.5 h-3.5" />
+            <span>Consola de Despacho</span>
+          </button>
+        </div>
         <OrderSearchToolbar
           searchQuery={model.searchQuery}
           setSearchQuery={model.setSearchQuery}

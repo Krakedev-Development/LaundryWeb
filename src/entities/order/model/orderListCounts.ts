@@ -50,6 +50,9 @@ export function countOrderTabs(orders: Order[]) {
         o.status === 'CLOSED' ||
         o.status === 'COMPLETED',
     ).length,
+    CANCELLED: orders.filter(
+      (o) => operationalStage(o) === 'CANCELLED' || o.status === 'CANCELLED',
+    ).length,
   };
 }
 

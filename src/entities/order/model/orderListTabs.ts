@@ -59,5 +59,11 @@ export function matchesQuickTab(order: Order, quickTab: QuickTab) {
     order.status !== 'COMPLETED'
   )
     return false;
+  if (
+    quickTab === 'CANCELLED' &&
+    operationalStage(order) !== 'CANCELLED' &&
+    order.status !== 'CANCELLED'
+  )
+    return false;
   return true;
 }

@@ -18,6 +18,8 @@ const {
   isOrderClosed,
   formatActor,
 } = require('../src/features/orders/model/orderDisplay.ts');
+const { countOrderTabs } = require('../src/entities/order/model/orderListCounts.ts');
+const { matchesQuickTab } = require('../src/entities/order/model/orderListTabs.ts');
 const { plantPhase, BEFORE_PLANT, AFTER_PLANT } = require('../src/features/plant/plantPhase.ts');
 
 // Paso 2 (UI): cómo se MUESTRA cada etapa. No cambia el estado real ni el flujo.
@@ -112,6 +114,20 @@ test('isOrderClosed detecta órdenes finalizadas por estado o etapa operativa', 
   assert.equal(isOrderClosed(order('READY_FOR_DELIVERY')), false);
   assert.equal(isOrderClosed(order('CLOSED')), true);
   assert.equal(isOrderClosed(order('COMPLETED')), true);
+});
+
+test('pestaña y conteo CANCELLED filtra correctamente solicitudes canceladas', () => {
+  const cancelledOrder = order('CANCELLED');
+  const activeOrder = order('CONFIRMED');
+  const closedOrder = order('CLOSED');
+  assert.equal(matchesQuickTab(cancelledOrder, 'CANCELLED'), true);
+  assert.equal(matchesQuickTab(activeOrder, 'CANCELLED'), false);
+  assert.equal(matchesQuickTab(closedOrder, 'CANCELLED'), false);
+
+  const counts = countOrderTabs([cancelledOrder, activeOrder, closedOrder]);
+  assert.equal(counts.ALL, 3);
+  assert.equal(counts.CANCELLED, 1);
+  assert.equal(counts.CLOSED, 1);
 });
 
 test('formatActor traduce roles y no duplica nombre cuando coincide con el rol', () => {
