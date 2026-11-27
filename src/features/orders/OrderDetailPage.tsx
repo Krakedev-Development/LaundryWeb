@@ -11,6 +11,7 @@ import {
   MoreVertical,
   Copy,
   Layers,
+  MessageSquare,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { PageHeader } from '../../components/common/PageHeader';
@@ -41,7 +42,9 @@ import { OperationTab } from './components/OperationTab';
 import { OrderInfoTab } from './components/OrderInfoTab';
 import { LogisticsTab } from './components/LogisticsTab';
 import { ActivityTab } from './components/ActivityTab';
+import { OrderChatTab } from './components/OrderChatTab';
 import { IncidentModal } from './components/IncidentModal';
+import { adminSocketService } from '../../services/realtime/adminSocketService';
 import {
   isIncidentActive,
   useServerIncidents,
@@ -69,6 +72,7 @@ export const OrderDetailPage: React.FC = () => {
     setSearchParams(next, { replace: true });
   }, [searchParams, setSearchParams]);
   const {
+    currentUser,
     orders,
     customers,
     facilities,
@@ -93,9 +97,40 @@ export const OrderDetailPage: React.FC = () => {
   >({ status: 'loading' });
   const [attempt, setAttempt] = useState(0);
   const [confirmingPayment, setConfirmingPayment] = useState(false);
-  const [activeTab, setActiveTab] = useState<'operation' | 'order' | 'logistics' | 'activity'>(
-    'operation',
-  );
+  const [activeTab, setActiveTab] = useState<
+    'operation' | 'order' | 'logistics' | 'activity' | 'chat'
+  >(() => (searchParams.get('tab') === 'chat' ? 'chat' : 'operation'));
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
+
+  useEffect(() => {
+    const requestedTab = searchParams.get('tab');
+    if (requestedTab === 'chat') {
+      setActiveTab('chat');
+      setUnreadChatCount(0);
+      const next = new URLSearchParams(searchParams);
+      next.delete('tab');
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
+
+  useEffect(() => {
+    const targetOrderId = serverOrder?.id ?? id;
+    if (!targetOrderId) return;
+    adminSocketService.ensureConnected();
+    const unsub = adminSocketService.on(
+      'chat:message:new',
+      (msg: { orderId?: string; senderId?: string }) => {
+        if (
+          msg?.orderId === targetOrderId &&
+          msg.senderId !== currentUser.id &&
+          activeTab !== 'chat'
+        ) {
+          setUnreadChatCount((n) => n + 1);
+        }
+      },
+    );
+    return unsub;
+  }, [serverOrder?.id, id, currentUser.id, activeTab]);
   const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false);
   const actionsMenu = useRef<HTMLDivElement>(null);
   const actionsTrigger = useRef<HTMLButtonElement>(null);
@@ -416,7 +451,10 @@ export const OrderDetailPage: React.FC = () => {
         label="Secciones de la solicitud"
         idPrefix="detail"
         value={activeTab}
-        onChange={setActiveTab}
+        onChange={(nextTab) => {
+          setActiveTab(nextTab);
+          if (nextTab === 'chat') setUnreadChatCount(0);
+        }}
         items={[
           { id: 'operation', label: 'Operación', icon: Sparkles },
           {
@@ -436,6 +474,18 @@ export const OrderDetailPage: React.FC = () => {
                   badge: orderIncidents.length,
                   badgeTone: 'alert' as const,
                   badgeLabel: `${orderIncidents.length} incidencias`,
+                }
+              : {}),
+          },
+          {
+            id: 'chat',
+            label: 'Chat',
+            icon: MessageSquare,
+            ...(unreadChatCount > 0
+              ? {
+                  badge: unreadChatCount,
+                  badgeTone: 'alert' as const,
+                  badgeLabel: `${unreadChatCount} mensajes nuevos`,
                 }
               : {}),
           },
@@ -478,6 +528,15 @@ export const OrderDetailPage: React.FC = () => {
           order={order}
           orderIncidents={orderIncidents}
           onOpenIncidentModal={() => setIsIncidentModalOpen(true)}
+        />
+      )}
+
+      {activeTab === 'chat' && (
+        <OrderChatTab
+          orderId={serverOrder?.id ?? order.id}
+          orderStatus={order.status}
+          currentUserId={currentUser.id}
+          onUnreadReset={() => setUnreadChatCount(0)}
         />
       )}
       </TabPanel>
